@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>欢乐斗地主 - 大厅</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { 
+    min-height:100vh; background:linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+    font-family:'Microsoft YaHei', sans-serif; color:#e2e8f0;
+}
+
+.header {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:20px 40px; border-bottom:1px solid rgba(255,255,255,0.05);
+}
+.header h1 { font-size:24px; font-weight:700; }
+.header .user-info { display:flex; align-items:center; gap:15px; }
+.header .user-info span { color:#94a3b8; font-size:14px; }
+.header .user-info .name { color:#60a5fa; font-weight:600; }
+.btn-logout {
+    padding:8px 16px; border-radius:8px; border:1px solid rgba(255,255,255,0.1);
+    background:transparent; color:#94a3b8; font-size:13px; cursor:pointer;
+}
+.btn-logout:hover { border-color:#ef4444; color:#ef4444; }
+
+.main { max-width:1000px; margin:0 auto; padding:40px 20px; }
+
+/* 战绩卡片 */
+.stats-card {
+    background:rgba(30,41,59,0.8); border-radius:20px; padding:35px;
+    border:1px solid rgba(255,255,255,0.05);
+    box-shadow:0 20px 40px rgba(0,0,0,0.3);
+    margin-bottom:30px;
+}
+.stats-card h2 { font-size:18px; margin-bottom:25px; color:#94a3b8; font-weight:500; }
+.stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; }
+.stat-item { text-align:center; }
+.stat-item .num { font-size:36px; font-weight:800; color:#60a5fa; }
+.stat-item .num.green { color:#4ade80; }
+.stat-item .num.red { color:#f87171; }
+.stat-item .num.yellow { color:#fbbf24; }
+.stat-item .label { font-size:13px; color:#64748b; margin-top:5px; }
+
+/* 按钮区 */
+.actions { display:flex; gap:20px; margin-bottom:30px; }
+.btn-play {
+    flex:1; padding:20px; border-radius:16px; border:none;
+    background:linear-gradient(135deg, #2563eb, #3b82f6);
+    color:white; font-size:20px; font-weight:700; cursor:pointer;
+    letter-spacing:4px; transition:all 0.3s;
+    box-shadow:0 8px 25px rgba(37,99,235,0.3);
+}
+.btn-play:hover { transform:translateY(-2px); box-shadow:0 12px 35px rgba(37,99,235,0.4); }
+.btn-play:active { transform:translateY(0); }
+
+.btn-secondary {
+    padding:20px 30px; border-radius:16px; border:1px solid rgba(255,255,255,0.1);
+    background:rgba(30,41,59,0.6); color:#94a3b8; font-size:15px; cursor:pointer;
+    transition:all 0.3s;
+}
+.btn-secondary:hover { border-color:#60a5fa; color:#60a5fa; }
+
+/* 排行榜 */
+.leaderboard {
+    background:rgba(30,41,59,0.8); border-radius:20px; padding:35px;
+    border:1px solid rgba(255,255,255,0.05);
+    box-shadow:0 20px 40px rgba(0,0,0,0.3);
+}
+.leaderboard h2 { font-size:18px; margin-bottom:25px; color:#94a3b8; font-weight:500; }
+
+.lb-table { width:100%; border-collapse:collapse; }
+.lb-table th { text-align:left; padding:12px 16px; color:#64748b; font-size:13px; font-weight:500; border-bottom:1px solid rgba(255,255,255,0.05); }
+.lb-table td { padding:12px 16px; font-size:14px; border-bottom:1px solid rgba(255,255,255,0.03); }
+.lb-table tr:hover td { background:rgba(255,255,255,0.02); }
+.lb-table .rank { color:#fbbf24; font-weight:700; font-size:16px; }
+.lb-table .rank.r1 { color:#fbbf24; }
+.lb-table .rank.r2 { color:#94a3b8; }
+.lb-table .rank.r3 { color:#cd7f32; }
+.lb-table .me { background:rgba(96,165,250,0.05); }
+.lb-table .me td { color:#60a5fa; font-weight:600; }
+.lb-empty { text-align:center; color:#475569; padding:40px; font-size:14px; }
+
+/* 加载 */
+.loading-text { color:#475569; text-align:center; padding:20px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+    <h1>🃏 欢乐斗地主</h1>
+    <div class="user-info">
+        <span>欢迎，</span><span class="name" id="userName">-</span>
+        <button class="btn-logout" onclick="logout()">退出</button>
+    </div>
+</div>
+
+<div class="main">
+    <div class="stats-card">
+        <h2>📊 我的战绩</h2>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="num" id="statTotal">0</div>
+                <div class="label">总场次</div>
+            </div>
+            <div class="stat-item">
+                <div class="num green" id="statWins">0</div>
+                <div class="label">胜</div>
+            </div>
+            <div class="stat-item">
+                <div class="num red" id="statLosses">0</div>
+                <div class="label">负</div>
+            </div>
+            <div class="stat-item">
+                <div class="num yellow" id="statRate">0%</div>
+                <div class="label">胜率</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="actions">
+        <button class="btn-play" onclick="startGame()">开 始 游 戏</button>
+        <button class="btn-secondary" onclick="location.reload()">🔄 刷新</button>
+    </div>
+
+    <div class="leaderboard">
+        <h2>🏆 排行榜</h2>
+        <table class="lb-table">
+            <thead>
+                <tr>
+                    <th>排名</th>
+                    <th>玩家</th>
+                    <th>场次</th>
+                    <th>胜</th>
+                    <th>胜率</th>
+                </tr>
+            </thead>
+            <tbody id="lbBody">
+                <tr><td colspan="5" class="loading-text">加载中...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+const API = 'http://localhost:5000/api';
+let currentUser = '';
+
+window.onload = function() {
+    const params = new URLSearchParams(window.location.search);
+    currentUser = params.get('name') || localStorage.getItem('doudizhu_name') || '';
+    
+    if (!currentUser) {
+        window.location.href = 'index.html';
+        return;
+    }
+    
+    document.getElementById('userName').textContent = currentUser;
+    loadStats();
+    loadLeaderboard();
+};
+
+async function loadStats() {
+    try {
+        const resp = await fetch(API + '/stats/' + encodeURIComponent(currentUser));
+        const data = await resp.json();
+        document.getElementById('statTotal').textContent = data.total;
+        document.getElementById('statWins').textContent = data.wins;
+        document.getElementById('statLosses').textContent = data.losses;
+        document.getElementById('statRate').textContent = data.win_rate + '%';
+    } catch(e) {
+        console.error('加载战绩失败:', e);
+    }
+}
+
+async function loadLeaderboard() {
+    try {
+        const resp = await fetch(API + '/leaderboard');
+        const data = await resp.json();
+        const tbody = document.getElementById('lbBody');
+        
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="lb-empty">还没有人玩过，快来开一局吧！</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = data.map(item => {
+            const isMe = item.name === currentUser;
+            const rankClass = item.rank <= 3 ? ' r' + item.rank : '';
+            return '<tr class="' + (isMe ? 'me' : '') + '">' +
+                '<td class="rank' + rankClass + '">' + item.rank + '</td>' +
+                '<td>' + item.name + (isMe ? ' ⭐' : '') + '</td>' +
+                '<td>' + item.total + '</td>' +
+                '<td>' + item.wins + '</td>' +
+                '<td>' + item.win_rate + '%</td>' +
+                '</tr>';
+        }).join('');
+    } catch(e) {
+        console.error('加载排行榜失败:', e);
+    }
+}
+
+function startGame() {
+    // 跳转到游戏页面
+    window.location.href = 'game.html?name=' + encodeURIComponent(currentUser);
+}
+
+function logout() {
+    localStorage.removeItem('doudizhu_token');
+    localStorage.removeItem('doudizhu_name');
+    window.location.href = 'index.html';
+}
+</script>
+</body>
+</html>
