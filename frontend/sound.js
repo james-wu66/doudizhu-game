@@ -4,11 +4,24 @@
  */
 
 const SoundSystem = {
-    basePath: '../audio/',
+    basePath: (function() {
+        // 检测是否通过 HTTP 服务器访问
+        if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+            return '/audio/';
+        }
+        // 本地直接打开时用相对路径
+        return '../audio/';
+    })(),
     enabled: true,
     
     // 音频缓存
     cache: {},
+
+    // 获取音频URL（自动检测 .ogg / .mp3）
+    _getUrl(name) {
+        // 优先尝试 .ogg，回退 .mp3
+        return this.basePath + name + '.ogg';
+    },
     
     // 预加载音频
     preload() {
@@ -22,12 +35,13 @@ const SoundSystem = {
             'voice_大王', 'voice_小王',
             'voice_顺子', 'voice_连对', 'voice_飞机',
             'voice_炸弹', 'voice_王炸', 'voice_压你',
+            'voice_三带一', 'voice_三带二',
             'voice_开始游戏', 'voice_你赢了', 'voice_你输了',
             'effect_失败', '炸弹_大', '补充_欢呼掌声'
         ];
         
         files.forEach(name => {
-            const audio = new Audio(this.basePath + name + '.mp3');
+            const audio = new Audio(this._getUrl(name));
             audio.preload = 'auto';
             this.cache[name] = audio;
         });
@@ -39,7 +53,7 @@ const SoundSystem = {
         try {
             let audio = this.cache[name];
             if (!audio) {
-                audio = new Audio(this.basePath + name + '.mp3');
+                audio = new Audio(this._getUrl(name));
                 this.cache[name] = audio;
             }
             audio.currentTime = 0;
@@ -115,7 +129,7 @@ const SoundSystem = {
     
     // 赢了
     playWin() {
-        this.playBoth('voice_你赢了', '补充_欢呼掌声');
+        this.play('voice_你赢了');
     },
     
     // 输了

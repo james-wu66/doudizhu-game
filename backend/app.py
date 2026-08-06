@@ -84,6 +84,22 @@ def serve_audio(filename):
     filename = unquote(filename)
     return send_from_directory("../audio", filename)
 
+@app.route("/sound.js")
+def serve_sound_js():
+    return send_from_directory("../frontend", "sound.js")
+
+@app.route("/manifest.json")
+def serve_manifest():
+    return send_from_directory("../frontend", "manifest.json")
+
+@app.route("/sw.js")
+def serve_sw():
+    return send_from_directory("../frontend", "sw.js")
+
+@app.route("/icons/<path:filename>")
+def serve_icons(filename):
+    return send_from_directory("../frontend/icons", filename)
+
 
 @app.route("/api/register", methods=["POST"])
 def register():
