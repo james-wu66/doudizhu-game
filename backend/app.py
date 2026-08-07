@@ -100,6 +100,10 @@ def serve_sw():
 def serve_icons(filename):
     return send_from_directory("../frontend/icons", filename)
 
+@app.route("/lobby")
+def lobby():
+    return send_from_directory("../frontend", "lobby.html")
+
 
 @app.route("/api/register", methods=["POST"])
 def register():
