@@ -23,4 +23,4 @@ jobs:
         run: tcb login --apiKeyId ${{ secrets.TCB_SECRET_ID }} --apiKey ${{ secrets.TCB_SECRET_KEY }}
 
       - name: Deploy to Cloud Run
-        run: tcb cloudrun deploy --envId ${{ secrets.TCB_ENV_ID }} --serviceName doudizhu-game --force
+        run: echo "No" | tcb cloudrun deploy --env-id ${{ secrets.TCB_ENV_ID }} --service-name doudizhu-game --force --no-confirm
