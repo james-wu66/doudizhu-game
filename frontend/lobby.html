@@ -292,6 +292,14 @@ body {
 <script>
 const API = 'http://localhost:5000/api';
 let currentUser = '';
+let currentProfileName = '';
+
+function escapeHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function escapeAttr(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
 
 window.onload = function() {
     const params = new URLSearchParams(window.location.search);
@@ -305,6 +313,23 @@ window.onload = function() {
     document.getElementById('userName').textContent = currentUser;
     loadStats();
     loadLeaderboard();
+
+    // 排行榜整行点击查看他人主页（事件委托，data-name 携带用户名）
+    const lbBody = document.getElementById('lbBody');
+    lbBody.addEventListener('click', function(e) {
+        const tr = e.target.closest('tr');
+        if (tr && tr.dataset && tr.dataset.name) {
+            openProfile(tr.dataset.name);
+        }
+    });
+
+    // 隐私开关：仅本人可改，change 时保存
+    const privacyToggle = document.getElementById('privacyToggle');
+    if (privacyToggle) {
+        privacyToggle.addEventListener('change', function() {
+            savePrivacy(this.checked);
+        });
+    }
 };
 
 async function loadStats() {
@@ -334,9 +359,9 @@ async function loadLeaderboard() {
         tbody.innerHTML = data.map(item => {
             const isMe = item.name === currentUser;
             const rankClass = item.rank <= 3 ? ' r' + item.rank : '';
-            return '<tr class="' + (isMe ? 'me' : '') + '">' +
+            return '<tr class="' + (isMe ? 'me' : '') + ' clickable" data-name="' + escapeAttr(item.name) + '" style="cursor:pointer">' +
                 '<td class="rank' + rankClass + '">' + item.rank + '</td>' +
-                '<td><img src="' + API + '/users/' + encodeURIComponent(item.name) + '/avatar" style="width:24px;height:24px;border-radius:50%;vertical-align:middle;margin-right:8px" onerror="this.style.display=\'none\'">' + item.name + (isMe ? ' ⭐' : '') + '</td>' +
+                '<td><img src="' + API + '/users/' + encodeURIComponent(item.name) + '/avatar" style="width:24px;height:24px;border-radius:50%;vertical-align:middle;margin-right:8px" onerror="this.style.display=\'none\'">' + escapeHtml(item.name) + (isMe ? ' ⭐' : '') + '</td>' +
                 '<td>' + item.total + '</td>' +
                 '<td>' + item.wins + '</td>' +
                 '<td>' + item.win_rate + '%</td>' +
@@ -362,13 +387,44 @@ function logout() {
 
 
 // === 个人信息中心 ===
-function openProfile() {
-    if (!currentUser) { alert('请先登录'); return; }
+function openProfile(name) {
+    name = name || currentUser;
+    if (!name) { alert('请先登录'); return; }
+    currentProfileName = name;
+    const viewingSelf = (name === currentUser);
     document.getElementById('profileOverlay').classList.add('show');
-    document.getElementById('profileAvatar').textContent = currentUser.charAt(0).toUpperCase();
-    document.getElementById('profileNick').textContent = currentUser;
-    loadProfileInfo();
-    loadUserAvatar();
+    document.getElementById('profileAvatar').textContent = name.charAt(0).toUpperCase();
+    document.getElementById('profileNick').textContent = name;
+
+    // 改头像入口：仅本人可见可用
+    const avatarContainer = document.querySelector('.profile-avatar-container');
+    const avatarOverlay = document.getElementById('avatarOverlay');
+    if (viewingSelf) {
+        avatarContainer.style.cursor = 'pointer';
+        avatarContainer.onclick = openAvatarModal;
+        if (avatarOverlay) avatarOverlay.style.display = '';
+    } else {
+        avatarContainer.style.cursor = 'default';
+        avatarContainer.onclick = null;
+        if (avatarOverlay) avatarOverlay.style.display = 'none';
+    }
+
+    // 隐私开关：仅本人可见可用
+    const privacyLabel = document.getElementById('privacyLabel');
+    const privacyToggle = document.getElementById('privacyToggle');
+    if (privacyLabel && privacyToggle) {
+        if (viewingSelf) {
+            privacyLabel.style.display = '';
+            privacyToggle.disabled = false;
+        } else {
+            privacyLabel.style.display = 'none';
+        }
+    }
+
+    loadProfileInfo(name);
+    loadUserAvatar(name);
+    // 重置到资料 tab
+    switchProfileTab('info', document.querySelector('.profile-tab'));
 }
 
 function closeProfile() {
@@ -383,24 +439,36 @@ function switchProfileTab(tab, btn) {
     if (tab === 'games') loadProfileGames();
 }
 
-async function loadProfileInfo() {
+async function loadProfileInfo(name) {
+    name = name || currentProfileName || currentUser;
     try {
-        const resp = await fetch(API + '/users/' + encodeURIComponent(currentUser));
+        const resp = await fetch(API + '/users/' + encodeURIComponent(name));
         const data = await resp.json();
         if (data.success) {
             document.getElementById('pTotal').textContent = data.stats.total;
             document.getElementById('pWins').textContent = data.stats.wins;
             document.getElementById('pRate').textContent = data.stats.win_rate + '%';
             document.getElementById('pStreak').textContent = data.stats.streak;
+            // 回填隐私开关（allow_view_stats=0 表示不允许他人看 → 复选框勾选）
+            const privacyToggle = document.getElementById('privacyToggle');
+            if (privacyToggle && typeof data.allow_view_stats !== 'undefined') {
+                privacyToggle.checked = (data.allow_view_stats === 0);
+            }
         }
     } catch(e) { console.warn('loadProfileInfo err', e); }
 }
 
 let allGames = [];
-async function loadProfileGames() {
+async function loadProfileGames(name) {
+    name = name || currentProfileName || currentUser;
     try {
-        const resp = await fetch(API + '/users/' + encodeURIComponent(currentUser) + '/games');
+        const resp = await fetch(API + '/users/' + encodeURIComponent(name) + '/games?viewer=' + encodeURIComponent(currentUser));
         const data = await resp.json();
+        if (data.hidden) {
+            allGames = [];
+            document.getElementById('gamesList').innerHTML = '<div style="color:#94a3b8;text-align:center;padding:20px;">对方已隐藏战绩</div>';
+            return;
+        }
         allGames = data.games || [];
         renderGames(allGames);
     } catch(e) {
@@ -536,9 +604,10 @@ function doUploadAvatar() {
     input.click();
 }
 
-async function loadUserAvatar() {
+async function loadUserAvatar(name) {
+    name = name || currentProfileName || currentUser;
     try {
-        const resp = await fetch(API + '/users/' + encodeURIComponent(currentUser) + '/avatar');
+        const resp = await fetch(API + '/users/' + encodeURIComponent(name) + '/avatar');
         if (resp.ok) {
             const blob = await resp.blob();
             if (blob.size > 0) {
@@ -550,6 +619,26 @@ async function loadUserAvatar() {
             }
         }
     } catch(e) {}
+}
+
+async function savePrivacy(checked) {
+    try {
+        const resp = await fetch(API + '/users/' + encodeURIComponent(currentUser) + '/privacy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ viewer: currentUser, allow_view: !checked })
+        });
+        const data = await resp.json();
+        if (!data.success) {
+            alert(data.error || '保存失败');
+            const pt = document.getElementById('privacyToggle');
+            if (pt) pt.checked = !checked; // 回滚
+        }
+    } catch(e) {
+        alert('保存失败，请重试');
+        const pt = document.getElementById('privacyToggle');
+        if (pt) pt.checked = !checked;
+    }
 }
 
 function closeReplay_orig() {
@@ -576,7 +665,7 @@ function closeReplay_orig() {
                 <div class="profile-avatar-container" onclick="openAvatarModal()">
                     <div class="profile-avatar" id="profileAvatar">-</div>
                     <img class="profile-avatar-img" id="profileAvatarImg" src="">
-                    <div class="avatar-overlay">📷</div>
+                    <div class="avatar-overlay" id="avatarOverlay">📷</div>
                 </div>
                 <div class="profile-nick" id="profileNick">-</div>
                 <div class="profile-stats3">
@@ -596,7 +685,7 @@ function closeReplay_orig() {
                     <button onclick="filterGames('fav',this)">收藏</button>
                 </div>
                 <div class="games-list" id="gamesList"><div style="color:#475569;text-align:center;padding:20px;">加载中...</div></div>
-                <label class="games-privacy"><input type="checkbox" disabled> 不允许他人看我的战绩</label>
+                <label class="games-privacy" id="privacyLabel" style="display:none"><input type="checkbox" id="privacyToggle"> 不允许他人看我的战绩</label>
             </div>
         </div>
     </div>

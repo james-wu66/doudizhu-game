@@ -1,0 +1,10 @@
+.git/
+__pycache__/
+*.pyc
+*.bat
+*.md
+verify_replay.js
+Procfile
+render.yaml
+.env
+backend/database/*.db

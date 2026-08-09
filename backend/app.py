@@ -80,6 +80,10 @@ def init_db():
     try:
         c.execute("ALTER TABLE users ADD COLUMN avatar_url TEXT")
     except: pass
+    # 隐私：是否允许他人查看自己的战绩（1=允许，0=不允许），老用户默认允许
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN allow_view_stats INTEGER DEFAULT 1")
+    except: pass
 
     conn.commit()
     conn.close()
@@ -346,16 +350,31 @@ def get_user_profile(name):
         else:
             current_streak = 0
 
+    c.execute("SELECT allow_view_stats FROM users WHERE name = ?", (name,))
+    urow = c.fetchone()
+    allow_view = urow["allow_view_stats"] if urow and urow["allow_view_stats"] is not None else 1
+
     conn.close()
-    return jsonify({"success": True, "name": name, "stats": {"total": total, "wins": wins, "win_rate": win_rate, "streak": max_streak}})
+    return jsonify({"success": True, "name": name, "allow_view_stats": allow_view, "stats": {"total": total, "wins": wins, "win_rate": win_rate, "streak": max_streak}})
 
 
 @app.route("/api/users/<name>/games")
 def get_user_games(name):
     from urllib.parse import unquote
     name = unquote(name)
+    viewer = request.args.get('viewer', '')
     conn = get_db()
     c = conn.cursor()
+
+    c.execute("SELECT allow_view_stats FROM users WHERE name = ?", (name,))
+    urow = c.fetchone()
+    allow = urow["allow_view_stats"] if urow and urow["allow_view_stats"] is not None else 1
+
+    # 隐私：非本人且对方关闭战绩可见，返回空列表并标记 hidden（临时鉴权：viewer 由前端传当前用户名，P2 接入 token）
+    is_self = (viewer == name)
+    if not is_self and allow == 0:
+        conn.close()
+        return jsonify({"success": True, "games": [], "hidden": True})
 
     c.execute("""
         SELECT id, result, role, score_change, bid_score, created_at
@@ -377,6 +396,24 @@ def get_user_games(name):
             "created_at": row["created_at"] or ""
         })
     return jsonify({"success": True, "games": games})
+
+
+@app.route("/api/users/<name>/privacy", methods=["POST"])
+def update_privacy(name):
+    # 临时鉴权：当前无 token，用前端传入的 viewer 身份校验（P2 阶段接入 token 鉴权）
+    from urllib.parse import unquote
+    name = unquote(name)
+    data = request.get_json(silent=True) or {}
+    viewer = data.get('viewer', '') or ''
+    if viewer != name:
+        return jsonify({"success": False, "error": "无权修改他人隐私设置"}), 403
+    allow_view = 1 if data.get('allow_view', True) else 0
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("UPDATE users SET allow_view_stats = ? WHERE name = ?", (allow_view, name))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True})
 
 
 @app.route("/api/games/<int:game_id>/replay")
@@ -502,4 +539,6 @@ if __name__ == "__main__":
     print("  斗地主后端启动成功！")
     print("  http://localhost:5000")
     print("=" * 40)
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    import os as _os
+    port = int(_os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port, debug=False)
