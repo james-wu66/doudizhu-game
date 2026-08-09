@@ -697,13 +697,13 @@ body.replay-mode #bid-actions{
     height: 40px !important;
   }
   body.replay-mode .opp-cards .card .corner .rank {
-    font-size: 12px !important;
+    font-size: 9.6px !important;
   }
   body.replay-mode .opp-cards .card .corner .suit {
-    font-size: 10px !important;
+    font-size: 8px !important;
   }
   body.replay-mode .opp-cards .card .center-suit {
-    font-size: 22px !important;
+    font-size: 17.6px !important;
   }
   body.replay-mode .opp-cards .card .corner.tl {
     top: 2px !important;
@@ -718,13 +718,13 @@ body.replay-mode #bid-actions{
     height: 39px !important;
   }
   body.replay-mode .played-cards .card .corner .rank {
-    font-size: 12px !important;
+    font-size: 9.6px !important;
   }
   body.replay-mode .played-cards .card .corner .suit {
-    font-size: 10px !important;
+    font-size: 8px !important;
   }
   body.replay-mode .played-cards .card .center-suit {
-    font-size: 22px !important;
+    font-size: 17.6px !important;
   }
   body.replay-mode .played-cards .card .corner.tl {
     top: 2px !important;
@@ -733,6 +733,12 @@ body.replay-mode #bid-actions{
   body.replay-mode .played-cards .card .corner.br {
     bottom: 2px !important;
     right: 3px !important;
+  }
+  /* 地主底牌手机端缩小10% */
+  body.replay-mode #landlord-area .card {
+    width: 36.9px !important;
+    height: 48.6px !important;
+    font-size: 14.4px !important;
   }
 }
 </style>
@@ -1340,8 +1346,9 @@ function renderReplayOpponent(containerId,cards,label){
   // 与玩家手牌同尺寸基础上整体缩小20%（等比例：花纹/数字字号随牌高自动缩）
   var styles=getComputedStyle(document.documentElement);
   function r2(n){return Math.round(n*100)/100;}
-  var cw=r2((parseFloat(styles.getPropertyValue('--legacy-card-w'))||window.innerHeight*.065)*0.8);
-  var ch=r2((parseFloat(styles.getPropertyValue('--legacy-card-h'))||cw*1.4)*0.8);
+  var replayScale=(window.innerWidth<=767)?0.64:0.8;
+  var cw=r2((parseFloat(styles.getPropertyValue('--legacy-card-w'))||window.innerHeight*.065)*replayScale);
+  var ch=r2((parseFloat(styles.getPropertyValue('--legacy-card-h'))||cw*1.4)*replayScale);
   // 两行排布：第一行固定10张（17张=10+7，20张=10+10），重叠比例同玩家手牌（45%）
   var rowCount=10;
   var overlap=r2(cw*.45);
@@ -1414,7 +1421,7 @@ function renderReplayPlayedCards(who,cards){
   container.innerHTML='';
   container.classList.add('played-cards');
   var n=cards.length;
-  var baseW=45;
+  var baseW=(window.innerWidth<=767)?36:45;
   // 玩家自己的出牌区较宽，1~20张保持45px
   var autoShrink=(who!==0&&n>=16);
   var cardW=baseW;
