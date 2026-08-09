@@ -13,6 +13,7 @@ const SoundSystem = {
         return '../audio/';
     })(),
     enabled: true,
+    sfxVolume: 1.0,  // 音效音量 0-1
     
     // 音频缓存
     cache: {},
@@ -20,7 +21,7 @@ const SoundSystem = {
     // 获取音频URL（自动检测 .ogg / .mp3）
     _getUrl(name) {
         // 优先尝试 .ogg，回退 .mp3
-        return this.basePath + name + '.ogg';
+        return this.basePath + name + '.mp3';
     },
     
     // 预加载音频
@@ -36,6 +37,7 @@ const SoundSystem = {
             'voice_顺子', 'voice_连对', 'voice_飞机',
             'voice_炸弹', 'voice_王炸', 'voice_压你',
             'voice_三带一', 'voice_三带二',
+            'voice_叫地主', 'voice_抢地主', 'voice_不抢', 'voice_要不起',
             'voice_开始游戏', 'voice_你赢了', 'voice_你输了',
             'effect_失败', '炸弹_大', '补充_欢呼掌声'
         ];
@@ -56,6 +58,7 @@ const SoundSystem = {
                 audio = new Audio(this._getUrl(name));
                 this.cache[name] = audio;
             }
+            audio.volume = this.sfxVolume;
             audio.currentTime = 0;
             audio.play().catch(() => {});
         } catch(e) {}

@@ -84,14 +84,160 @@ body {
 
 /* 加载 */
 .loading-text { color:#475569; text-align:center; padding:20px; }
+
+/* === 个人信息中心弹窗 === */
+.profile-overlay {
+    display:none; position:fixed; inset:0; z-index:9999;
+    background:rgba(0,0,0,0.6); backdrop-filter:blur(4px);
+    justify-content:center; align-items:center;
+}
+.profile-overlay.show { display:flex; }
+.profile-modal {
+    width:760px; max-width:95vw; height:480px; max-height:85vh;
+    background:linear-gradient(180deg,#1a3a5c,#0e2240);
+    border:1px solid rgba(255,255,255,0.1); border-radius:16px;
+    display:flex; overflow:hidden; position:relative;
+    box-shadow:0 20px 60px rgba(0,0,0,0.5);
+}
+.profile-close {
+    position:absolute; top:12px; right:16px; z-index:10;
+    background:none; border:none; color:#94a3b8; font-size:24px; cursor:pointer;
+}
+.profile-close:hover { color:#fff; }
+.profile-tabs {
+    width:100px; background:rgba(0,0,0,0.2); padding:20px 0;
+    display:flex; flex-direction:column; gap:4px; flex-shrink:0;
+}
+.profile-tab {
+    padding:12px 0; text-align:center; color:#94a3b8; font-size:14px;
+    cursor:pointer; border:none; background:none; transition:all 0.2s;
+    border-left:3px solid transparent;
+}
+.profile-tab.active {
+    color:#60a5fa; background:rgba(96,165,250,0.1); border-left-color:#60a5fa;
+}
+.profile-content {
+    flex:1; overflow-y:auto; padding:24px 28px;
+}
+.profile-content::-webkit-scrollbar { width:4px; }
+.profile-content::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
+
+/* 资料 tab */
+.profile-avatar {
+    width:72px; height:72px; border-radius:50%; margin:0 auto 12px;
+    background:linear-gradient(135deg,#2563eb,#3b82f6);
+    display:flex; align-items:center; justify-content:center;
+    font-size:32px; color:#fff; font-weight:800; border:3px solid rgba(96,165,250,0.3);
+}
+.profile-nick { text-align:center; font-size:18px; font-weight:700; color:#e2e8f0; margin-bottom:20px; }
+.profile-stats3 { display:flex; justify-content:center; gap:40px; margin-top:16px; }
+.profile-stat3 { text-align:center; }
+.profile-stat3 .num { font-size:28px; font-weight:800; color:#60a5fa; }
+.profile-stat3 .lbl { font-size:12px; color:#64748b; margin-top:4px; }
+
+/* 战绩 tab */
+.games-filter { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+.games-filter button {
+    padding:6px 14px; border-radius:20px; border:1px solid rgba(255,255,255,0.1);
+    background:transparent; color:#94a3b8; font-size:12px; cursor:pointer;
+}
+.games-filter button.active { background:rgba(96,165,250,0.15); color:#60a5fa; border-color:#60a5fa; }
+.games-list { display:flex; flex-direction:column; gap:8px; }
+.game-row {
+    display:flex; align-items:center; gap:12px; padding:10px 12px;
+    background:rgba(255,255,255,0.03); border-radius:10px;
+}
+.game-row .result-dot {
+    width:32px; height:32px; border-radius:50%; display:flex;
+    align-items:center; justify-content:center; font-size:11px;
+    font-weight:700; color:#fff; flex-shrink:0;
+}
+.game-row .result-dot.win { background:#22c55e; }
+.game-row .result-dot.lose { background:#ef4444; }
+.game-row .game-info { flex:1; }
+.game-row .game-mode { font-size:14px; color:#e2e8f0; font-weight:600; }
+.game-row .game-meta { font-size:11px; color:#64748b; margin-top:2px; }
+.game-row .game-score { font-size:15px; font-weight:700; min-width:50px; text-align:right; }
+.game-row .game-score.positive { color:#4ade80; }
+.game-row .game-score.negative { color:#f87171; }
+.game-row .btn-replay {
+    padding:4px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.1);
+    background:rgba(96,165,250,0.1); color:#60a5fa; font-size:11px; cursor:pointer;
+}
+.game-row .btn-replay:hover { background:rgba(96,165,250,0.2); }
+.games-privacy { margin-top:16px; font-size:12px; color:#475569; }
+
+/* 回放弹窗 */
+.replay-overlay {
+    display:none; position:fixed; inset:0; z-index:10000;
+    background:rgba(0,0,0,0.7); backdrop-filter:blur(6px);
+    justify-content:center; align-items:center;
+}
+.replay-overlay.show { display:flex; }
+.replay-box {
+    width:500px; max-width:90vw; max-height:80vh;
+    background:linear-gradient(180deg,#1a3a5c,#0e2240);
+    border:1px solid rgba(255,255,255,0.1); border-radius:16px;
+    padding:24px; overflow-y:auto;
+    box-shadow:0 20px 60px rgba(0,0,0,0.5);
+}
+.replay-title { font-size:18px; font-weight:700; color:#e2e8f0; margin-bottom:16px; text-align:center; }
+.replay-steps { display:flex; flex-direction:column; gap:6px; }
+.replay-step {
+    display:flex; align-items:center; gap:10px; padding:8px 12px;
+    background:rgba(255,255,255,0.03); border-radius:8px; font-size:13px;
+    opacity:0; transition:opacity 0.3s;
+}
+.replay-step.show { opacity:1; }
+.replay-step .step-player { color:#60a5fa; font-weight:600; min-width:60px; }
+.replay-step .step-pattern { color:#fbbf24; min-width:50px; }
+.replay-step .step-cards { color:#94a3b8; }
+.replay-btns { display:flex; gap:10px; margin-top:16px; justify-content:center; }
+.replay-btns button {
+    padding:8px 20px; border-radius:8px; border:none; font-size:13px; cursor:pointer;
+}
+.replay-btn-start { background:#2563eb; color:#fff; }
+.replay-btn-close { background:rgba(255,255,255,0.1); color:#94a3b8; }
+
+
+/* 头像容器 */
+.profile-avatar-container {
+    position:relative; width:72px; height:72px; margin:0 auto 12px; cursor:pointer;
+}
+.profile-avatar-img {
+    width:72px; height:72px; border-radius:50%; object-fit:cover;
+    border:3px solid rgba(96,165,250,0.3); display:none;
+}
+.avatar-overlay {
+    position:absolute; bottom:0; right:0; background:rgba(0,0,0,0.6); border-radius:50%;
+    width:24px; height:24px; display:flex; align-items:center; justify-content:center;
+    font-size:12px; opacity:0; transition:opacity 0.3s;
+}
+.profile-avatar-container:hover .avatar-overlay { opacity:1; }
+/* 头像模态框 */
+.avatar-modal-overlay {
+    display:none; position:fixed; inset:0; z-index:10001;
+    background:rgba(0,0,0,0.7); backdrop-filter:blur(6px);
+    justify-content:center; align-items:center;
+}
+.avatar-modal-overlay.show { display:flex; }
+.avatar-modal {
+    width:350px; max-width:90vw;
+    background:linear-gradient(180deg,#1a3a5c,#0e2240);
+    border:1px solid rgba(255,255,255,0.1); border-radius:16px;
+    padding:24px; text-align:center;
+    box-shadow:0 20px 60px rgba(0,0,0,0.5);
+}
+
 </style>
+<script src="sound.js"></script>
 </head>
 <body>
 
 <div class="header">
     <h1>🃏 欢乐斗地主</h1>
     <div class="user-info">
-        <span>欢迎，</span><span class="name" id="userName">-</span>
+        <span>欢迎，</span><span class="name" id="userName" onclick="openProfile()" style="cursor:pointer;text-decoration:underline dotted rgba(96,165,250,0.3)">-</span>
         <button class="btn-logout" onclick="logout()">退出</button>
     </div>
 </div>
@@ -152,7 +298,7 @@ window.onload = function() {
     currentUser = params.get('name') || localStorage.getItem('doudizhu_name') || '';
     
     if (!currentUser) {
-        window.location.href = 'index.html';
+        window.location.href = '/';
         return;
     }
     
@@ -190,7 +336,7 @@ async function loadLeaderboard() {
             const rankClass = item.rank <= 3 ? ' r' + item.rank : '';
             return '<tr class="' + (isMe ? 'me' : '') + '">' +
                 '<td class="rank' + rankClass + '">' + item.rank + '</td>' +
-                '<td>' + item.name + (isMe ? ' ⭐' : '') + '</td>' +
+                '<td><img src="' + API + '/users/' + encodeURIComponent(item.name) + '/avatar" style="width:24px;height:24px;border-radius:50%;vertical-align:middle;margin-right:8px" onerror="this.style.display=\'none\'">' + item.name + (isMe ? ' ⭐' : '') + '</td>' +
                 '<td>' + item.total + '</td>' +
                 '<td>' + item.wins + '</td>' +
                 '<td>' + item.win_rate + '%</td>' +
@@ -203,14 +349,283 @@ async function loadLeaderboard() {
 
 function startGame() {
     // 跳转到游戏页面
-    window.location.href = 'game.html?name=' + encodeURIComponent(currentUser);
+    window.location.href = '/?name=' + encodeURIComponent(currentUser);
 }
 
 function logout() {
     localStorage.removeItem('doudizhu_token');
     localStorage.removeItem('doudizhu_name');
-    window.location.href = 'index.html';
+    localStorage.removeItem('doudizhu_user');
+    sessionStorage.removeItem('doudizhu_user');
+    window.location.href = '/';
 }
+
+
+// === 个人信息中心 ===
+function openProfile() {
+    if (!currentUser) { alert('请先登录'); return; }
+    document.getElementById('profileOverlay').classList.add('show');
+    document.getElementById('profileAvatar').textContent = currentUser.charAt(0).toUpperCase();
+    document.getElementById('profileNick').textContent = currentUser;
+    loadProfileInfo();
+    loadUserAvatar();
+}
+
+function closeProfile() {
+    document.getElementById('profileOverlay').classList.remove('show');
+}
+
+function switchProfileTab(tab, btn) {
+    document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('profileInfo').style.display = tab === 'info' ? 'block' : 'none';
+    document.getElementById('profileGames').style.display = tab === 'games' ? 'block' : 'none';
+    if (tab === 'games') loadProfileGames();
+}
+
+async function loadProfileInfo() {
+    try {
+        const resp = await fetch(API + '/users/' + encodeURIComponent(currentUser));
+        const data = await resp.json();
+        if (data.success) {
+            document.getElementById('pTotal').textContent = data.stats.total;
+            document.getElementById('pWins').textContent = data.stats.wins;
+            document.getElementById('pRate').textContent = data.stats.win_rate + '%';
+            document.getElementById('pStreak').textContent = data.stats.streak;
+        }
+    } catch(e) { console.warn('loadProfileInfo err', e); }
+}
+
+let allGames = [];
+async function loadProfileGames() {
+    try {
+        const resp = await fetch(API + '/users/' + encodeURIComponent(currentUser) + '/games');
+        const data = await resp.json();
+        allGames = data.games || [];
+        renderGames(allGames);
+    } catch(e) {
+        document.getElementById('gamesList').innerHTML = '<div style="color:#475569;text-align:center;padding:20px;">加载失败</div>';
+    }
+}
+
+function renderGames(games) {
+    const list = document.getElementById('gamesList');
+    if (!games.length) {
+        list.innerHTML = '<div style="color:#475569;text-align:center;padding:20px;">还没有对局记录</div>';
+        return;
+    }
+    list.innerHTML = games.map(g => {
+        const isWin = g.result === 'win';
+        const scoreClass = g.score_change >= 0 ? 'positive' : 'negative';
+        const scoreText = g.score_change >= 0 ? '+' + g.score_change : g.score_change;
+        const roleText = g.role === 'landlord' ? '地主' : '农民';
+        const timeText = g.created_at ? g.created_at.substring(5, 16).replace('T', ' ') : '';
+        // 最近3局可回看
+        const canReplay = games.indexOf(g) < 3;
+        const replayBtn = canReplay ? '<button class="btn-replay" onclick="goReplay(' + g.game_id + ')">▶ 回看</button>' : '';
+        return '<div class="game-row">'
+            + '<div class="result-dot ' + (isWin ? 'win' : 'lose') + '">' + (isWin ? '胜' : '败') + '</div>'
+            + '<div class="game-info"><div class="game-mode">' + (g.mode || '经典新手场') + '</div>'
+            + '<div class="game-meta">' + timeText + ' · ' + roleText + (g.bid_score ? ' · 叫' + g.bid_score + '分' : '') + '</div></div>'
+            + '<div class="game-score ' + scoreClass + '">' + scoreText + '</div>'
+            + replayBtn
+            + '</div>';
+    }).join('');
+}
+
+function filterGames(type, btn) {
+    document.querySelectorAll('.games-filter button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    // 现在只有经典模式，全部显示
+    renderGames(allGames);
+}
+
+// === 回放功能 ===
+let replayData = [];
+let replayTimer = null;
+async function loadReplay(gameId) {
+    try {
+        const resp = await fetch(API + '/games/' + gameId + '/replay');
+        const data = await resp.json();
+        if (!data.success || !data.moves || data.moves.length === 0) {
+            alert('该局没有回放数据'); return;
+        }
+        replayData = data.moves;
+        document.getElementById('replayTitle').textContent = '对局回放（' + replayData.length + '步）';
+        const steps = document.getElementById('replaySteps');
+        steps.innerHTML = replayData.map((m, i) =>
+            '<div class="replay-step" id="rstep' + i + '">'
+            + '<span class="step-player">' + (m.player || '?') + '</span>'
+            + '<span class="step-pattern">' + (m.pattern || '') + '</span>'
+            + '<span class="step-cards">' + (m.cards || '') + '</span>'
+            + '</div>'
+        ).join('');
+        document.getElementById('replayOverlay').classList.add('show');
+    } catch(e) { alert('回放加载失败'); }
+}
+
+function startReplay() {
+    if (replayTimer) clearInterval(replayTimer);
+    // 先全部隐藏
+    document.querySelectorAll('.replay-step').forEach(s => s.classList.remove('show'));
+    let idx = 0;
+    replayTimer = setInterval(() => {
+        if (idx >= replayData.length) { clearInterval(replayTimer); replayTimer = null; return; }
+        const el = document.getElementById('rstep' + idx);
+        if (el) el.classList.add('show');
+        idx++;
+    }, 600);
+}
+
+
+
+function goReplay(gameId) {
+    window.location.href = '/?replay=' + gameId + '&name=' + encodeURIComponent(currentUser);
+}
+function closeReplay() {
+    if (replayTimer) { clearInterval(replayTimer); replayTimer = null; }
+    document.getElementById('replayOverlay').classList.remove('show');
+}
+
+// === 头像功能 ===
+function openAvatarModal() {
+    document.getElementById('avatarModalOverlay').classList.add('show');
+    const preview = document.getElementById('avatarPreview');
+    const avatarImg = document.getElementById('profileAvatarImg');
+    if (avatarImg.style.display !== 'none' && avatarImg.src) {
+        preview.innerHTML = '<img src="' + avatarImg.src + '" style="width:100%;height:100%;object-fit:cover">';
+    } else {
+        preview.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:48px;color:#fff;font-weight:800">' + currentUser.charAt(0).toUpperCase() + '</div>';
+    }
+}
+
+function closeAvatarModal() {
+    document.getElementById('avatarModalOverlay').classList.remove('show');
+}
+
+function doUploadAvatar() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async function() {
+        const file = this.files[0];
+        if (!file) return;
+        if (file.size > 2*1024*1024) { alert('文件大小不能超过2MB'); return; }
+        if (!file.type.startsWith('image/')) { alert('请选择图片文件'); return; }
+
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+            const resp = await fetch(API + '/users/' + encodeURIComponent(currentUser) + '/avatar', {
+                method: 'POST', body: formData
+            });
+            const data = await resp.json();
+            if (data.success) {
+                const avatarImg = document.getElementById('profileAvatarImg');
+                const avatarLetter = document.getElementById('profileAvatar');
+                avatarImg.src = data.avatar_url + '?t=' + Date.now();
+                avatarImg.style.display = 'block';
+                avatarLetter.style.display = 'none';
+                closeAvatarModal();
+                alert('头像上传成功');
+            } else {
+                alert(data.error || '上传失败');
+            }
+        } catch(e) { alert('上传失败'); }
+    };
+    input.click();
+}
+
+async function loadUserAvatar() {
+    try {
+        const resp = await fetch(API + '/users/' + encodeURIComponent(currentUser) + '/avatar');
+        if (resp.ok) {
+            const blob = await resp.blob();
+            if (blob.size > 0) {
+                const avatarImg = document.getElementById('profileAvatarImg');
+                const avatarLetter = document.getElementById('profileAvatar');
+                avatarImg.src = URL.createObjectURL(blob);
+                avatarImg.style.display = 'block';
+                avatarLetter.style.display = 'none';
+            }
+        }
+    } catch(e) {}
+}
+
+function closeReplay_orig() {
+    if (replayTimer) { clearInterval(replayTimer); replayTimer = null; }
+    document.getElementById('replayOverlay').classList.remove('show');
+}
+
+
+
+
 </script>
+
+<!-- 个人信息中心弹窗 -->
+<div class="profile-overlay" id="profileOverlay" onclick="if(event.target===this)closeProfile()">
+    <div class="profile-modal">
+        <button class="profile-close" onclick="closeProfile()">×</button>
+        <div class="profile-tabs">
+            <button class="profile-tab active" onclick="switchProfileTab('info',this)">资料</button>
+            <button class="profile-tab" onclick="switchProfileTab('games',this)">战绩</button>
+        </div>
+        <div class="profile-content">
+            <!-- 资料 tab -->
+            <div id="profileInfo">
+                <div class="profile-avatar-container" onclick="openAvatarModal()">
+                    <div class="profile-avatar" id="profileAvatar">-</div>
+                    <img class="profile-avatar-img" id="profileAvatarImg" src="">
+                    <div class="avatar-overlay">📷</div>
+                </div>
+                <div class="profile-nick" id="profileNick">-</div>
+                <div class="profile-stats3">
+                    <div class="profile-stat3"><div class="num" id="pTotal">0</div><div class="lbl">总场数</div></div>
+                    <div class="profile-stat3"><div class="num" id="pWins">0</div><div class="lbl">总胜场</div></div>
+                    <div class="profile-stat3"><div class="num" id="pRate">0%</div><div class="lbl">胜率</div></div>
+                    <div class="profile-stat3"><div class="num" id="pStreak">0</div><div class="lbl">最高连胜</div></div>
+                </div>
+            </div>
+            <!-- 战绩 tab -->
+            <div id="profileGames" style="display:none">
+                <div class="games-filter">
+                    <button class="active" onclick="filterGames('all',this)">全部</button>
+                    <button onclick="filterGames('classic',this)">经典</button>
+                    <button onclick="filterGames('team',this)">组队</button>
+                    <button onclick="filterGames('collection',this)">合集</button>
+                    <button onclick="filterGames('fav',this)">收藏</button>
+                </div>
+                <div class="games-list" id="gamesList"><div style="color:#475569;text-align:center;padding:20px;">加载中...</div></div>
+                <label class="games-privacy"><input type="checkbox" disabled> 不允许他人看我的战绩</label>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 回放弹窗 -->
+<div class="replay-overlay" id="replayOverlay" onclick="if(event.target===this)closeReplay()">
+    <div class="replay-box">
+        <div class="replay-title" id="replayTitle">对局回放</div>
+        <div class="replay-steps" id="replaySteps"></div>
+        <div class="replay-btns">
+            <button class="replay-btn-start" onclick="startReplay()">▶ 播放</button>
+            <button class="replay-btn-close" onclick="closeReplay()">关闭</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- 头像更换弹窗 -->
+<div class="avatar-modal-overlay" id="avatarModalOverlay" onclick="if(event.target===this)closeAvatarModal()">
+    <div class="avatar-modal">
+        <h3 style="margin-bottom:20px;color:#e2e8f0">更换头像</h3>
+        <div id="avatarPreview" style="width:120px;height:120px;border-radius:50%;margin:0 auto 20px;border:3px solid rgba(96,165,250,0.3);overflow:hidden;background:linear-gradient(135deg,#2563eb,#3b82f6)"></div>
+        <p style="color:#94a3b8;font-size:13px;margin-bottom:20px">支持 JPG、PNG、GIF，最大 2MB</p>
+        <div style="display:flex;gap:10px;justify-content:center">
+            <button onclick="doUploadAvatar()" style="padding:10px 20px;border-radius:8px;border:none;background:#2563eb;color:#fff;cursor:pointer">📷 选择图片</button>
+            <button onclick="closeAvatarModal()" style="padding:10px 20px;border-radius:8px;border:none;background:rgba(255,255,255,0.1);color:#94a3b8;cursor:pointer">关闭</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
