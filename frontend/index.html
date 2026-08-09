@@ -3297,19 +3297,22 @@ function updateUserInfoDisplay() {
     const urlName = params.get('name');
     // 从大厅点"开始游戏"跳转回来：恢复登录状态，不弹登录框
     if (urlName) {
+      const urlToken = params.get('token') || '';
       const saved = localStorage.getItem('doudizhu_user');
       if (saved) {
         try {
           const u = JSON.parse(saved);
           if (u.name === urlName) {
-            currentUser = {name: u.name, token: u.token || null};
+            currentUser = {name: u.name, token: u.token || urlToken || null};
+            localStorage.setItem('doudizhu_user', JSON.stringify(currentUser));
             updateUserInfoDisplay();
             closeLoginModal();
             return;
           }
         } catch(e){}
       }
-      currentUser = {name: urlName, token: null};
+      currentUser = {name: urlName, token: urlToken || null};
+      if (urlToken) localStorage.setItem('doudizhu_user', JSON.stringify(currentUser));
       updateUserInfoDisplay();
       closeLoginModal();
       return;

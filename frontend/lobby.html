@@ -2,7 +2,10 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>欢乐斗地主 - 大厅</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -229,6 +232,40 @@ body {
     box-shadow:0 20px 60px rgba(0,0,0,0.5);
 }
 
+
+
+/* === 手机端适配 === */
+@media (max-width: 768px) {
+    .header { padding: 12px 16px; }
+    .header h1 { font-size: 18px; }
+    .main { padding: 16px 10px; }
+    .stats-card { padding: 20px 16px; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .stat-item .num { font-size: 24px; }
+    .actions { flex-direction: column; gap: 10px; }
+    .btn-play { padding: 14px; font-size: 16px; }
+    .leaderboard { padding: 20px 16px; }
+    .lb-table th, .lb-table td { padding: 8px 6px; font-size: 12px; }
+    .profile-modal { width: 95vw; height: 85vh; }
+    .profile-tabs { width: 70px; }
+    .profile-stats3 { gap: 20px; flex-wrap: wrap; }
+    .profile-stat3 .num { font-size: 22px; }
+    .games-filter button { padding: 4px 10px; font-size: 11px; }
+    .game-row { gap: 8px; padding: 8px; }
+    .game-row .game-mode { font-size: 12px; }
+    .game-row .game-meta { font-size: 10px; }
+    .game-row .game-score { font-size: 13px; }
+    .btn-replay { padding: 3px 8px; font-size: 10px; }
+}
+
+@media (max-width: 480px) {
+    .header h1 { font-size: 16px; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .stat-item .num { font-size: 20px; }
+    .stat-item .label { font-size: 11px; }
+    .lb-table { font-size: 11px; }
+}
+
 </style>
 <script src="sound.js"></script>
 </head>
@@ -373,8 +410,11 @@ async function loadLeaderboard() {
 }
 
 function startGame() {
-    // 跳转到游戏页面
-    window.location.href = '/?name=' + encodeURIComponent(currentUser);
+    // 跳转到游戏页面，带上 token
+    const saved = localStorage.getItem('doudizhu_user');
+    let token = '';
+    if (saved) { try { const u = JSON.parse(saved); token = u.token || ''; } catch(e){} }
+    window.location.href = '/?name=' + encodeURIComponent(currentUser) + '&token=' + encodeURIComponent(token);
 }
 
 function logout() {
