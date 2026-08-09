@@ -3234,7 +3234,7 @@ function handleLogin(e) {
     const rememberEl = document.getElementById('remember-login');
     const remember = !rememberEl || rememberEl.checked;
     if (remember) {
-      localStorage.setItem('doudizhu_user', JSON.stringify({name: data.name, password: password, token: data.token}));
+      localStorage.setItem('doudizhu_user', JSON.stringify({name: data.name, token: data.token}));
     } else {
       localStorage.removeItem('doudizhu_user');
     }
