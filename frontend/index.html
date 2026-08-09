@@ -594,7 +594,7 @@ body{display:flex;justify-content:center;align-items:center;}
 #settings-btn:hover{background:rgba(0,0,0,0.7);border-color:var(--gold);transform:rotate(90deg);}
 
 /* === SETTINGS MODAL === */
-#settings-modal{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(10px);z-index:1500!important;display:none;align-items:center;justify-content:center;}
+#settings-modal{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(10px);z-index:9999!important;display:none;align-items:center;justify-content:center;}
 #settings-modal.show{display:flex;}
 #settings-box{background:linear-gradient(145deg,#1a2a3a,#0e1a2a);border:2px solid rgba(255,255,255,0.1);border-radius:20px;padding:30px;width:90%;max-width:400px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5);animation:modalIn 0.3s ease-out;}
 @keyframes modalIn{from{opacity:0;transform:scale(0.9) translateY(20px);}to{opacity:1;transform:scale(1) translateY(0);}}
@@ -688,6 +688,52 @@ body.replay-mode .played-cards .card:first-child{
 body.replay-mode #actions,
 body.replay-mode #bid-actions{
   display:none!important;
+}
+
+/* === 手机端回放模式牌尺寸（仅回放+手机生效） === */
+@media (max-width: 767px) {
+  body.replay-mode .opp-cards .card {
+    width: 28px !important;
+    height: 40px !important;
+  }
+  body.replay-mode .opp-cards .card .corner .rank {
+    font-size: 12px !important;
+  }
+  body.replay-mode .opp-cards .card .corner .suit {
+    font-size: 10px !important;
+  }
+  body.replay-mode .opp-cards .card .center-suit {
+    font-size: 22px !important;
+  }
+  body.replay-mode .opp-cards .card .corner.tl {
+    top: 2px !important;
+    left: 3px !important;
+  }
+  body.replay-mode .opp-cards .card .corner.br {
+    bottom: 2px !important;
+    right: 3px !important;
+  }
+  body.replay-mode .played-cards .card {
+    width: 28px !important;
+    height: 39px !important;
+  }
+  body.replay-mode .played-cards .card .corner .rank {
+    font-size: 12px !important;
+  }
+  body.replay-mode .played-cards .card .corner .suit {
+    font-size: 10px !important;
+  }
+  body.replay-mode .played-cards .card .center-suit {
+    font-size: 22px !important;
+  }
+  body.replay-mode .played-cards .card .corner.tl {
+    top: 2px !important;
+    left: 3px !important;
+  }
+  body.replay-mode .played-cards .card .corner.br {
+    bottom: 2px !important;
+    right: 3px !important;
+  }
 }
 </style>
 </head>
