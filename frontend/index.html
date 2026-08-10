@@ -553,20 +553,21 @@ body{display:flex;justify-content:center;align-items:center;}
   #opp-left{left:var(--safe-x)!important;}
   #opp-right{right:var(--safe-x)!important;}
   .opponent{top:clamp(62px,17vh,88px)!important;}
-  #landlord-area{top:clamp(8px,2vh,18px)!important;}
+  #landlord-area{top:clamp(4px,1vh,10px)!important;transform:translateX(-50%) scale(0.9)!important;}
   #round-display{top:10px!important;}
   #score-display{top:10px!important;right:var(--safe-x)!important;}
   #player-area{bottom:clamp(10px,3vh,18px)!important;}
   #player-hand{height:auto!important;min-height:0!important;overflow:visible!important;}
   #player-hand-inner{height:auto!important;min-height:0!important;}
-  #actions,#bid-actions{bottom:32vh!important;}
-  #played-player{bottom:30%!important;}
+  #actions,#bid-actions{bottom:29vh!important;}
+  #played-player{bottom:36%!important;}
   .card-sm .corner .rank{font-size:1.05em!important;}
   .card-sm .center-suit{font-size:1.1em!important;}
   /* 2026-08-05 手机出牌区恢复：与手牌一致 -45% 重叠（露出55%），用户确认 */
   .played-cards{gap:0!important;}
   .played-cards .card,.played-cards .card-sm{margin-left:calc(var(--played-card-w,40px) * -0.45)!important;flex:0 0 var(--played-card-w,40px)!important;}
   .played-cards .card:first-child,.played-cards .card-sm:first-child{margin-left:0!important;}
+  #played-left,#played-right{top:28vh!important;}
 }
 
 /* === 出牌区强制缩小（防止顺子/连对挡住对手头像） === */
@@ -1346,7 +1347,7 @@ function renderReplayOpponent(containerId,cards,label){
   // 与玩家手牌同尺寸基础上整体缩小20%（等比例：花纹/数字字号随牌高自动缩）
   var styles=getComputedStyle(document.documentElement);
   function r2(n){return Math.round(n*100)/100;}
-  var replayScale=(window.innerWidth<=767)?0.52:0.8;
+  var replayScale=(window.innerWidth<1100)?0.72:0.8;
   var cw=r2((parseFloat(styles.getPropertyValue('--legacy-card-w'))||window.innerHeight*.065)*replayScale);
   var ch=r2((parseFloat(styles.getPropertyValue('--legacy-card-h'))||cw*1.4)*replayScale);
   // 两行排布：第一行固定10张（17张=10+7，20张=10+10），重叠比例同玩家手牌（45%）
@@ -1382,11 +1383,11 @@ function renderReplayOpponent(containerId,cards,label){
     var cFont=ch*0.55;
     var corners=el.querySelectorAll('.corner');
     corners.forEach(function(corner){
-      corner.style.fontSize=sFont+'px';
-      var rn=corner.querySelector('.rank');if(rn)rn.style.fontSize=rFont+'px';
-      var su=corner.querySelector('.suit');if(su)su.style.fontSize=sFont+'px';
+      corner.style.setProperty('font-size',sFont+'px','important');
+      var rn=corner.querySelector('.rank');if(rn)rn.style.setProperty('font-size',rFont+'px','important');
+      var su=corner.querySelector('.suit');if(su)su.style.setProperty('font-size',sFont+'px','important');
     });
-    var cs=el.querySelector('.center-suit');if(cs)cs.style.fontSize=cFont+'px';
+    var cs=el.querySelector('.center-suit');if(cs)cs.style.setProperty('font-size',cFont+'px','important');
     cardsDiv.appendChild(el);
   });
   // 容器高度按实际行数撑开（1行=rowH，2行=2*rowH）
@@ -1421,7 +1422,7 @@ function renderReplayPlayedCards(who,cards){
   container.innerHTML='';
   container.classList.add('played-cards');
   var n=cards.length;
-  var baseW=(window.innerWidth<=767)?29:55;
+  var baseW=(window.innerWidth<1100)?34:55;
   // 玩家自己的出牌区较宽，1~20张保持45px
   var autoShrink=(who!==0&&n>=16);
   var cardW=baseW;
@@ -1444,11 +1445,11 @@ function renderReplayPlayedCards(who,cards){
     var rF=cardH*0.30,sF=cardH*0.26,cF=cardH*0.55;
     var corners=el.querySelectorAll('.corner');
     corners.forEach(function(corner){
-      corner.style.fontSize=sF+'px';
-      var rn=corner.querySelector('.rank');if(rn)rn.style.fontSize=rF+'px';
-      var su=corner.querySelector('.suit');if(su)su.style.fontSize=sF+'px';
+      corner.style.setProperty('font-size',sF+'px','important');
+      var rn=corner.querySelector('.rank');if(rn)rn.style.setProperty('font-size',rF+'px','important');
+      var su=corner.querySelector('.suit');if(su)su.style.setProperty('font-size',sF+'px','important');
     });
-    var cs=el.querySelector('.center-suit');if(cs)cs.style.fontSize=cF+'px';
+    var cs=el.querySelector('.center-suit');if(cs)cs.style.setProperty('font-size',cF+'px','important');
     container.appendChild(el);
   });
 }
