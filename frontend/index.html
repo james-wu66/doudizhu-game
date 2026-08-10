@@ -23,7 +23,7 @@
   --text-light: #e8e0d0;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-html,body{width:100%;height:100%;overflow:hidden;font-family:'Microsoft YaHei','PingFang SC','Helvetica Neue',sans-serif;background:#060e1a;touch-action:manipulation;}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Microsoft YaHei','PingFang SC','Helvetica Neue',sans-serif;background:#060e1a;touch-action:manipulation;overscroll-behavior:none;}
 body{display:flex;justify-content:center;align-items:center;}
 
 #app{position:relative;width:100vw;height:100vh;overflow:hidden;user-select:none;}
@@ -572,7 +572,7 @@ body{display:flex;justify-content:center;align-items:center;}
   .played-cards .card,.played-cards .card-sm{margin-left:calc(var(--played-card-w,40px) * -0.45)!important;flex:0 0 var(--played-card-w,40px)!important;}
   .played-cards .card:first-child,.played-cards .card-sm:first-child{margin-left:0!important;}
   #played-left,#played-right{top:28vh!important;}
-  #msg-toast{top:40vh!important;}
+  #msg-toast{top:auto!important;bottom:calc(14vh + 3vh)!important;transform:translateX(-50%)!important;}
   #landlord-area .card{font-size:14px!important;}
 }
 
@@ -3193,7 +3193,10 @@ document.addEventListener('gesturestart',e=>e.preventDefault());
 document.addEventListener('dblclick',e=>e.preventDefault());
 
 function resizeResponsiveLayout(){
-  const w=window.innerWidth,h=window.innerHeight;if(!w||!h)return;
+  // 强制横屏：竖屏时交换宽高，确保布局始终按横屏计算
+  var rw=window.innerWidth,rh=window.innerHeight;
+  var w=Math.max(rw,rh),h=Math.min(rw,rh);
+  if(w<100)return;
   const root=document.documentElement,hand=(G.hands&&G.hands[PLAYER])||[],n=Math.max(1,hand.length);
   // 2026-08-04：手机横屏（宽<1100）按宽度算且明显放大，桌面按宽度算
   let cardW;
@@ -3216,6 +3219,15 @@ if(window.visualViewport)window.visualViewport.addEventListener('resize',resizeR
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&typeof saveGameState==='function')saveGameState();});
 window.addEventListener('pagehide',()=>{if(typeof saveGameState==='function')saveGameState();});
 
+// ==================== 防止背景拖动 ====================
+document.addEventListener('touchmove', function(e) {
+  // 手牌区域放行（允许拖拽选牌）
+  if (e.target.closest && e.target.closest('#player-hand')) return;
+  // 弹窗内的滚动放行
+  if (e.target.closest && (e.target.closest('.profile-content') || e.target.closest('.settings-section') || e.target.closest('.replay-box'))) return;
+  e.preventDefault();
+}, {passive: false});
+
 // ==================== 强制横屏 ====================
 function lockLandscape(){
   if(screen.orientation&&screen.orientation.lock){
@@ -3223,6 +3235,8 @@ function lockLandscape(){
   }
 }
 document.addEventListener('click',lockLandscape,{once:true});
+// 每次屏幕方向变化时也尝试锁定
+if(screen.orientation)screen.orientation.addEventListener('change',function(){lockLandscape();});
 
 // ==================== INIT ====================
 const API_BASE = window.location.origin;
