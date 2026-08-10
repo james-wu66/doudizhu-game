@@ -6,6 +6,7 @@ WORKDIR /app
 # 安装依赖（用清华镜像加速）
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+RUN apt-get update && apt-get install -y nodejs npm --no-install-recommends && rm -rf /var/lib/apt/lists/*
 RUN npm install -g @cloudbase/cli
 
 # 复制全部文件
