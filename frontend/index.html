@@ -293,14 +293,18 @@ body{display:flex;justify-content:center;align-items:center;}
   to{opacity:1;transform:scale(1) translateY(0);}
 }
 
-@media (orientation:portrait) and (max-width:768px){
-  #app::after{
-    content:'请旋转手机至横屏模式';
-    position:absolute;inset:0;z-index:5;
-    display:flex;align-items:center;justify-content:center;
-    background:#060e1a;color:#fff;font-size:20px;
+@media (orientation:portrait) and (max-width:1100px){
+  body{
+    transform:rotate(90deg);
+    transform-origin:center center;
+    width:100vh;
+    height:100vw;
+    position:fixed;
+    top:0;
+    left:0;
+    overflow:hidden;
   }
-  #game-table{display:none;}
+  
 }
 
 /* === RESPONSIVE DESKTOP + MOBILE LAYOUT OVERRIDES === */
@@ -640,6 +644,10 @@ body{display:flex;justify-content:center;align-items:center;}
 .login-tab.active{background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;box-shadow:0 2px 10px rgba(59,130,246,0.3);}
 .login-input{width:100%;padding:14px 18px;border:2px solid rgba(255,255,255,0.1);border-radius:12px;background:rgba(0,0,0,0.3);color:#fff;font-size:16px;margin-bottom:12px;outline:none;transition:border-color 0.3s;}
 .login-input:focus{border-color:var(--gold);}
+.password-wrapper{position:relative;margin-bottom:12px;}
+.password-wrapper .login-input{margin-bottom:0;padding-right:50px;}
+.toggle-pwd{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;padding:4px;opacity:0.6;transition:opacity 0.2s;}
+.toggle-pwd:hover{opacity:1;}
 .login-input::placeholder{color:#64748b;}
 .login-btn{width:100%;padding:14px;border:none;border-radius:12px;font-size:17px;font-weight:700;cursor:pointer;transition:all 0.2s;margin-bottom:8px;}
 .login-btn-primary{background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;box-shadow:0 4px 20px rgba(245,158,11,0.3);}
@@ -941,6 +949,7 @@ body.replay-mode #bid-actions{
     <button class="settings-btn settings-btn-secondary" onclick="closeSettings()">关闭设置</button>
     <button class="settings-btn settings-btn-secondary" onclick="goToLobby()" style="margin-top:8px;">🏠 返回大厅</button>
     <button class="settings-btn settings-btn-danger" id="btn-logout" onclick="logoutUser()" style="display:none;">退出登录</button>
+    <button class="settings-btn settings-btn-danger" id="btn-delete-account" onclick="deleteAccount()" style="display:none;margin-top:4px;font-size:13px;opacity:0.8;">🗑️ 注销账号</button>
   </div>
 </div>
 
@@ -954,7 +963,14 @@ body.replay-mode #bid-actions{
     </div>
     <form id="login-form" onsubmit="handleLogin(event)">
       <input type="text" class="login-input" id="input-name" placeholder="请输入昵称" maxlength="12" autocomplete="username">
-      <input type="password" class="login-input" id="input-password" placeholder="请输入密码（至少4位）" maxlength="20" autocomplete="current-password">
+      <div class="password-wrapper">
+        <input type="password" class="login-input" id="input-password" placeholder="请输入密码（至少4位）" maxlength="20" autocomplete="current-password">
+        <button type="button" class="toggle-pwd" onclick="togglePwd('input-password',this)">👁️</button>
+      </div>
+      <div class="password-wrapper" id="confirm-password-group" style="display:none">
+        <input type="password" class="login-input" id="input-confirm-password" placeholder="请确认密码" maxlength="20" autocomplete="new-password">
+        <button type="button" class="toggle-pwd" onclick="togglePwd('input-confirm-password',this)">👁️</button>
+      </div>
       <label class="login-remember">
         <input type="checkbox" id="remember-login" checked>
         <span>记住密码（下次打开自动填好账号，点登录即可）</span>
@@ -3200,6 +3216,14 @@ if(window.visualViewport)window.visualViewport.addEventListener('resize',resizeR
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&typeof saveGameState==='function')saveGameState();});
 window.addEventListener('pagehide',()=>{if(typeof saveGameState==='function')saveGameState();});
 
+// ==================== 强制横屏 ====================
+function lockLandscape(){
+  if(screen.orientation&&screen.orientation.lock){
+    screen.orientation.lock('landscape').catch(function(){});
+  }
+}
+document.addEventListener('click',lockLandscape,{once:true});
+
 // ==================== INIT ====================
 const API_BASE = window.location.origin;
 
@@ -3235,6 +3259,9 @@ function openSettings() {
   if(sfxVol!==null){var el=document.getElementById('sfx-volume');if(el)el.value=sfxVol;var el2=document.getElementById('sfx-volume-val');if(el2)el2.textContent=sfxVol+'%';}
   // 同步 toggle 状态
   updateUserInfoDisplay();
+  // 注销按钮显隐
+  var delBtn = document.getElementById('btn-delete-account');
+  if (delBtn) delBtn.style.display = (currentUser && currentUser.name && currentUser.name !== '游客') ? 'block' : 'none';
 }
 
 function closeSettings() {
@@ -3251,6 +3278,18 @@ document.getElementById('settings-modal').addEventListener('click', function(e) 
 // ==================== LOGIN SYSTEM ====================
 // currentUser / currentTab 已提前到 <script> 开头声明，供 updateStartModal/saveGameState 在 INIT 阶段访问
 
+function togglePwd(inputId, btn) {
+  var input = document.getElementById(inputId);
+  if (!input) return;
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = '🔒';
+  } else {
+    input.type = 'password';
+    btn.textContent = '👁️';
+  }
+}
+
 function switchTab(tab) {
   currentTab = tab;
   document.getElementById('tab-login').classList.toggle('active', tab === 'login');
@@ -3258,6 +3297,10 @@ function switchTab(tab) {
   document.getElementById('login-submit-btn').textContent = tab === 'login' ? '登录' : '注册';
   document.getElementById('login-error').textContent = '';
   document.getElementById('input-password').value = '';
+  var confirmGroup = document.getElementById('confirm-password-group');
+  if (confirmGroup) confirmGroup.style.display = tab === 'register' ? 'block' : 'none';
+  var confirmInput = document.getElementById('input-confirm-password');
+  if (confirmInput) confirmInput.value = '';
 }
 
 function handleLogin(e) {
@@ -3268,6 +3311,11 @@ function handleLogin(e) {
   
   if (!name) { errorEl.textContent = '请输入昵称'; return; }
   if (password.length < 4) { errorEl.textContent = '密码至少4位'; return; }
+  if (currentTab === 'register') {
+    var confirmPwd = document.getElementById('input-confirm-password');
+    if (confirmPwd && !confirmPwd.value) { errorEl.textContent = '请确认密码'; return; }
+    if (confirmPwd && confirmPwd.value !== password) { errorEl.textContent = '两次密码不一致'; return; }
+  }
   
   const endpoint = currentTab === 'login' ? '/api/login' : '/api/register';
   const btn = document.getElementById('login-submit-btn');
@@ -3331,6 +3379,34 @@ function logoutUser() {
   closeSettings();
   // 退出后重新弹出登录弹窗（可换号登录）
   document.getElementById('login-modal').classList.remove('hidden');
+}
+
+function deleteAccount() {
+  if (!currentUser || !currentUser.name) { alert('请先登录'); return; }
+  if (currentUser.name === '游客') { alert('游客无法注销'); return; }
+  if (!confirm('⚠️ 注销账号将永久删除你的所有数据（战绩、存档等），且无法恢复！\n\n确定要注销吗？')) return;
+  if (!confirm('最后一次确认：真的要注销账号「' + currentUser.name + '」吗？')) return;
+  var pwd = prompt('请输入密码以确认注销');
+  if (!pwd) return;
+  fetch(API_BASE + '/api/delete-account', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({name: currentUser.name, password: pwd})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if (data.success) {
+      localStorage.removeItem('doudizhu_user');
+      sessionStorage.removeItem('doudizhu_user');
+      currentUser = null;
+      closeSettings();
+      document.getElementById('login-modal').classList.remove('hidden');
+      alert('账号已注销');
+    } else {
+      alert(data.error || '注销失败');
+    }
+  })
+  .catch(function(){ alert('注销失败，请重试'); });
 }
 
 function updateUserInfoDisplay() {

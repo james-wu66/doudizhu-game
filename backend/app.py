@@ -61,6 +61,34 @@ def cloud_upload():
     except Exception as e:
         print(f"[云存储] 上传异常: {e}")
 
+
+@app.route("/api/delete-account", methods=["POST"])
+def delete_account():
+    data = request.json
+    name = data.get("name", "").strip()
+    password = data.get("password", "")
+    if not name or not password:
+        return jsonify({"error": "请输入用户名和密码"}), 400
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT id, password_hash FROM users WHERE name = ?", (name,))
+    user = c.fetchone()
+    if not user:
+        conn.close()
+        return jsonify({"error": "用户不存在"}), 404
+    if user["password_hash"] != hash_password(password):
+        conn.close()
+        return jsonify({"error": "密码错误"}), 400
+    c.execute("DELETE FROM game_records WHERE user_name = ?", (name,))
+    c.execute("DELETE FROM ai_learning WHERE game_id IN (SELECT id FROM game_records WHERE user_name = ?)", (name,))
+    c.execute("DELETE FROM users WHERE id = ?", (user["id"],))
+    conn.commit()
+    conn.close()
+    try:
+        cloud_upload()
+    except: pass
+    return jsonify({"success": True, "message": "账号已注销"})
+
 def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = get_db()
