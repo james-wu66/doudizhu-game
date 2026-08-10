@@ -431,7 +431,7 @@ body{display:flex;justify-content:center;align-items:center;}
 #game-table{position:relative;width:100vw;height:100vh;overflow:hidden;}
 #round-display{position:fixed!important;left:15vw!important;top:3vh!important;transform:none!important;font-size:2.2vh!important;z-index:2000!important;}
 #landlord-area{position:fixed!important;left:50%!important;top:2vh!important;transform:translateX(-50%)!important;display:flex!important;gap:4px!important;width:max-content!important;z-index:2000!important;}
-#landlord-area .card{flex:0 0 41px!important;width:41px!important;height:54px!important;margin:0!important;}
+#landlord-area .card{flex:0 0 37px!important;width:37px!important;height:49px!important;margin:0!important;font-size:14.4px!important;}
 #score-display{position:fixed!important;right:2vw!important;top:3vh!important;max-width:30vw!important;overflow:visible!important;white-space:nowrap!important;font-size:2.2vh!important;z-index:2000!important;}
 .opponent{position:fixed!important;top:17vh!important;z-index:300!important;}
 #opp-left{left:2vw!important;right:auto!important;}
@@ -473,14 +473,14 @@ body{display:flex;justify-content:center;align-items:center;}
 :root{--legacy-card-w:7vh;--legacy-card-h:9.8vh;--legacy-card-font:2.744vh;--legacy-suit-font:2.352vh;}
 #round-display{position:fixed!important;left:7vw!important;top:2vh!important;transform:none!important;font-size:2.5vh!important;}
 #score-display{position:fixed!important;right:2vw!important;top:2vh!important;max-width:32vw!important;font-size:2.5vh!important;}
-#landlord-area{position:fixed!important;left:50%!important;top:3vh!important;transform:translateX(-50%)!important;gap:4px!important;}
+#landlord-area{position:fixed!important;left:50%!important;top:1vh!important;transform:translateX(-50%)!important;gap:4px!important;}
 .opponent{position:fixed!important;top:17vh!important;z-index:300!important;}
 #opp-left{left:2vw!important;right:auto!important;}#opp-right{right:2vw!important;left:auto!important;}
 .opp-avatar{width:8vh!important;height:8vh!important;font-size:2.4vh!important;}
-#played-left,#played-right{top:36vh!important;width:32vw!important;height:10vh!important;max-width:32vw!important;}
+#played-left,#played-right{top:32vh!important;width:32vw!important;height:10vh!important;max-width:32vw!important;}
 #played-left{left:24vw!important;right:auto!important;transform:translateX(-50%)!important;}
 #played-right{right:24vw!important;left:auto!important;transform:translateX(50%)!important;}
-#played-player{position:fixed!important;left:50%!important;bottom:30vh!important;top:auto!important;width:42vw!important;height:10vh!important;transform:translateX(-50%)!important;}
+#played-player{position:fixed!important;left:50%!important;bottom:34vh!important;top:auto!important;width:42vw!important;height:10vh!important;transform:translateX(-50%)!important;}
 .played-cards{gap:8px!important;z-index:500!important;overflow:visible!important;}
 #msg-toast{position:fixed!important;left:50%!important;top:43vh!important;transform:translateX(-50%)!important;font-size:2.2vh!important;}
 #actions,#bid-actions{position:fixed!important;left:50%!important;bottom:calc(14vh + 3vh + 2vh)!important;transform:translateX(-50%)!important;gap:3vw!important;z-index:1000!important;}
@@ -553,7 +553,7 @@ body{display:flex;justify-content:center;align-items:center;}
   #opp-left{left:var(--safe-x)!important;}
   #opp-right{right:var(--safe-x)!important;}
   .opponent{top:clamp(62px,17vh,88px)!important;}
-  #landlord-area{top:clamp(28px,8vh,46px)!important;}
+  #landlord-area{top:clamp(8px,2vh,18px)!important;}
   #round-display{top:10px!important;}
   #score-display{top:10px!important;right:var(--safe-x)!important;}
   #player-area{bottom:clamp(10px,3vh,18px)!important;}
@@ -697,13 +697,13 @@ body.replay-mode #bid-actions{
     height: 40px !important;
   }
   body.replay-mode .opp-cards .card .corner .rank {
-    font-size: 9.6px !important;
+    font-size: 7.7px !important;
   }
   body.replay-mode .opp-cards .card .corner .suit {
-    font-size: 8px !important;
+    font-size: 6.4px !important;
   }
   body.replay-mode .opp-cards .card .center-suit {
-    font-size: 17.6px !important;
+    font-size: 14px !important;
   }
   body.replay-mode .opp-cards .card .corner.tl {
     top: 2px !important;
@@ -736,9 +736,9 @@ body.replay-mode #bid-actions{
   }
   /* 地主底牌手机端缩小10% */
   body.replay-mode #landlord-area .card {
-    width: 36.9px !important;
-    height: 48.6px !important;
-    font-size: 14.4px !important;
+    width: 30px !important;
+    height: 40px !important;
+    font-size: 11.5px !important;
   }
 }
 </style>
@@ -1346,7 +1346,7 @@ function renderReplayOpponent(containerId,cards,label){
   // 与玩家手牌同尺寸基础上整体缩小20%（等比例：花纹/数字字号随牌高自动缩）
   var styles=getComputedStyle(document.documentElement);
   function r2(n){return Math.round(n*100)/100;}
-  var replayScale=(window.innerWidth<=767)?0.64:0.8;
+  var replayScale=(window.innerWidth<=767)?0.52:0.8;
   var cw=r2((parseFloat(styles.getPropertyValue('--legacy-card-w'))||window.innerHeight*.065)*replayScale);
   var ch=r2((parseFloat(styles.getPropertyValue('--legacy-card-h'))||cw*1.4)*replayScale);
   // 两行排布：第一行固定10张（17张=10+7，20张=10+10），重叠比例同玩家手牌（45%）
@@ -1421,7 +1421,7 @@ function renderReplayPlayedCards(who,cards){
   container.innerHTML='';
   container.classList.add('played-cards');
   var n=cards.length;
-  var baseW=(window.innerWidth<=767)?36:45;
+  var baseW=(window.innerWidth<=767)?29:55;
   // 玩家自己的出牌区较宽，1~20张保持45px
   var autoShrink=(who!==0&&n>=16);
   var cardW=baseW;
