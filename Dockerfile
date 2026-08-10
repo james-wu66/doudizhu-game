@@ -6,6 +6,7 @@ WORKDIR /app
 # 安装依赖（用清华镜像加速）
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+RUN npm install -g @cloudbase/cli
 
 # 复制全部文件
 COPY backend/ backend/

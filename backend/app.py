@@ -26,6 +26,41 @@ def get_db():
     return conn
 
 
+
+# === 云存储备份/恢复 ===
+import subprocess as _subprocess
+CLOUD_PATH = "doudizhu-backup/doudizhu.db"
+
+def cloud_download():
+    """从云存储下载数据库（启动时调用）"""
+    try:
+        result = _subprocess.run(
+            ["tcb", "storage", "download", CLOUD_PATH, DB_PATH,
+             "--env-id", os.environ.get("TCB_ENV_ID", "")],
+            capture_output=True, text=True, timeout=30
+        )
+        if result.returncode == 0:
+            print("[云存储] 数据库下载成功")
+        else:
+            print(f"[云存储] 下载失败（首次运行正常）: {result.stderr[:100]}")
+    except Exception as e:
+        print(f"[云存储] 下载异常: {e}")
+
+def cloud_upload():
+    """上传数据库到云存储（每次保存战绩后调用）"""
+    try:
+        result = _subprocess.run(
+            ["tcb", "storage", "upload", DB_PATH, CLOUD_PATH,
+             "--env-id", os.environ.get("TCB_ENV_ID", "")],
+            capture_output=True, text=True, timeout=30
+        )
+        if result.returncode == 0:
+            print("[云存储] 数据库上传成功")
+        else:
+            print(f"[云存储] 上传失败: {result.stderr[:100]}")
+    except Exception as e:
+        print(f"[云存储] 上传异常: {e}")
+
 def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = get_db()
@@ -249,6 +284,11 @@ def record_game():
     conn.commit()
     conn.close()
     
+    # 每次保存战绩后自动上传到云存储
+    try:
+        cloud_upload()
+    except: pass
+
     return jsonify({"success": True, "game_id": game_id})
 
 
@@ -535,6 +575,7 @@ def get_avatar(name):
 
 if __name__ == "__main__":
     init_db()
+    cloud_download()
     print("=" * 40)
     print("  斗地主后端启动成功！")
     print("  http://localhost:5000")
