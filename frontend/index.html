@@ -568,6 +568,8 @@ body{display:flex;justify-content:center;align-items:center;}
   .played-cards .card,.played-cards .card-sm{margin-left:calc(var(--played-card-w,40px) * -0.45)!important;flex:0 0 var(--played-card-w,40px)!important;}
   .played-cards .card:first-child,.played-cards .card-sm:first-child{margin-left:0!important;}
   #played-left,#played-right{top:28vh!important;}
+  #msg-toast{top:40vh!important;}
+  #landlord-area .card{font-size:14px!important;}
 }
 
 /* === 出牌区强制缩小（防止顺子/连对挡住对手头像） === */
@@ -575,7 +577,7 @@ body{display:flex;justify-content:center;align-items:center;}
 
 /* === 电脑版出牌区牌型优化（2026-08-05）：仅宽屏>=1100px生效，与手牌一致的瘦长比例+自然重叠+字放大 === */
 @media (min-width:1100px){
-  #landlord-area{transform:translateX(-50%) scale(1.1)!important;}
+  #landlord-area{transform:translateX(-50%) scale(1.2)!important;}
   .played-cards{gap:0!important;}
   .played-cards .card,.played-cards .card-sm{
     margin-left:calc(var(--played-card-w,72px) * -0.45)!important;
@@ -1381,8 +1383,8 @@ function renderReplayOpponent(containerId,cards,label){
     el.style.setProperty('margin','0','important');
     // 花纹与牌等比缩放：点数=牌高*30%，花色=牌高*26%，中央=牌高*55%
     var rFont=ch*0.30;
-    var sFont=ch*0.234;
-    var cFont=ch*0.495;
+    var sFont=ch*0.186;
+    var cFont=ch*0.314;
     var corners=el.querySelectorAll('.corner');
     corners.forEach(function(corner){
       corner.style.setProperty('font-size',sFont+'px','important');
@@ -1444,7 +1446,7 @@ function renderReplayPlayedCards(who,cards){
     el.style.setProperty('flex-shrink','0','important');
     el.style.setProperty('margin',(i===0?'0':'0 0 0 '+(-cardW*0.45)+'px'),'important');
     // 待办1：角标和中央花色按牌面比例设置字号
-    var rF=cardH*0.30,sF=cardH*0.26,cF=cardH*0.55;
+    var rF=cardH*0.30,sF=cardH*0.186,cF=cardH*0.314;
     var corners=el.querySelectorAll('.corner');
     corners.forEach(function(corner){
       corner.style.setProperty('font-size',sF+'px','important');
