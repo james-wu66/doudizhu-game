@@ -14,16 +14,67 @@ from werkzeug.utils import secure_filename
 import uuid
 from flask_cors import CORS
 
+try:
+    import pymysql
+    from pymysql.cursors import DictCursor
+except ImportError:
+    pymysql = None
+    DictCursor = None
+
 app = Flask(__name__)
 CORS(app)
 
+# === 数据库配置 ===
+USE_MYSQL = bool(os.environ.get("DB_HOST"))
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "database", "doudizhu.db")
 
+class _SQLiteCursor:
+    """SQLite 游标包装器：自动把 %s 占位符转为 ?"""
+    def __init__(self, cursor):
+        self._c = cursor
+    def execute(self, query, params=None):
+        if params and '%s' in query:
+            query = query.replace('%s', '?')
+        return self._c.execute(query, params) if params else self._c.execute(query)
+    def executemany(self, query, params_list):
+        if '%s' in query:
+            query = query.replace('%s', '?')
+        return self._c.executemany(query, params_list)
+    def fetchone(self): return self._c.fetchone()
+    def fetchall(self): return self._c.fetchall()
+    @property
+    def lastrowid(self): return self._c.lastrowid
+    def __getattr__(self, name): return getattr(self._c, name)
+
+class _SQLiteConn:
+    """SQLite 连接包装器"""
+    def __init__(self, conn):
+        self._conn = conn
+    def cursor(self): return _SQLiteCursor(self._conn.cursor())
+    def commit(self): return self._conn.commit()
+    def close(self): return self._conn.close()
+    def __getattr__(self, name): return getattr(self._conn, name)
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    """根据环境变量自动选择 MySQL 或 SQLite"""
+    if USE_MYSQL:
+        return pymysql.connect(
+            host=os.environ["DB_HOST"],
+            port=int(os.environ.get("DB_PORT", 3306)),
+            user=os.environ["DB_USER"],
+            password=os.environ["DB_PASSWORD"],
+            database=os.environ["DB_NAME"],
+            charset="utf8mb4",
+            cursorclass=DictCursor,
+            connect_timeout=10,
+            read_timeout=30,
+            write_timeout=30,
+            autocommit=True
+        )
+    else:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        return _SQLiteConn(conn)
 
 
 
@@ -33,6 +84,9 @@ CLOUD_PATH = "doudizhu-backup/doudizhu.db"
 
 def cloud_download():
     """从云存储下载数据库（启动时调用）"""
+    if USE_MYSQL:
+        print("[云存储] MySQL 模式，跳过云存储下载")
+        return
     try:
         result = _subprocess.run(
             ["tcb", "storage", "download", CLOUD_PATH, DB_PATH,
@@ -48,6 +102,8 @@ def cloud_download():
 
 def cloud_upload():
     """上传数据库到云存储（每次保存战绩后调用）"""
+    if USE_MYSQL:
+        return  # MySQL 数据已持久，无需上传
     try:
         result = _subprocess.run(
             ["tcb", "storage", "upload", DB_PATH, CLOUD_PATH,
@@ -71,7 +127,7 @@ def delete_account():
         return jsonify({"error": "请输入用户名和密码"}), 400
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT id, password_hash FROM users WHERE name = ?", (name,))
+    c.execute("SELECT id, password_hash FROM users WHERE name = %s", (name,))
     user = c.fetchone()
     if not user:
         conn.close()
@@ -79,9 +135,9 @@ def delete_account():
     if user["password_hash"] != hash_password(password):
         conn.close()
         return jsonify({"error": "密码错误"}), 400
-    c.execute("DELETE FROM game_records WHERE user_name = ?", (name,))
-    c.execute("DELETE FROM ai_learning WHERE game_id IN (SELECT id FROM game_records WHERE user_name = ?)", (name,))
-    c.execute("DELETE FROM users WHERE id = ?", (user["id"],))
+    c.execute("DELETE FROM game_records WHERE user_name = %s", (name,))
+    c.execute("DELETE FROM ai_learning WHERE game_id IN (SELECT id FROM game_records WHERE user_name = %s)", (name,))
+    c.execute("DELETE FROM users WHERE id = %s", (user["id"],))
     conn.commit()
     conn.close()
     try:
@@ -90,66 +146,114 @@ def delete_account():
     return jsonify({"success": True, "message": "账号已注销"})
 
 def init_db():
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    conn = get_db()
-    c = conn.cursor()
-    
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            token TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS game_records (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_name TEXT NOT NULL,
-            result TEXT NOT NULL,
-            role TEXT,
-            rounds INTEGER,
-            duration_seconds INTEGER,
-            ai_decisions TEXT,
-            score_change INTEGER DEFAULT 0,
-            bid_score INTEGER DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS ai_learning (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            game_id INTEGER,
-            step_number INTEGER,
-            hand_state TEXT,
-            action_taken TEXT,
-            action_type TEXT,
-            result TEXT,
-            score_change REAL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    
-    # 迁移：给老数据库补字段（已存在则忽略）
-    try:
-        c.execute("ALTER TABLE game_records ADD COLUMN score_change INTEGER DEFAULT 0")
-    except: pass
-    try:
-        c.execute("ALTER TABLE game_records ADD COLUMN bid_score INTEGER DEFAULT 0")
-    except: pass
-    try:
-        c.execute("ALTER TABLE users ADD COLUMN avatar_url TEXT")
-    except: pass
-    # 隐私：是否允许他人查看自己的战绩（1=允许，0=不允许），老用户默认允许
-    try:
-        c.execute("ALTER TABLE users ADD COLUMN allow_view_stats INTEGER DEFAULT 1")
-    except: pass
+    if USE_MYSQL:
+        conn = get_db()
+        c = conn.cursor()
+        
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                name VARCHAR(255) UNIQUE NOT NULL,
+                password_hash VARCHAR(255) NOT NULL,
+                token VARCHAR(255),
+                avatar_url VARCHAR(255),
+                allow_view_stats INT DEFAULT 1,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        """)
+        
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS game_records (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                user_name VARCHAR(255) NOT NULL,
+                result VARCHAR(50) NOT NULL,
+                role VARCHAR(50),
+                rounds INT,
+                duration_seconds INT,
+                ai_decisions LONGTEXT,
+                score_change INT DEFAULT 0,
+                bid_score INT DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        """)
+        
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS ai_learning (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                game_id INT,
+                step_number INT,
+                hand_state LONGTEXT,
+                action_taken LONGTEXT,
+                action_type VARCHAR(100),
+                result VARCHAR(50),
+                score_change FLOAT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        """)
+        
+        conn.close()
+        print("[数据库] MySQL 表初始化完成")
+    else:
+        # SQLite 模式
+        os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+        conn = get_db()
+        c = conn.cursor()
+        
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                token TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS game_records (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_name TEXT NOT NULL,
+                result TEXT NOT NULL,
+                role TEXT,
+                rounds INTEGER,
+                duration_seconds INTEGER,
+                ai_decisions TEXT,
+                score_change INTEGER DEFAULT 0,
+                bid_score INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS ai_learning (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                game_id INTEGER,
+                step_number INTEGER,
+                hand_state TEXT,
+                action_taken TEXT,
+                action_type TEXT,
+                result TEXT,
+                score_change REAL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # 迁移：给老数据库补字段（已存在则忽略）
+        try:
+            c.execute("ALTER TABLE game_records ADD COLUMN score_change INTEGER DEFAULT 0")
+        except: pass
+        try:
+            c.execute("ALTER TABLE game_records ADD COLUMN bid_score INTEGER DEFAULT 0")
+        except: pass
+        try:
+            c.execute("ALTER TABLE users ADD COLUMN avatar_url TEXT")
+        except: pass
+        try:
+            c.execute("ALTER TABLE users ADD COLUMN allow_view_stats INTEGER DEFAULT 1")
+        except: pass
 
-    conn.commit()
-    conn.close()
+        conn.commit()
+        conn.close()
 
 
 def hash_password(password):
@@ -200,13 +304,13 @@ def register():
     
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT id FROM users WHERE name = ?", (name,))
+    c.execute("SELECT id FROM users WHERE name = %s", (name,))
     if c.fetchone():
         conn.close()
         return jsonify({"error": "这个名字已经被用了"}), 400
     
     token = secrets.token_hex(16)
-    c.execute("INSERT INTO users (name, password_hash, token) VALUES (?, ?, ?)",
+    c.execute("INSERT INTO users (name, password_hash, token) VALUES (%s, %s, %s)",
               (name, hash_password(password), token))
     conn.commit()
     conn.close()
@@ -225,7 +329,7 @@ def login():
     
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT * FROM users WHERE name = ? AND password_hash = ?",
+    c.execute("SELECT * FROM users WHERE name = %s AND password_hash = %s",
               (name, hash_password(password)))
     user = c.fetchone()
     
@@ -234,7 +338,7 @@ def login():
         return jsonify({"error": "名字或密码不对"}), 400
     
     token = secrets.token_hex(16)
-    c.execute("UPDATE users SET token = ? WHERE id = ?", (token, user["id"]))
+    c.execute("UPDATE users SET token = %s WHERE id = %s", (token, user["id"]))
     conn.commit()
     conn.close()
     
@@ -248,7 +352,7 @@ def auto_login():
     
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT name FROM users WHERE token = ?", (token,))
+    c.execute("SELECT name FROM users WHERE token = %s", (token,))
     user = c.fetchone()
     conn.close()
     
@@ -268,7 +372,7 @@ def get_stats(name):
         SELECT COUNT(*) as total,
                SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) as wins,
                SUM(CASE WHEN result = 'lose' THEN 1 ELSE 0 END) as losses
-        FROM game_records WHERE user_name = ?
+        FROM game_records WHERE user_name = %s
     """, (name,))
     row = c.fetchone()
     
@@ -277,7 +381,7 @@ def get_stats(name):
     losses = row["losses"] or 0
     win_rate = round(wins / total * 100, 1) if total > 0 else 0
     
-    c.execute("SELECT result FROM game_records WHERE user_name = ? ORDER BY created_at DESC LIMIT 20", (name,))
+    c.execute("SELECT result FROM game_records WHERE user_name = %s ORDER BY created_at DESC LIMIT 20", (name,))
     recent = [r["result"] for r in c.fetchall()]
     streak = 0
     for r in recent:
@@ -306,7 +410,7 @@ def record_game():
     c = conn.cursor()
     c.execute("""
         INSERT INTO game_records (user_name, result, role, rounds, duration_seconds, ai_decisions, score_change, bid_score)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
     """, (name, result, role, rounds, duration, ai_decisions, score_change, bid_score))
     game_id = c.lastrowid
     conn.commit()
@@ -327,7 +431,7 @@ def leaderboard():
     c.execute("""
         SELECT u.name, COUNT(g.id) as total,
                SUM(CASE WHEN g.result = 'win' THEN 1 ELSE 0 END) as wins,
-               ROUND(CAST(SUM(CASE WHEN g.result = 'win' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(g.id) * 100, 1) as win_rate
+               ROUND(SUM(CASE WHEN g.result = 'win' THEN 1 ELSE 0 END) * 100.0 / COUNT(g.id), 1) as win_rate
         FROM users u
         LEFT JOIN game_records g ON u.name = g.user_name
         GROUP BY u.name
@@ -351,7 +455,7 @@ def record_ai_step():
     c = conn.cursor()
     c.execute("""
         INSERT INTO ai_learning (game_id, step_number, hand_state, action_taken, action_type, result, score_change)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
     """, (data.get("game_id"), data.get("step"),
           json.dumps(data.get("hand_state", []), ensure_ascii=False),
           json.dumps(data.get("action", {}), ensure_ascii=False),
@@ -399,7 +503,7 @@ def get_user_profile(name):
     c.execute("""
         SELECT COUNT(*) as total,
                SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) as wins
-        FROM game_records WHERE user_name = ?
+        FROM game_records WHERE user_name = %s
     """, (name,))
     row = c.fetchone()
     total = row["total"] or 0
@@ -407,7 +511,7 @@ def get_user_profile(name):
     win_rate = round(wins / total * 100, 1) if total > 0 else 0
 
     # 最高连胜：从历史记录中计算
-    c.execute("SELECT result FROM game_records WHERE user_name = ? ORDER BY created_at DESC", (name,))
+    c.execute("SELECT result FROM game_records WHERE user_name = %s ORDER BY created_at DESC", (name,))
     results = [r["result"] for r in c.fetchall()]
     max_streak = 0
     current_streak = 0
@@ -418,7 +522,7 @@ def get_user_profile(name):
         else:
             current_streak = 0
 
-    c.execute("SELECT allow_view_stats FROM users WHERE name = ?", (name,))
+    c.execute("SELECT allow_view_stats FROM users WHERE name = %s", (name,))
     urow = c.fetchone()
     allow_view = urow["allow_view_stats"] if urow and urow["allow_view_stats"] is not None else 1
 
@@ -434,7 +538,7 @@ def get_user_games(name):
     conn = get_db()
     c = conn.cursor()
 
-    c.execute("SELECT allow_view_stats FROM users WHERE name = ?", (name,))
+    c.execute("SELECT allow_view_stats FROM users WHERE name = %s", (name,))
     urow = c.fetchone()
     allow = urow["allow_view_stats"] if urow and urow["allow_view_stats"] is not None else 1
 
@@ -446,7 +550,7 @@ def get_user_games(name):
 
     c.execute("""
         SELECT id, result, role, score_change, bid_score, created_at
-        FROM game_records WHERE user_name = ?
+        FROM game_records WHERE user_name = %s
         ORDER BY created_at DESC LIMIT 50
     """, (name,))
     rows = c.fetchall()
@@ -478,7 +582,7 @@ def update_privacy(name):
     allow_view = 1 if data.get('allow_view', True) else 0
     conn = get_db()
     c = conn.cursor()
-    c.execute("UPDATE users SET allow_view_stats = ? WHERE name = ?", (allow_view, name))
+    c.execute("UPDATE users SET allow_view_stats = %s WHERE name = %s", (allow_view, name))
     conn.commit()
     conn.close()
     return jsonify({"success": True})
@@ -491,7 +595,7 @@ def get_game_replay(game_id):
 
     c.execute("""
         SELECT id, user_name, result, role, bid_score, score_change, ai_decisions, rounds, created_at
-        FROM game_records WHERE id = ?
+        FROM game_records WHERE id = %s
     """, (game_id,))
     row = c.fetchone()
 
@@ -500,7 +604,7 @@ def get_game_replay(game_id):
         return jsonify({"error": "对局不存在"}), 404
 
     # 检查是否是该用户最近3局
-    c.execute("SELECT id FROM game_records WHERE user_name = ? ORDER BY created_at DESC LIMIT 3", (row["user_name"],))
+    c.execute("SELECT id FROM game_records WHERE user_name = %s ORDER BY created_at DESC LIMIT 3", (row["user_name"],))
     recent_ids = [r["id"] for r in c.fetchall()]
     conn.close()
 
@@ -571,7 +675,7 @@ def upload_avatar(name):
 
         conn = get_db()
         c = conn.cursor()
-        c.execute("UPDATE users SET avatar_url = ? WHERE name = ?", (filename, name))
+        c.execute("UPDATE users SET avatar_url = %s WHERE name = %s", (filename, name))
         conn.commit()
         conn.close()
 
@@ -587,7 +691,7 @@ def get_avatar(name):
 
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT avatar_url FROM users WHERE name = ?", (name,))
+    c.execute("SELECT avatar_url FROM users WHERE name = %s", (name,))
     user = c.fetchone()
     conn.close()
 
@@ -606,6 +710,7 @@ if __name__ == "__main__":
     cloud_download()
     print("=" * 40)
     print("  斗地主后端启动成功！")
+    print(f"  数据库模式: {'MySQL' if USE_MYSQL else 'SQLite'}")
     print("  http://localhost:5000")
     print("=" * 40)
     import os as _os
