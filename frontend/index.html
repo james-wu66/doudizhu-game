@@ -295,8 +295,8 @@ body{display:flex;justify-content:center;align-items:center;}
 
 @media (orientation:portrait) and (max-width:1100px){
   body{
-    transform:rotate(90deg);
-    transform-origin:center center;
+    transform:rotate(90deg) translateY(-100%);
+    transform-origin:top left;
     width:100vh;
     height:100vw;
     position:fixed;
@@ -572,7 +572,7 @@ body{display:flex;justify-content:center;align-items:center;}
   .played-cards .card,.played-cards .card-sm{margin-left:calc(var(--played-card-w,40px) * -0.45)!important;flex:0 0 var(--played-card-w,40px)!important;}
   .played-cards .card:first-child,.played-cards .card-sm:first-child{margin-left:0!important;}
   #played-left,#played-right{top:28vh!important;}
-  #msg-toast{top:auto!important;bottom:calc(14vh + 3vh)!important;transform:translateX(-50%)!important;}
+  #msg-toast{top:50vh!important;bottom:auto!important;transform:translateX(-50%)!important;}
   #landlord-area .card{font-size:14px!important;}
 }
 
@@ -666,7 +666,8 @@ body.replay-mode #player-hand{
 body.replay-mode #played-player{
   bottom:36%!important;
 }
-body.replay-mode #msg-toast{top:34vh!important;}
+body.replay-mode #msg-toast{top:34vh!important;font-size:1.7vh!important;padding:4px 10px!important;border-radius:6px!important;max-width:70vw!important;white-space:nowrap!important;}
+body.replay-mode .bid-status{font-size:1.7vh!important;padding:4px 10px!important;border-radius:6px!important;}
 body.replay-mode #played-left,
 body.replay-mode #played-right{
   top:46%!important;
@@ -753,6 +754,7 @@ body.replay-mode #bid-actions{
     height: 40px !important;
     font-size: 11.5px !important;
   }
+  body.replay-mode #landlord-area .card .center-suit{font-size:0.99em!important;}
 }
 </style>
 </head>
@@ -3445,24 +3447,61 @@ function updateUserInfoDisplay() {
     const urlName = params.get('name');
     // 从大厅点"开始游戏"跳转回来：恢复登录状态，不弹登录框
     if (urlName) {
+      // 游客直接放行，不走验证
+      if (urlName === '游客') {
+        currentUser = {name: '游客', token: null};
+        updateUserInfoDisplay();
+        closeLoginModal();
+        return;
+      }
       const urlToken = params.get('token') || '';
       const saved = localStorage.getItem('doudizhu_user');
+      let localToken = urlToken;
       if (saved) {
         try {
           const u = JSON.parse(saved);
-          if (u.name === urlName) {
-            currentUser = {name: u.name, token: u.token || urlToken || null};
-            localStorage.setItem('doudizhu_user', JSON.stringify(currentUser));
-            updateUserInfoDisplay();
-            closeLoginModal();
-            return;
-          }
+          if (u.name === urlName && u.token) localToken = u.token;
         } catch(e){}
       }
-      currentUser = {name: urlName, token: urlToken || null};
-      if (urlToken) localStorage.setItem('doudizhu_user', JSON.stringify(currentUser));
-      updateUserInfoDisplay();
-      closeLoginModal();
+      if (!localToken) {
+        localStorage.removeItem('doudizhu_user');
+        sessionStorage.removeItem('doudizhu_user');
+        window.location.href = '/';
+        return;
+      }
+      // 向后端验证 token
+      fetch(API_BASE + '/api/auto-login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({token: localToken})
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.success && data.name === urlName) {
+          currentUser = {name: data.name, token: localToken};
+          localStorage.setItem('doudizhu_user', JSON.stringify(currentUser));
+          updateUserInfoDisplay();
+          closeLoginModal();
+        } else {
+          localStorage.removeItem('doudizhu_user');
+          sessionStorage.removeItem('doudizhu_user');
+          window.location.href = '/';
+        }
+      })
+      .catch(function() {
+        // 网络错误不清本地记录，静默放行
+        if (saved) {
+          try {
+            const u = JSON.parse(saved);
+            if (u.name === urlName) {
+              currentUser = {name: u.name, token: u.token || null};
+              updateUserInfoDisplay();
+              closeLoginModal();
+              return;
+            }
+          } catch(e){}
+        }
+      });
       return;
     }
     // 打开应用（根路径）：登录界面保持显示；勾选过"记住密码"则自动填好账号密码，点登录即进
