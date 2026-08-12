@@ -22,5 +22,14 @@ jobs:
       - name: Login to CloudBase
         run: tcb login --apiKeyId ${{ secrets.TCB_SECRET_ID }} --apiKey ${{ secrets.TCB_SECRET_KEY }}
 
+      - name: 设置 MySQL 环境变量
+        run: |
+          tcb secrets set DB_HOST "172.17.0.2" --env-id ${{ secrets.TCB_ENV_ID }}
+          tcb secrets set DB_PORT "3306" --env-id ${{ secrets.TCB_ENV_ID }}
+          tcb secrets set DB_USER "doudizhu_game" --env-id ${{ secrets.TCB_ENV_ID }}
+          tcb secrets set DB_PASSWORD "${{ secrets.DB_PASSWORD }}" --env-id ${{ secrets.TCB_ENV_ID }}
+          tcb secrets set DB_NAME "james-wu-d2gcojd404e6b8137" --env-id ${{ secrets.TCB_ENV_ID }}
+          tcb secrets set PORT "80" --env-id ${{ secrets.TCB_ENV_ID }}
+
       - name: Deploy to Cloud Run
-        run: echo "No" | tcb cloudrun deploy --env-id ${{ secrets.TCB_ENV_ID }} --service-name doudizhu-game --force --env-vars DB_HOST=172.17.0.2,DB_PORT=3306,DB_USER=doudizhu_game,DB_PASSWORD=${{ secrets.DB_PASSWORD }},DB_NAME=james-wu-d2gcojd404e6b8137,PORT=80
+        run: echo "No" | tcb cloudrun deploy --env-id ${{ secrets.TCB_ENV_ID }} --service-name doudizhu-game --force
