@@ -351,7 +351,9 @@ function escapeAttr(s) {
 
 window.onload = function() {
     const params = new URLSearchParams(window.location.search);
-    currentUser = params.get('name') || localStorage.getItem('doudizhu_name') || '';
+    var _user = null;
+    try { _user = JSON.parse(localStorage.getItem('doudizhu_user')); } catch(e) {}
+    currentUser = params.get('name') || (_user && _user.name) || '';
     
     if (!currentUser) {
         window.location.href = '/';
@@ -708,11 +710,13 @@ function setLobbyBgmVolume(val){
   val=parseInt(val);
   localStorage.setItem('doudizhu_bgm_vol',val);
   document.getElementById('lobby-bgm-val').textContent=val+'%';
+  try{if(window.opener&&window.opener.setBgmVolume)window.opener.setBgmVolume(val);}catch(e){}
 }
 function setLobbySfxVolume(val){
   val=parseInt(val);
   localStorage.setItem('doudizhu_sfx_vol',val);
   document.getElementById('lobby-sfx-val').textContent=val+'%';
+  try{if(window.opener&&window.opener.setSfxVolume)window.opener.setSfxVolume(val);}catch(e){}
 }
 function syncLobbyVolume(){
   var bgmVol=localStorage.getItem('doudizhu_bgm_vol');
@@ -727,15 +731,16 @@ function lobbyLogout(){
   window.location.href='index.html';
 }
 function lobbyDeleteAccount(){
-  var user=JSON.parse(localStorage.getItem('doudizhu_user')||'null');
-  if(!user||!user.name){alert('登录状态已失效，请重新登录');window.location.href='index.html';return;}
+  if(!currentUser){alert('登录状态已失效，请重新登录');window.location.href='index.html';return;}
+  var userName = typeof currentUser === 'string' ? currentUser : (currentUser && currentUser.name);
+  if(!userName){alert('登录状态已失效，请重新登录');window.location.href='index.html';return;}
   if(!confirm('⚠️ 注销账号将永久删除你的所有战绩数据，且不可恢复！确定继续吗？'))return;
   var pwd=prompt('请输入账号密码确认注销：');
   if(pwd===null||pwd==='')return;
   fetch(API+'/delete-account',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({name:user.name,password:pwd})
+    body:JSON.stringify({name:userName,password:pwd})
   }).then(function(res){return res.json();}).then(function(data){
     if(data.success){
       localStorage.removeItem('doudizhu_user');

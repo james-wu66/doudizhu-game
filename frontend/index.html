@@ -251,7 +251,7 @@ body{display:flex;justify-content:center;align-items:center;}
   background:linear-gradient(180deg,#1a3a5c,#0e2240);
   border:2px solid #2a6a9a;border-radius:20px;padding:32px 48px;
   text-align:center;box-shadow:0 10px 40px rgba(0,0,0,0.5);
-  min-width:300px;max-height:88vh;overflow-y:auto;
+  min-width:300px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
 }
 .result-box h2{font-size:28px;color:var(--gold);margin-bottom:12px;text-shadow:0 2px 6px rgba(0,0,0,0.4);}
 .result-box p{color:var(--text-light);font-size:16px;margin:6px 0;}
@@ -1287,7 +1287,7 @@ async function initReplayMode(gameId){
   }catch(e){
     console.warn('回放加载失败',e);
     alert('回放加载失败');
-    window.location.href='/lobby';
+    window.location.href='/lobby'+(currentUser&&currentUser.name?'?name='+encodeURIComponent(currentUser.name):'');
   }
 }
 
@@ -3258,6 +3258,14 @@ resizeResponsiveLayout();
 // iOS 首次加载横屏时视口尺寸不稳定，延迟重算几次，避免底部白边/错位
 setTimeout(resizeResponsiveLayout,400);
 setTimeout(resizeResponsiveLayout,1200);
+
+// 页面加载时从 localStorage 恢复音量设置
+(function(){
+  var bgmVol=localStorage.getItem('doudizhu_bgm_vol');
+  if(bgmVol!==null&&typeof setBgmVolume==='function')setBgmVolume(bgmVol);
+  var sfxVol=localStorage.getItem('doudizhu_sfx_vol');
+  if(sfxVol!==null&&typeof setSfxVolume==='function')setSfxVolume(sfxVol);
+})();
 
 // 注册 Service Worker（PWA 离线缓存，仅 https/file 环境生效）
 if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('./sw.js').catch(()=>{});});}
