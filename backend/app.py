@@ -25,7 +25,23 @@ app = Flask(__name__)
 CORS(app)
 
 # === 数据库配置 ===
-USE_MYSQL = bool(os.environ.get("DB_HOST"))
+# 优先读 config_local.py（本地密钥文件），其次环境变量，最后用腾讯云内网默认值
+try:
+    from config_local import DB_HOST as _CL_DB_HOST, DB_PORT as _CL_DB_PORT, DB_USER as _CL_DB_USER, DB_PASSWORD as _CL_DB_PASSWORD, DB_NAME as _CL_DB_NAME
+    os.environ.setdefault("DB_HOST", _CL_DB_HOST)
+    os.environ.setdefault("DB_PORT", str(_CL_DB_PORT))
+    os.environ.setdefault("DB_USER", _CL_DB_USER)
+    os.environ.setdefault("DB_PASSWORD", _CL_DB_PASSWORD)
+    os.environ.setdefault("DB_NAME", _CL_DB_NAME)
+except ImportError:
+    pass  # config_local.py 不存在，用环境变量或默认值
+# 腾讯云内网默认值（环境变量被清空时自动兜底）
+DB_HOST = os.environ.get("DB_HOST", "172.17.0.2")
+DB_PORT = int(os.environ.get("DB_PORT", "3306"))
+DB_USER = os.environ.get("DB_USER", "doudizhu_game")
+DB_PASSWORD = os.environ.get("DB_PASSWORD", "wzm13002104610.")
+DB_NAME = os.environ.get("DB_NAME", "james-wu-d2gcojd404e6b8137")
+USE_MYSQL = bool(DB_HOST) and pymysql is not None
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "database", "doudizhu.db")
 
 class _SQLiteCursor:
@@ -56,14 +72,14 @@ class _SQLiteConn:
     def __getattr__(self, name): return getattr(self._conn, name)
 
 def get_db():
-    """根据环境变量自动选择 MySQL 或 SQLite"""
+    """根据配置自动选择 MySQL 或 SQLite"""
     if USE_MYSQL:
         return pymysql.connect(
-            host=os.environ["DB_HOST"],
-            port=int(os.environ.get("DB_PORT", 3306)),
-            user=os.environ["DB_USER"],
-            password=os.environ["DB_PASSWORD"],
-            database=os.environ["DB_NAME"],
+            host=DB_HOST,
+            port=DB_PORT,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_NAME,
             charset="utf8mb4",
             cursorclass=DictCursor,
             connect_timeout=10,

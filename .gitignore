@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 backend/database/
 .env
+
+backend/config_local.py
