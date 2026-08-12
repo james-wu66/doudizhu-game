@@ -242,7 +242,7 @@ body{display:flex;justify-content:center;align-items:center;}
 .result-box{max-height:92vh;overflow-y:auto;}
 
 #result-modal{
-  position:absolute;inset:0;z-index:8000;
+  position:fixed;inset:0;z-index:8000;
   display:none;align-items:center;justify-content:center;
   background:rgba(0,0,0,0.7);
 }
@@ -251,7 +251,7 @@ body{display:flex;justify-content:center;align-items:center;}
   background:linear-gradient(180deg,#1a3a5c,#0e2240);
   border:2px solid #2a6a9a;border-radius:20px;padding:32px 48px;
   text-align:center;box-shadow:0 10px 40px rgba(0,0,0,0.5);
-  min-width:300px;
+  min-width:300px;max-height:88vh;overflow-y:auto;
 }
 .result-box h2{font-size:28px;color:var(--gold);margin-bottom:12px;text-shadow:0 2px 6px rgba(0,0,0,0.4);}
 .result-box p{color:var(--text-light);font-size:16px;margin:6px 0;}
@@ -297,13 +297,13 @@ body{display:flex;justify-content:center;align-items:center;}
   body{
     transform:rotate(90deg) translateY(-100%);
     transform-origin:top left;
-    width:100vh;
-    height:100vw;
+    width:100vh;height:100vw;margin:0;padding:0;
     position:fixed;
     top:0;
     left:0;
     overflow:hidden;
   }
+  #game-table{position:absolute!important;top:0!important;left:0!important;width:100%!important;height:100%!important;}
   
 }
 
@@ -572,7 +572,7 @@ body{display:flex;justify-content:center;align-items:center;}
   .played-cards .card,.played-cards .card-sm{margin-left:calc(var(--played-card-w,40px) * -0.45)!important;flex:0 0 var(--played-card-w,40px)!important;}
   .played-cards .card:first-child,.played-cards .card-sm:first-child{margin-left:0!important;}
   #played-left,#played-right{top:28vh!important;}
-  #msg-toast{top:50vh!important;bottom:auto!important;transform:translateX(-50%)!important;}
+  #msg-toast{top:auto!important;bottom:calc(36% + 60px)!important;transform:translateX(-50%)!important;}
   #landlord-area .card{font-size:14px!important;}
 }
 
@@ -762,7 +762,7 @@ body.replay-mode #bid-actions{
 <div id="app">
 <div id="game-table">
   <div id="watermark">吴</div>
-  <button id="bgm-toggle" title="背景音乐" onclick="toggleBgmMute()">🔇</button>
+  <button id="bgm-toggle" title="背景音乐" onclick="toggleBgmMute()">🔊</button>
   <button id="settings-btn" title="设置" onclick="openSettings()">⚙️</button>
   <div id="round-display">第1局 / 共10局</div>
   <div id="landlord-area"></div>
@@ -3271,8 +3271,8 @@ function openSettings() {
   // 同步音量滑块
   var bgmVol=localStorage.getItem('doudizhu_bgm_vol');
   var sfxVol=localStorage.getItem('doudizhu_sfx_vol');
-  if(bgmVol!==null){var el=document.getElementById('bgm-volume');if(el)el.value=bgmVol;var el2=document.getElementById('bgm-volume-val');if(el2)el2.textContent=bgmVol+'%';}
-  if(sfxVol!==null){var el=document.getElementById('sfx-volume');if(el)el.value=sfxVol;var el2=document.getElementById('sfx-volume-val');if(el2)el2.textContent=sfxVol+'%';}
+  if(bgmVol!==null)setBgmVolume(bgmVol);
+  if(sfxVol!==null)setSfxVolume(sfxVol);
   // 同步 toggle 状态
   updateUserInfoDisplay();
   // 注销按钮显隐
@@ -3582,6 +3582,8 @@ function setBgmVolume(val){
   val=parseInt(val);
   var bgm=document.getElementById('bgm-audio');
   if(bgm)bgm.volume=val/100;
+  var slider=document.getElementById('bgm-volume');
+  if(slider)slider.value=val;
   var el=document.getElementById('bgm-volume-val');
   if(el)el.textContent=val+'%';
   localStorage.setItem('doudizhu_bgm_vol',val);
@@ -3604,14 +3606,25 @@ function toggleBgmMute(){
   }
   localStorage.setItem('doudizhu_bgm_muted',bgmMuted);
 }
-// 恢复静音状态
+// 恢复静音状态（默认开启）
 (function(){
   var m=localStorage.getItem('doudizhu_bgm_muted');
-  if(m==='true'){bgmMuted=true;var btn=document.getElementById('bgm-toggle');if(btn)btn.textContent='🔇';var slider=document.getElementById('bgm-volume');if(slider)slider.disabled=true;var bgm=document.getElementById('bgm-audio');if(bgm){bgm.muted=true;bgm.pause();}}
+  if(m==='true'){
+    bgmMuted=true;
+    var btn=document.getElementById('bgm-toggle');if(btn)btn.textContent='🔇';
+    var slider=document.getElementById('bgm-volume');if(slider)slider.disabled=true;
+    var bgm=document.getElementById('bgm-audio');if(bgm){bgm.muted=true;bgm.pause();}
+  }else{
+    bgmMuted=false;
+    var btn=document.getElementById('bgm-toggle');if(btn)btn.textContent='🔊';
+    var bgm=document.getElementById('bgm-audio');if(bgm){bgm.muted=false;bgm.volume=0.8;bgm.play().catch(()=>{});}
+  }
 })();
 function setSfxVolume(val){
   val=parseInt(val);
   if(typeof SoundSystem!=='undefined')SoundSystem.sfxVolume=val/100;
+  var slider=document.getElementById('sfx-volume');
+  if(slider)slider.value=val;
   var el=document.getElementById('sfx-volume-val');
   if(el)el.textContent=val+'%';
   localStorage.setItem('doudizhu_sfx_vol',val);

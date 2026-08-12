@@ -266,6 +266,17 @@ body {
     .lb-table { font-size: 11px; }
 }
 
+
+/* === 大厅设置 tab 样式 === */
+.settings-block{margin-bottom:16px;padding:14px;background:rgba(255,255,255,0.05);border-radius:10px;}
+.settings-block h4{color:#94a3b8;font-size:13px;font-weight:700;margin-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:6px;}
+.settings-row{display:flex;align-items:center;gap:10px;padding:8px 0;color:#e2e8f0;font-size:14px;}
+.settings-row input[type=range]{flex:1;accent-color:#60a5fa;}
+.settings-row span{width:40px;text-align:right;color:#94a3b8;font-size:12px;}
+.rules-text{color:#94a3b8;font-size:13px;line-height:1.8;max-height:180px;overflow-y:auto;}
+.rules-text p{margin:4px 0;}
+.settings-block-btn{width:100%;padding:12px;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;background:rgba(255,255,255,0.1);color:#e2e8f0;}
+.settings-block-btn.danger{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;}
 </style>
 <script src="sound.js"></script>
 </head>
@@ -476,7 +487,9 @@ function switchProfileTab(tab, btn) {
     btn.classList.add('active');
     document.getElementById('profileInfo').style.display = tab === 'info' ? 'block' : 'none';
     document.getElementById('profileGames').style.display = tab === 'games' ? 'block' : 'none';
+    document.getElementById('profileSettings').style.display = tab === 'settings' ? 'block' : 'none';
     if (tab === 'games') loadProfileGames();
+    if (tab === 'settings') syncLobbyVolume();
 }
 
 async function loadProfileInfo(name) {
@@ -689,6 +702,51 @@ function closeReplay_orig() {
 
 
 
+
+// === 大厅设置 tab 功能 ===
+function setLobbyBgmVolume(val){
+  val=parseInt(val);
+  localStorage.setItem('doudizhu_bgm_vol',val);
+  document.getElementById('lobby-bgm-val').textContent=val+'%';
+}
+function setLobbySfxVolume(val){
+  val=parseInt(val);
+  localStorage.setItem('doudizhu_sfx_vol',val);
+  document.getElementById('lobby-sfx-val').textContent=val+'%';
+}
+function syncLobbyVolume(){
+  var bgmVol=localStorage.getItem('doudizhu_bgm_vol');
+  var sfxVol=localStorage.getItem('doudizhu_sfx_vol');
+  if(bgmVol!==null){document.getElementById('lobby-bgm-volume').value=bgmVol;document.getElementById('lobby-bgm-val').textContent=bgmVol+'%';}
+  if(sfxVol!==null){document.getElementById('lobby-sfx-volume').value=sfxVol;document.getElementById('lobby-sfx-val').textContent=sfxVol+'%';}
+}
+function lobbyLogout(){
+  if(!confirm('确定要退出登录吗？'))return;
+  localStorage.removeItem('doudizhu_user');
+  sessionStorage.removeItem('doudizhu_user');
+  window.location.href='index.html';
+}
+function lobbyDeleteAccount(){
+  var user=JSON.parse(localStorage.getItem('doudizhu_user')||'null');
+  if(!user||!user.name){alert('登录状态已失效，请重新登录');window.location.href='index.html';return;}
+  if(!confirm('⚠️ 注销账号将永久删除你的所有战绩数据，且不可恢复！确定继续吗？'))return;
+  var pwd=prompt('请输入账号密码确认注销：');
+  if(pwd===null||pwd==='')return;
+  fetch(API+'/delete-account',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name:user.name,password:pwd})
+  }).then(function(res){return res.json();}).then(function(data){
+    if(data.success){
+      localStorage.removeItem('doudizhu_user');
+      sessionStorage.removeItem('doudizhu_user');
+      alert('账号已注销');
+      window.location.href='index.html';
+    }else{
+      alert(data.error||'注销失败');
+    }
+  }).catch(function(){alert('网络错误，注销失败');});
+}
 </script>
 
 <!-- 个人信息中心弹窗 -->
@@ -698,6 +756,7 @@ function closeReplay_orig() {
         <div class="profile-tabs">
             <button class="profile-tab active" onclick="switchProfileTab('info',this)">资料</button>
             <button class="profile-tab" onclick="switchProfileTab('games',this)">战绩</button>
+            <button class="profile-tab" onclick="switchProfileTab('settings',this)">设置</button>
         </div>
         <div class="profile-content">
             <!-- 资料 tab -->
@@ -726,6 +785,35 @@ function closeReplay_orig() {
                 </div>
                 <div class="games-list" id="gamesList"><div style="color:#475569;text-align:center;padding:20px;">加载中...</div></div>
                 <label class="games-privacy" id="privacyLabel" style="display:none"><input type="checkbox" id="privacyToggle"> 不允许他人看我的战绩</label>
+            </div>
+            <!-- 设置 tab -->
+            <div id="profileSettings" style="display:none">
+                <div class="settings-block">
+                    <h4>🔊 音效设置</h4>
+                    <div class="settings-row">
+                        <label>背景音乐</label>
+                        <input type="range" id="lobby-bgm-volume" min="0" max="100" oninput="setLobbyBgmVolume(this.value)">
+                        <span id="lobby-bgm-val">80%</span>
+                    </div>
+                    <div class="settings-row">
+                        <label>出牌音效</label>
+                        <input type="range" id="lobby-sfx-volume" min="0" max="100" oninput="setLobbySfxVolume(this.value)">
+                        <span id="lobby-sfx-val">100%</span>
+                    </div>
+                </div>
+                <div class="settings-block">
+                    <h4>📖 游戏规则</h4>
+                    <div class="rules-text">
+                        <p><b>发牌：</b>54张牌，每人17张，3张底牌</p>
+                        <p><b>叫地主：</b>按顺序叫分/抢地主，最高者当地主拿底牌</p>
+                        <p><b>牌型：</b>单张、对子、三张、三带一/二、顺子、连对、飞机、炸弹、王炸</p>
+                        <p><b>大小：</b>大王＞小王＞2＞A＞K＞Q＞J＞10＞9＞8＞7＞6＞5＞4＞3</p>
+                        <p><b>胜负：</b>地主先出完牌→地主胜；任一农民先出完→农民胜</p>
+                        <p><b>倍数：</b>炸弹×2、王炸×4、春天×2</p>
+                    </div>
+                </div>
+                <button class="settings-block-btn" onclick="lobbyLogout()">退出登录</button>
+                <button class="settings-block-btn danger" onclick="lobbyDeleteAccount()">🗑️ 注销账号</button>
             </div>
         </div>
     </div>
