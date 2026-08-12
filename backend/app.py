@@ -161,7 +161,21 @@ def delete_account():
     except: pass
     return jsonify({"success": True, "message": "账号已注销"})
 
+def _ensure_db_mode():
+    """启动时测试MySQL连接：成功则用MySQL，失败则回退SQLite（不崩溃）"""
+    global USE_MYSQL
+    if not USE_MYSQL:
+        return
+    try:
+        conn = get_db()
+        conn.close()
+        print("[数据库] MySQL 连接成功")
+    except Exception as e:
+        print(f"[数据库] MySQL 连接失败，回退 SQLite: {e}")
+        USE_MYSQL = False
+
 def init_db():
+    _ensure_db_mode()
     if USE_MYSQL:
         conn = get_db()
         c = conn.cursor()
