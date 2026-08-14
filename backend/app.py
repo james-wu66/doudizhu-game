@@ -40,7 +40,7 @@ DB_HOST = os.environ.get("DB_HOST") or "172.17.0.2"
 DB_PORT = int(os.environ.get("DB_PORT") or "3306")
 DB_USER = os.environ.get("DB_USER") or "doudizhu_game"
 DB_PASSWORD = os.environ.get("DB_PASSWORD") or "wzm13002104610."
-DB_NAME = os.environ.get("DB_NAME") or "james-wu-d2gcojd404e6b8137"
+DB_NAME = os.environ.get("DB_NAME") or "james_wu_d2gcojd404e6b8137"
 USE_MYSQL = bool(DB_HOST) and pymysql is not None
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "database", "doudizhu.db")
 
@@ -162,7 +162,8 @@ def delete_account():
     return jsonify({"success": True, "message": "账号已注销"})
 
 def _ensure_db_mode():
-    """启动时测试MySQL连接：成功则用MySQL，失败则回退SQLite（不崩溃）"""
+    """启动时测试MySQL连接：成功则用MySQL，失败则回退SQLite（不崩溃）
+    如果库不存在，自动创建"""
     global USE_MYSQL
     if not USE_MYSQL:
         return
@@ -170,7 +171,30 @@ def _ensure_db_mode():
         conn = get_db()
         conn.close()
         print("[数据库] MySQL 连接成功")
+        return
     except Exception as e:
+        err = str(e)
+        # 库不存在（1049），尝试自动创建
+        if '1049' in err or 'Unknown database' in err:
+            try:
+                print(f"[数据库] 库 {DB_NAME} 不存在，尝试自动创建...")
+                bootstrap = pymysql.connect(
+                    host=DB_HOST, port=DB_PORT, user=DB_USER,
+                    password=DB_PASSWORD, charset="utf8mb4",
+                    connect_timeout=10
+                )
+                cur = bootstrap.cursor()
+                cur.execute(f"CREATE DATABASE IF NOT EXISTS `{DB_NAME}` CHARACTER SET utf8mb4")
+                bootstrap.close()
+                # 再次尝试连接
+                conn = get_db()
+                conn.close()
+                print(f"[数据库] 自动建库 + 连接成功")
+                return
+            except Exception as e2:
+                print(f"[数据库] 自动建库失败，回退 SQLite: {e2}")
+                USE_MYSQL = False
+                return
         print(f"[数据库] MySQL 连接失败，回退 SQLite: {e}")
         USE_MYSQL = False
 
