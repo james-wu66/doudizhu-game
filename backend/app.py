@@ -314,7 +314,7 @@ def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
 
-# 诊断接口：返回当前数据库模式（MySQL 还是 SQLite），用于确认数据持久化真相
+# 诊断接口：返回当前数据库模式 + 主动测试 MySQL 连接，确认数据持久化真相
 @app.route("/api/diag")
 def diag():
     result = {
@@ -323,6 +323,20 @@ def diag():
         "db_name": DB_NAME,
         "use_mysql_flag": USE_MYSQL,
     }
+    # 主动测试 MySQL 连接（短超时5秒），返回失败原因
+    mysql_test = {"ok": False, "error": ""}
+    try:
+        test_conn = pymysql.connect(
+            host=DB_HOST, port=DB_PORT, user=DB_USER,
+            password=DB_PASSWORD, database=DB_NAME,
+            charset="utf8mb4", connect_timeout=5
+        )
+        test_conn.close()
+        mysql_test["ok"] = True
+    except Exception as e:
+        mysql_test["error"] = str(e)
+    result["mysql_test"] = mysql_test
+    # 当前使用的数据库统计
     try:
         conn = get_db()
         c = conn.cursor()
