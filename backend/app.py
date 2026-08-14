@@ -314,6 +314,30 @@ def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
 
+# 诊断接口：返回当前数据库模式（MySQL 还是 SQLite），用于确认数据持久化真相
+@app.route("/api/diag")
+def diag():
+    result = {
+        "db_mode": "mysql" if USE_MYSQL else "sqlite",
+        "db_host": DB_HOST,
+        "db_name": DB_NAME,
+        "use_mysql_flag": USE_MYSQL,
+    }
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("SELECT COUNT(*) AS n FROM users")
+        result["users_count"] = c.fetchone()["n"]
+        c.execute("SELECT COUNT(*) AS n FROM game_records")
+        result["game_records_count"] = c.fetchone()["n"]
+        conn.close()
+        result["db_ok"] = True
+    except Exception as e:
+        result["db_ok"] = False
+        result["db_error"] = str(e)
+    return jsonify(result)
+
+
 @app.route("/")
 def index():
     resp = send_from_directory("../frontend", "index.html")
