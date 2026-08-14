@@ -603,7 +603,11 @@ function startReplay() {
 
 
 function goReplay(gameId) {
-    window.location.href = '/?replay=' + gameId + '&name=' + encodeURIComponent(currentUser);
+    // 带上 token，防止 index.html 初始化时因无 token 闪退回登录页
+    var saved = localStorage.getItem('doudizhu_user') || sessionStorage.getItem('doudizhu_user');
+    var token = '';
+    if (saved) { try { var u = JSON.parse(saved); token = u.token || ''; } catch(e){} }
+    window.location.href = '/?replay=' + gameId + '&name=' + encodeURIComponent(currentUser) + '&token=' + encodeURIComponent(token);
 }
 function closeReplay() {
     if (replayTimer) { clearInterval(replayTimer); replayTimer = null; }

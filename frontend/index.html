@@ -1230,7 +1230,8 @@ async function initReplayMode(gameId){
     const data=await resp.json();
     if(!data.success||!data.moves||data.moves.length===0){
       alert('该局没有回放数据');
-      window.location.href='/lobby'+(currentUser&&currentUser.name?'?name='+encodeURIComponent(currentUser.name):'');
+      var _urlName = new URLSearchParams(window.location.search).get('name');
+      window.location.href='/lobby'+(_urlName?'?name='+encodeURIComponent(_urlName):'');
       return;
     }
     replayData=data.moves;
@@ -1287,7 +1288,8 @@ async function initReplayMode(gameId){
   }catch(e){
     console.warn('回放加载失败',e);
     alert('回放加载失败');
-    window.location.href='/lobby'+(currentUser&&currentUser.name?'?name='+encodeURIComponent(currentUser.name):'');
+    var _urlName2 = new URLSearchParams(window.location.search).get('name');
+    window.location.href='/lobby'+(_urlName2?'?name='+encodeURIComponent(_urlName2):'');
   }
 }
 
@@ -3360,7 +3362,8 @@ function handleLogin(e) {
       return;
     }
     currentUser = {name: data.name, token: data.token};
-    // 勾选"记住密码"→ 保存账号密码，下次打开登录界面自动填好，点登录即进；未勾选 → 不保存
+    // 勾选"记住密码"→ 保存账号密码到 localStorage；未勾选 → 不长期保存
+    // 但 token 始终存 sessionStorage，保证本次会话内不因 token 丢失闪退回登录页
     const rememberEl = document.getElementById('remember-login');
     const remember = !rememberEl || rememberEl.checked;
     if (remember) {
@@ -3368,6 +3371,7 @@ function handleLogin(e) {
     } else {
       localStorage.removeItem('doudizhu_user');
     }
+    sessionStorage.setItem('doudizhu_user', JSON.stringify({name: data.name, token: data.token}));
     window.location.href = '/lobby?name=' + encodeURIComponent(data.name);
     return;
   })
@@ -3463,7 +3467,7 @@ function updateUserInfoDisplay() {
         return;
       }
       const urlToken = params.get('token') || '';
-      const saved = localStorage.getItem('doudizhu_user');
+      const saved = localStorage.getItem('doudizhu_user') || sessionStorage.getItem('doudizhu_user');
       let localToken = urlToken;
       if (saved) {
         try {
