@@ -316,7 +316,9 @@ def hash_password(password):
 
 @app.route("/")
 def index():
-    return send_from_directory("../frontend", "index.html")
+    resp = send_from_directory("../frontend", "index.html")
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return resp
 
 @app.route("/audio/<path:filename>")
 def serve_audio(filename):
@@ -342,7 +344,9 @@ def serve_icons(filename):
 
 @app.route("/lobby")
 def lobby():
-    return send_from_directory("../frontend", "lobby.html")
+    resp = send_from_directory("../frontend", "lobby.html")
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return resp
 
 
 @app.route("/api/register", methods=["POST"])
