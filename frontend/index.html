@@ -251,7 +251,7 @@ body{display:flex;justify-content:center;align-items:center;}
   background:linear-gradient(180deg,#1a3a5c,#0e2240);
   border:2px solid #2a6a9a;border-radius:20px;padding:32px 48px;
   text-align:center;box-shadow:0 10px 40px rgba(0,0,0,0.5);
-  min-width:300px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  min-width:300px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
 }
 .result-box h2{font-size:28px;color:var(--gold);margin-bottom:12px;text-shadow:0 2px 6px rgba(0,0,0,0.4);}
 .result-box p{color:var(--text-light);font-size:16px;margin:6px 0;}
@@ -294,17 +294,7 @@ body{display:flex;justify-content:center;align-items:center;}
 }
 
 @media (orientation:portrait) and (max-width:1100px){
-  body{
-    transform:rotate(90deg) translateY(-100%);
-    transform-origin:top left;
-    width:100vh;height:100vw;margin:0;padding:0;
-    position:fixed;
-    top:0;
-    left:0;
-    overflow:hidden;
-  }
-  #game-table{position:absolute!important;top:0!important;left:0!important;width:100%!important;height:100%!important;}
-  
+  /* 2026-08-14 界面锁死横屏：竖屏时不做任何旋转/调整，保持与横屏一致的布局 */
 }
 
 /* === RESPONSIVE DESKTOP + MOBILE LAYOUT OVERRIDES === */
@@ -574,6 +564,8 @@ body{display:flex;justify-content:center;align-items:center;}
   #played-left,#played-right{top:28vh!important;}
   #msg-toast{top:auto!important;bottom:calc(36% + 60px)!important;transform:translateX(-50%)!important;}
   #landlord-area .card{font-size:14px!important;}
+  /* 2026-08-14 游戏结束弹窗手机版可滚动：确保"下一局/返回大厅"按钮可见 */
+  #result-modal .result-box{max-height:82vh!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior:contain!important;}
 }
 
 /* === 出牌区强制缩小（防止顺子/连对挡住对手头像） === */
@@ -1054,6 +1046,9 @@ function restoreGameState(data){
   else{dealRound();}
 }
 function startFromMenu(){
+  // 开始游戏：用户手势后主动播放背景音乐（浏览器放行自动播放策略）
+  var _bgm=document.getElementById('bgm-audio');
+  if(_bgm&&!_bgm.muted){_bgm.volume=(localStorage.getItem('doudizhu_bgm_vol')||80)/100;_bgm.play().catch(function(){});}
   // 游客：直接开始新游戏，不弹窗
   if(currentUser && currentUser.name === '游客'){
     document.getElementById('start-modal').classList.add('hidden');
@@ -1074,6 +1069,8 @@ function startFromMenu(){
 }
 function continueFromMenu(){
   // 点"继续游戏"：恢复上次存档
+  var _bgm2=document.getElementById('bgm-audio');
+  if(_bgm2&&!_bgm2.muted){_bgm2.volume=(localStorage.getItem('doudizhu_bgm_vol')||80)/100;_bgm2.play().catch(function(){});}
   const saved=readSavedGame();
   document.getElementById('start-modal').classList.add('hidden');
   if(saved)restoreGameState(saved);
@@ -3232,15 +3229,23 @@ document.addEventListener('touchmove', function(e) {
   e.preventDefault();
 }, {passive: false});
 
-// ==================== 强制横屏 ====================
-function lockLandscape(){
-  if(screen.orientation&&screen.orientation.lock){
-    screen.orientation.lock('landscape').catch(function(){});
+// ==================== 界面锁死横屏（2026-08-14） ====================
+// 手机怎么转，界面布局都不动、不变形、不重排
+// 仅当横屏反向（转180°换手拿）时整体翻转，保证内容朝上
+function applyLockedLandscape(){
+  var ori = (window.orientation!==undefined)?window.orientation:(screen.orientation?screen.orientation.angle:0);
+  var app = document.getElementById('game-table');
+  if(!app)return;
+  // 仅横屏反向（180°）时整体翻转；横屏正向(0)和竖屏(90/-90)都不动
+  if(ori === 180 || ori === -180){
+    app.style.transform='rotate(180deg)';
+  }else{
+    app.style.transform='';
   }
 }
-document.addEventListener('click',lockLandscape,{once:true});
-// 每次屏幕方向变化时也尝试锁定
-if(screen.orientation)screen.orientation.addEventListener('change',function(){lockLandscape();});
+window.addEventListener('orientationchange',function(){setTimeout(applyLockedLandscape,100);});
+window.addEventListener('resize',applyLockedLandscape);
+applyLockedLandscape();
 
 // ==================== INIT ====================
 const API_BASE = window.location.origin;
@@ -3384,6 +3389,9 @@ function handleLogin(e) {
 }
 
 function guestPlay() {
+  // 游客开始：用户手势后主动播放背景音乐
+  var _bgm=document.getElementById('bgm-audio');
+  if(_bgm&&!_bgm.muted){_bgm.volume=(localStorage.getItem('doudizhu_bgm_vol')||80)/100;_bgm.play().catch(function(){});}
   currentUser = {name: '游客', token: null};
   closeLoginModal();
   // 游客始终只显示"开始游戏"，不显示"继续/重新开始"选择
@@ -3593,12 +3601,14 @@ document.addEventListener('keydown', function(e) {
 function setBgmVolume(val){
   val=parseInt(val);
   var bgm=document.getElementById('bgm-audio');
-  if(bgm)bgm.volume=val/100;
+  if(bgm){bgm.volume=val/100;bgm.muted=false;}  // 拖滑块=自动取消静音
   var slider=document.getElementById('bgm-volume');
-  if(slider)slider.value=val;
+  if(slider){slider.value=val;slider.disabled=false;}  // 滑块永不禁用
   var el=document.getElementById('bgm-volume-val');
   if(el)el.textContent=val+'%';
   localStorage.setItem('doudizhu_bgm_vol',val);
+  localStorage.setItem('doudizhu_bgm_muted','false');
+  bgmMuted=false;
 }
 // 背景音乐开关
 let bgmMuted=false;
@@ -3610,9 +3620,10 @@ function toggleBgmMute(){
   if(bgmMuted){
     if(bgm){bgm.pause();bgm.muted=true;}
     if(btn)btn.textContent='🔇';
-    if(slider)slider.disabled=true;
   }else{
-    if(bgm){bgm.muted=false;bgm.play().catch(()=>{});}
+    // 恢复播放前先应用用户设置的音量
+    var vol=parseInt(localStorage.getItem('doudizhu_bgm_vol')||'80');
+    if(bgm){bgm.muted=false;bgm.volume=vol/100;bgm.play().catch(()=>{});}
     if(btn)btn.textContent='🔊';
     if(slider)slider.disabled=false;
   }
@@ -3624,8 +3635,8 @@ function toggleBgmMute(){
   if(m==='true'){
     bgmMuted=true;
     var btn=document.getElementById('bgm-toggle');if(btn)btn.textContent='🔇';
-    var slider=document.getElementById('bgm-volume');if(slider)slider.disabled=true;
     var bgm=document.getElementById('bgm-audio');if(bgm){bgm.muted=true;bgm.pause();}
+    // 滑块不禁用（用户拖动即可调音量+自动取消静音）
   }else{
     bgmMuted=false;
     var btn=document.getElementById('bgm-toggle');if(btn)btn.textContent='🔊';

@@ -729,18 +729,42 @@ function syncLobbyVolume(){
   if(sfxVol!==null){document.getElementById('lobby-sfx-volume').value=sfxVol;document.getElementById('lobby-sfx-val').textContent=sfxVol+'%';}
 }
 function lobbyLogout(){
-  if(!confirm('确定要退出登录吗？'))return;
+  if(typeof confirm==='function' && !confirm('确定要退出登录吗？'))return;
   localStorage.removeItem('doudizhu_user');
   sessionStorage.removeItem('doudizhu_user');
-  window.location.href='index.html';
+  window.location.href='/';
 }
 function lobbyDeleteAccount(){
-  if(!currentUser){alert('登录状态已失效，请重新登录');window.location.href='index.html';return;}
+  if(!currentUser){alert('登录状态已失效，请重新登录');window.location.href='/';return;}
   var userName = typeof currentUser === 'string' ? currentUser : (currentUser && currentUser.name);
-  if(!userName){alert('登录状态已失效，请重新登录');window.location.href='index.html';return;}
-  if(!confirm('⚠️ 注销账号将永久删除你的所有战绩数据，且不可恢复！确定继续吗？'))return;
-  var pwd=prompt('请输入账号密码确认注销：');
-  if(pwd===null||pwd==='')return;
+  if(!userName){alert('登录状态已失效，请重新登录');window.location.href='/';return;}
+  if(typeof confirm==='function' && !confirm('⚠️ 注销账号将永久删除你的所有战绩数据，且不可恢复！确定继续吗？'))return;
+  // 手机浏览器禁用 prompt，改用页面内自定义密码输入框
+  var box=document.getElementById('del-pwd-box');
+  if(box){
+    box.style.display='block';
+    document.getElementById('del-pwd-name').textContent=userName;
+    document.getElementById('del-pwd-input').value='';
+    document.getElementById('del-pwd-input').focus();
+    window._delUserName=userName;
+  }else{
+    var pwd=prompt('请输入账号密码确认注销：');
+    if(pwd===null||pwd==='')return;
+    doDeleteAccount(userName,pwd);
+  }
+}
+function confirmDeleteAccount(){
+  var userName=window._delUserName||'';
+  var pwd=document.getElementById('del-pwd-input').value;
+  if(!pwd){alert('请输入密码');return;}
+  document.getElementById('del-pwd-box').style.display='none';
+  doDeleteAccount(userName,pwd);
+}
+function cancelDeleteAccount(){
+  var box=document.getElementById('del-pwd-box');
+  if(box)box.style.display='none';
+}
+function doDeleteAccount(userName,pwd){
   fetch(API+'/delete-account',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
@@ -750,7 +774,7 @@ function lobbyDeleteAccount(){
       localStorage.removeItem('doudizhu_user');
       sessionStorage.removeItem('doudizhu_user');
       alert('账号已注销');
-      window.location.href='index.html';
+      window.location.href='/';
     }else{
       alert(data.error||'注销失败');
     }
@@ -823,6 +847,15 @@ function lobbyDeleteAccount(){
                 </div>
                 <button class="settings-block-btn" onclick="lobbyLogout()">退出登录</button>
                 <button class="settings-block-btn danger" onclick="lobbyDeleteAccount()">🗑️ 注销账号</button>
+                <!-- 2026-08-14 注销密码输入框（替代手机被禁用的 prompt） -->
+                <div id="del-pwd-box" style="display:none;margin-top:10px;padding:12px;background:rgba(0,0,0,0.3);border-radius:10px;">
+                    <p style="margin:0 0 8px;color:#e2e8f0;font-size:13px;">请输入账号「<span id="del-pwd-name" style="color:#fbbf24"></span>」的密码确认注销：</p>
+                    <input type="password" id="del-pwd-input" placeholder="输入密码" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:#fff;font-size:14px;box-sizing:border-box;margin-bottom:8px;">
+                    <div style="display:flex;gap:8px;">
+                        <button class="settings-block-btn" onclick="confirmDeleteAccount()" style="flex:1;margin:0;">确认注销</button>
+                        <button class="settings-block-btn" onclick="cancelDeleteAccount()" style="flex:1;margin:0;">取消</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
