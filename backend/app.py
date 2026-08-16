@@ -40,7 +40,7 @@ DB_HOST = os.environ.get("DB_HOST") or "172.17.0.2"
 DB_PORT = int(os.environ.get("DB_PORT") or "3306")
 DB_USER = os.environ.get("DB_USER") or "doudizhu_game"
 DB_PASSWORD = os.environ.get("DB_PASSWORD") or "wzm13002104610."
-DB_NAME = os.environ.get("DB_NAME") or "james_wu_d2gcojd404e6b8137"
+DB_NAME = os.environ.get("DB_NAME") or "james-wu-d2gcojd404e6b8137"
 USE_MYSQL = bool(DB_HOST) and pymysql is not None
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "database", "doudizhu.db")
 
