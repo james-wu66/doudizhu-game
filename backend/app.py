@@ -35,9 +35,9 @@ try:
     os.environ.setdefault("DB_NAME", _CL_DB_NAME)
 except ImportError:
     pass  # config_local.py 不存在，用环境变量或默认值
-# 腾讯云内网默认值（环境变量被清空时自动兜底）
-DB_HOST = os.environ.get("DB_HOST") or "172.17.0.2"
-DB_PORT = int(os.environ.get("DB_PORT") or "3306")
+# 腾讯云外网默认值（环境变量被清空时自动兜底）
+DB_HOST = os.environ.get("DB_HOST") or "sh-cynosdbmysql-qp-dujvcv6.sql.tencentcos.com"
+DB_PORT = int(os.environ.get("DB_PORT") or "21142")
 DB_USER = os.environ.get("DB_USER") or "doudizhu_game"
 DB_PASSWORD = os.environ.get("DB_PASSWORD") or "wzm13002104610."
 DB_NAME = os.environ.get("DB_NAME") or "james-wu-d2gcojd404e6b8137"
@@ -82,9 +82,9 @@ def get_db():
             database=DB_NAME,
             charset="utf8mb4",
             cursorclass=DictCursor,
-            connect_timeout=10,
-            read_timeout=30,
-            write_timeout=30,
+            connect_timeout=20,
+            read_timeout=60,
+            write_timeout=60,
             autocommit=True
         )
     else:
@@ -181,7 +181,7 @@ def _ensure_db_mode():
                 bootstrap = pymysql.connect(
                     host=DB_HOST, port=DB_PORT, user=DB_USER,
                     password=DB_PASSWORD, charset="utf8mb4",
-                    connect_timeout=10
+                    connect_timeout=15
                 )
                 cur = bootstrap.cursor()
                 cur.execute(f"CREATE DATABASE IF NOT EXISTS `{DB_NAME}` CHARACTER SET utf8mb4")
@@ -329,7 +329,7 @@ def diag():
         test_conn = pymysql.connect(
             host=DB_HOST, port=DB_PORT, user=DB_USER,
             password=DB_PASSWORD, database=DB_NAME,
-            charset="utf8mb4", connect_timeout=5
+            charset="utf8mb4", connect_timeout=15
         )
         test_conn.close()
         mysql_test["ok"] = True
