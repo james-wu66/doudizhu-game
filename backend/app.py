@@ -8,6 +8,7 @@ import json
 import hashlib
 import secrets
 import sqlite3
+import time
 from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
@@ -71,26 +72,36 @@ class _SQLiteConn:
     def close(self): return self._conn.close()
     def __getattr__(self, name): return getattr(self._conn, name)
 
+# MySQL 失败后的重试冷却：失败后 300 秒内不再尝试，直接走 SQLite，
+# 避免每个请求都卡在 connect_timeout=20 秒的超时上
+_mysql_retry_after = 0.0
+
 def get_db():
-    """根据配置自动选择 MySQL 或 SQLite"""
-    if USE_MYSQL:
-        return pymysql.connect(
-            host=DB_HOST,
-            port=DB_PORT,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_NAME,
-            charset="utf8mb4",
-            cursorclass=DictCursor,
-            connect_timeout=20,
-            read_timeout=60,
-            write_timeout=60,
-            autocommit=True
-        )
-    else:
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
-        return _SQLiteConn(conn)
+    """根据配置自动选择 MySQL 或 SQLite；MySQL 连接失败时自动回退 SQLite 并冷却 5 分钟"""
+    global _mysql_retry_after
+    if USE_MYSQL and time.time() >= _mysql_retry_after:
+        try:
+            conn = pymysql.connect(
+                host=DB_HOST,
+                port=DB_PORT,
+                user=DB_USER,
+                password=DB_PASSWORD,
+                database=DB_NAME,
+                charset="utf8mb4",
+                cursorclass=DictCursor,
+                connect_timeout=20,
+                read_timeout=60,
+                write_timeout=60,
+                autocommit=True
+            )
+            _mysql_retry_after = 0.0
+            return conn
+        except Exception as e:
+            _mysql_retry_after = time.time() + 300
+            print(f"[数据库] MySQL 连接失败({e})，5 分钟内自动走 SQLite，之后自动重试")
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return _SQLiteConn(conn)
 
 
 
@@ -168,8 +179,13 @@ def _ensure_db_mode():
     if not USE_MYSQL:
         return
     try:
-        conn = get_db()
-        conn.close()
+        # 直接探测 MySQL 连通性（不走 get_db，避免与运行期回退逻辑混淆）
+        probe = pymysql.connect(
+            host=DB_HOST, port=DB_PORT, user=DB_USER,
+            password=DB_PASSWORD, database=DB_NAME,
+            charset="utf8mb4", connect_timeout=15
+        )
+        probe.close()
         print("[数据库] MySQL 连接成功")
         return
     except Exception as e:
@@ -186,9 +202,13 @@ def _ensure_db_mode():
                 cur = bootstrap.cursor()
                 cur.execute(f"CREATE DATABASE IF NOT EXISTS `{DB_NAME}` CHARACTER SET utf8mb4")
                 bootstrap.close()
-                # 再次尝试连接
-                conn = get_db()
-                conn.close()
+                # 建库后再次探测
+                probe2 = pymysql.connect(
+                    host=DB_HOST, port=DB_PORT, user=DB_USER,
+                    password=DB_PASSWORD, database=DB_NAME,
+                    charset="utf8mb4", connect_timeout=15
+                )
+                probe2.close()
                 print(f"[数据库] 自动建库 + 连接成功")
                 return
             except Exception as e2:
