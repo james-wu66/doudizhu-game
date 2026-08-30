@@ -36,9 +36,14 @@ try:
     os.environ.setdefault("DB_NAME", _CL_DB_NAME)
 except ImportError:
     pass  # config_local.py 不存在，用环境变量或默认值
-# 腾讯云外网默认值（环境变量被清空时自动兜底）
-DB_HOST = os.environ.get("DB_HOST") or "sh-cynosdbmysql-qp-dujvcv6.sql.tencentcos.com"
-DB_PORT = int(os.environ.get("DB_PORT") or "21142")
+# 2026-08-30 改回内网地址：8/18 那个提交把外网 host 拼错了（cluster ID 写成 qp-dujvcv6 实际是 grp-dujxvcs6；后缀写成 .tencentcos.com 实际是 .tencentcdb.com），导致线上 12 天连不上
+DB_HOST = os.environ.get("DB_HOST") or "172.17.0.2"
+DB_PORT = int(os.environ.get("DB_PORT") or "3306")
+# 兼容：如果环境变量还残留 8/18 那个错误的 host，自动修正
+if "qp-dujvcv6" in DB_HOST or "tencentcos.com" in DB_HOST:
+    print(f"[数据库] 警告：检测到旧错误 DB_HOST={DB_HOST}，自动改回 172.17.0.2:3306")
+    DB_HOST = "172.17.0.2"
+    DB_PORT = 3306
 DB_USER = os.environ.get("DB_USER") or "doudizhu_game"
 DB_PASSWORD = os.environ.get("DB_PASSWORD") or "wzm13002104610."
 DB_NAME = os.environ.get("DB_NAME") or "james-wu-d2gcojd404e6b8137"
