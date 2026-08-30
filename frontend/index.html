@@ -3486,7 +3486,10 @@ function updateUserInfoDisplay() {
       if (!localToken) {
         localStorage.removeItem('doudizhu_user');
         sessionStorage.removeItem('doudizhu_user');
-        window.location.href = '/';
+        // 修复：token 丢失不再踢回登录页，降级游客模式继续玩
+        currentUser = {name: '游客', token: null};
+        updateUserInfoDisplay();
+        closeLoginModal();
         return;
       }
       // 向后端验证 token
@@ -3505,7 +3508,10 @@ function updateUserInfoDisplay() {
         } else {
           localStorage.removeItem('doudizhu_user');
           sessionStorage.removeItem('doudizhu_user');
-          window.location.href = '/';
+          // 修复：token 失效不再踢回登录页，降级游客模式继续玩
+          currentUser = {name: '游客', token: null};
+          updateUserInfoDisplay();
+          closeLoginModal();
         }
       })
       .catch(function() {
