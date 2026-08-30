@@ -985,6 +985,8 @@ let sessionScores = [0, 0, 0];
 let currentRound = 0;
 let roundScore = 0;
 let cardIdCounter = 0;
+let bgmMuted = false;
+let sfxMuted = false;
 
 // ==================== CONSTANTS ====================
 const SUITS=['♠','♥','♦','♣'];
@@ -3617,7 +3619,6 @@ function setBgmVolume(val){
   bgmMuted=false;
 }
 // 背景音乐开关
-let bgmMuted=false;
 function toggleBgmMute(){
   bgmMuted=!bgmMuted;
   var bgm=document.getElementById('bgm-audio');
