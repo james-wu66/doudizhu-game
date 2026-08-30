@@ -423,8 +423,8 @@ async function loadLeaderboard() {
 }
 
 function startGame() {
-    // 跳转到游戏页面，带上 token
-    const saved = localStorage.getItem('doudizhu_user');
+    // 跳转到游戏页面，带上 token（localStorage 没有时读 sessionStorage，避免未勾选"记住密码"时 token 丢失闪退回登录）
+    const saved = localStorage.getItem('doudizhu_user') || sessionStorage.getItem('doudizhu_user');
     let token = '';
     if (saved) { try { const u = JSON.parse(saved); token = u.token || ''; } catch(e){} }
     window.location.href = '/?name=' + encodeURIComponent(currentUser) + '&token=' + encodeURIComponent(token);
