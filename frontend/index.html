@@ -541,6 +541,16 @@ body{display:flex;justify-content:center;align-items:center;}
 
 /* === 横屏优化（2026-08-04）：手机横屏安全边距 + 底牌放大 + 四周留白 === */
 @media (min-width:480px) and (max-width:1100px){
+  /* 2026-08-30 弹窗滚动修复：登录/开始/结算弹窗在横屏手机上可滚动（之前划不动） */
+  #login-modal,#start-modal,#result-modal{
+    overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;
+    touch-action:pan-y!important;overscroll-behavior:contain!important;
+    align-items:flex-start!important;padding:3vh 0!important;
+  }
+  #login-box,#start-modal .start-box{
+    margin:auto!important;max-height:94vh!important;overflow-y:auto!important;
+    -webkit-overflow-scrolling:touch!important;touch-action:pan-y!important;
+  }
   :root{
     --safe-x:clamp(24px,4vw,36px);
   }
@@ -956,13 +966,13 @@ body.replay-mode #bid-actions{
       <button class="login-tab" id="tab-register" onclick="switchTab('register')">注册</button>
     </div>
     <form id="login-form" onsubmit="handleLogin(event)">
-      <input type="text" class="login-input" id="input-name" placeholder="请输入昵称" maxlength="12" autocomplete="username">
+      <input type="text" class="login-input" id="input-name" placeholder="请输入昵称" maxlength="12" autocomplete="off">
       <div class="password-wrapper">
-        <input type="password" class="login-input" id="input-password" placeholder="请输入密码（至少4位）" maxlength="20" autocomplete="current-password">
+        <input type="password" class="login-input" id="input-password" placeholder="请输入密码（至少4位）" maxlength="20" autocomplete="off">
         <button type="button" class="toggle-pwd" onclick="togglePwd('input-password',this)">👁️</button>
       </div>
       <div class="password-wrapper" id="confirm-password-group" style="display:none">
-        <input type="password" class="login-input" id="input-confirm-password" placeholder="请确认密码" maxlength="20" autocomplete="new-password">
+        <input type="password" class="login-input" id="input-confirm-password" placeholder="请确认密码" maxlength="20" autocomplete="off">
         <button type="button" class="toggle-pwd" onclick="togglePwd('input-confirm-password',this)">👁️</button>
       </div>
       <label class="login-remember">
@@ -3274,6 +3284,21 @@ setTimeout(resizeResponsiveLayout,1200);
   if(bgmVol!==null&&typeof setBgmVolume==='function')setBgmVolume(bgmVol);
   var sfxVol=localStorage.getItem('doudizhu_sfx_vol');
   if(sfxVol!==null&&typeof setSfxVolume==='function')setSfxVolume(sfxVol);
+})();
+
+// 首次点击解锁声音（浏览器自动播放策略：必须有用户手势才能出声，2026-08-30 修复"点一下再点一下才有声音"）
+(function(){
+  var unlocked=false;
+  document.addEventListener('click', function unlockSound(){
+    if(unlocked)return;
+    unlocked=true;
+    var bgm=document.getElementById('bgm-audio');
+    if(bgm&&!bgm.muted){
+      bgm.volume=(localStorage.getItem('doudizhu_bgm_vol')||80)/100;
+      bgm.play().catch(function(){});
+    }
+    document.removeEventListener('click', unlockSound);
+  }, true);
 })();
 
 // 注册 Service Worker（PWA 离线缓存，仅 https/file 环境生效）
