@@ -614,6 +614,8 @@ body{display:flex;justify-content:center;align-items:center;}
 .settings-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
 .settings-item:last-child{border-bottom:none;}
 .settings-item label{color:var(--text-light);font-size:15px;cursor:pointer;}
+/* 2026-08-30：设置滑块允许移动端手势拖动（不被页面手势拦截） */
+#bgm-volume,#sfx-volume{touch-action:manipulation;}
 .toggle{position:relative;width:50px;height:26px;background:rgba(255,255,255,0.15);border-radius:13px;cursor:pointer;transition:background 0.3s;border:none;outline:none;flex-shrink:0;}
 .toggle::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;background:#fff;border-radius:50%;transition:transform 0.3s;box-shadow:0 2px 4px rgba(0,0,0,0.3);}
 .toggle.active{background:linear-gradient(135deg,#4ade80,#22c55e);}
@@ -3237,7 +3239,7 @@ document.addEventListener('touchmove', function(e) {
   // 手牌区域放行（允许拖拽选牌）
   if (e.target.closest && e.target.closest('#player-hand')) return;
   // 弹窗内的滚动放行
-  if (e.target.closest && (e.target.closest('.profile-content') || e.target.closest('.settings-section') || e.target.closest('.replay-box'))) return;
+  if (e.target.closest && (e.target.closest('.profile-content') || e.target.closest('.settings-section') || e.target.closest('.replay-box') || e.target.closest('#login-modal') || e.target.closest('#start-modal') || e.target.closest('#result-modal'))) return;
   e.preventDefault();
 }, {passive: false});
 
@@ -3634,7 +3636,10 @@ document.addEventListener('keydown', function(e) {
 function setBgmVolume(val){
   val=parseInt(val);
   var bgm=document.getElementById('bgm-audio');
-  if(bgm){bgm.volume=val/100;bgm.muted=false;}  // 拖滑块=自动取消静音
+  if(bgm){
+    bgm.volume=val/100;bgm.muted=false;  // 拖滑块=自动取消静音
+    if(bgm.paused)bgm.play().catch(function(){});  // 2026-08-30：拖动时若未在播则立即播放，保证有声音变化反馈
+  }
   var slider=document.getElementById('bgm-volume');
   if(slider){slider.value=val;slider.disabled=false;}  // 滑块永不禁用
   var el=document.getElementById('bgm-volume-val');
@@ -3675,9 +3680,16 @@ function toggleBgmMute(){
     var bgm=document.getElementById('bgm-audio');if(bgm){bgm.muted=false;bgm.volume=0.8;bgm.play().catch(()=>{});}
   }
 })();
+// 音效试听防抖计时器（拖动滑块时短间隔内只播一次试听音）
+var _sfxTrialTimer=null;
 function setSfxVolume(val){
   val=parseInt(val);
-  if(typeof SoundSystem!=='undefined')SoundSystem.sfxVolume=val/100;
+  if(typeof SoundSystem!=='undefined'){
+    SoundSystem.sfxVolume=val/100;
+    // 2026-08-30：拖动滑块立即试听音效，保证有反馈
+    clearTimeout(_sfxTrialTimer);
+    _sfxTrialTimer=setTimeout(function(){try{SoundSystem.play('voice_尖');}catch(e){}},180);
+  }
   var slider=document.getElementById('sfx-volume');
   if(slider)slider.value=val;
   var el=document.getElementById('sfx-volume-val');
