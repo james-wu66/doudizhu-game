@@ -35,16 +35,8 @@ os.environ["DB_PORT"] = "21142"
 os.environ["DB_USER"] = "doudizhu_game"
 os.environ["DB_PASSWORD"] = "wzm13002104610."
 os.environ["DB_NAME"] = "james-wu-d2gcojd404e6b8137"
-# 优先读 config_local.py（本地密钥文件），覆盖上面的默认值
-try:
-    from config_local import DB_HOST as _CL_DB_HOST, DB_PORT as _CL_DB_PORT, DB_USER as _CL_DB_USER, DB_PASSWORD as _CL_DB_PASSWORD, DB_NAME as _CL_DB_NAME
-    os.environ["DB_HOST"] = _CL_DB_HOST
-    os.environ["DB_PORT"] = str(_CL_DB_PORT)
-    os.environ["DB_USER"] = _CL_DB_USER
-    os.environ["DB_PASSWORD"] = _CL_DB_PASSWORD
-    os.environ["DB_NAME"] = _CL_DB_NAME
-except ImportError:
-    pass  # config_local.py 不存在，用上面的默认值
+# 环境变量已由上面的默认值设置，不再尝试导入 config_local.py
+# （config_local.py 中的内网地址导致云端部署时 DB_HOST 被覆盖为不通的地址）
 DB_HOST = os.environ["DB_HOST"]
 DB_PORT = int(os.environ["DB_PORT"])
 DB_USER = os.environ["DB_USER"]
