@@ -999,6 +999,8 @@ let roundScore = 0;
 let cardIdCounter = 0;
 let bgmMuted = false;
 let sfxMuted = false;
+// ===== AI 学习（LEARN）模块状态 =====
+const LEARN = {loaded: false, base: {}, buckets: {}, roundId: '', step: 0};
 
 // ==================== CONSTANTS ====================
 const SUITS=['♠','♥','♦','♣'];
@@ -1804,6 +1806,9 @@ async function startNewGame(){
 
 // 只负责发牌开局，不改局数（供"无人叫地主重新发牌"复用）
 async function dealRound(){
+  LEARN.roundId = Date.now() + '_' + Math.floor(Math.random() * 1000000);
+  LEARN.step = 0;
+  learnLoad();
   document.getElementById('result-modal').classList.remove('show');
   initGame();
   G.roundScores=[0,0,0]; // per-player score this round
@@ -2214,6 +2219,18 @@ function endGame(winner){
     const role=G.landlord===PLAYER?'landlord':'farmer';
     const result=playerWon?'win':'lose';
     recordGameResult(result,role,currentRound,0,G.gameMoves||[],G.bidMult*G.bombMult*BASE_SCORE*(result==='win'?1:-1),G.bidMult);
+    // AI 学习回填（AI 视角胜负：与地主同阵营者 win）——与登录状态无关，游客局也执行
+    try{
+      const aiResults=[];
+      [LEFT, RIGHT].forEach(w=>{
+        const wWon=(G.landlord===w)===landlordWon;
+        aiResults.push({who: w===LEFT?'LEFT':'RIGHT', result: wWon?'win':'lose'});
+      });
+      fetch(API_BASE + '/api/ai/backfill', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({round_id: LEARN.roundId, game_id: null, results: aiResults})
+      }).catch(()=>{});
+    }catch(e){console.warn('AI backfill fail',e);}
   }catch(e){console.warn('record fail',e);}
   multEl.textContent='';
 
@@ -2347,6 +2364,75 @@ function evaluateHand(cards){
   return {score:Math.max(0,Math.min(100,score)),bombs,rocket,singles};
 }
 
+// ===== AI 学习：修正参数加载与计算 =====
+function learnLoad(){
+  fetch(API_BASE + '/api/ai/learning')
+    .then(r => r.json())
+    .then(d => {
+      if(d && d.base){
+        LEARN.base = d.base || {};
+        LEARN.buckets = {};
+        (d.buckets || []).forEach(b => { LEARN.buckets[b.action_type + '|' + b.bucket] = b; });
+      }
+      LEARN.loaded = true;
+    })
+    .catch(() => { LEARN.loaded = true; }); // 加载失败不阻塞游戏，修正分为 0
+}
+function learnQuery(actionType, bucket){
+  if(!LEARN.loaded) return null;
+  return LEARN.buckets[actionType + '|' + bucket] || null;
+}
+function learnAdjust(actionType, bucket){
+  // 修正分 = (桶胜率 - 基准胜率) * 200，钳制 ±20，再乘渐进系数 min(1, total/100)
+  const b = learnQuery(actionType, bucket);
+  if(!b || b.total < 30) return 0;
+  const baseWr = (LEARN.base[actionType] || {}).win_rate;
+  if(baseWr === undefined) return 0;
+  const raw = (b.win_rate - baseWr) * 200;
+  const clamped = Math.max(-20, Math.min(20, raw));
+  return clamped * Math.min(1, b.total / 100);
+}
+function learnPassBias(role, landlordCount){
+  // PASS 专用：让牌 vs 压牌 双桶对照。正=更愿压（return false），负=更愿让（return true）
+  const band = landlordCount <= 3 ? 'lt3' : (landlordCount <= 8 ? 'lt8' : 'gt8');
+  const beat = learnQuery('PASS', 'beat:' + role + ':' + band);
+  const pass = learnQuery('PASS', 'pass:' + role + ':' + band);
+  if(!beat && !pass) return 0;
+  const baseWr = (LEARN.base['PASS'] || {}).win_rate;
+  let bias = 0;
+  if(beat && pass) bias = (beat.win_rate - pass.win_rate) * 200;
+  else if(beat) bias = (beat.win_rate - (baseWr === undefined ? 0.5 : baseWr)) * 200;
+  else if(pass) bias = -((pass.win_rate - (baseWr === undefined ? 0.5 : baseWr)) * 200);
+  const clamped = Math.max(-20, Math.min(20, bias));
+  const minTotal = Math.min(beat ? beat.total : 999, pass ? pass.total : 999);
+  return clamped * Math.min(1, minTotal / 100);
+}
+function aiRecordStep(step, handState, action, actionType, bucket, who){
+  if(!LEARN.roundId) return;
+  const payload = {
+    round_id: LEARN.roundId,
+    step: step,
+    hand_state: handState,
+    action: action,
+    action_type: actionType,
+    who: who,
+    bucket: bucket || '',
+    result: '',
+    score_change: 0
+  };
+  fetch(API_BASE + '/api/ai/record', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  }).catch(() => {}); // 记录失败静默，不影响游戏
+}
+function aiActionTypeOf(candidate, freq){
+  if(candidate && (candidate.pattern.type === 'BOMB' || candidate.pattern.type === 'ROCKET')) return 'BOMB';
+  if(candidate && aiSplitPenalty(candidate.cards, freq) > 0) return 'SPLIT';
+  return 'NORMAL'; // NORMAL 不参与统计
+}
+function aiRoleNameFor(seat){ return seat === LEFT ? 'LEFT' : seat === RIGHT ? 'RIGHT' : 'PLAYER'; }
+
 // ===== 叫地主 v4（不看座位：改为叫牌顺序 + 竞争强度 + 倍数成本） =====
 function aiDecideBid(hand,isCallPhase){
   const report=evaluateHand(hand);
@@ -2367,7 +2453,10 @@ function aiDecideBid(hand,isCallPhase){
     const grabbedBefore=(G.grabActed||[]).filter(Boolean).length;
     threshold+=grabbedBefore*2;
   }
-  return report.score>=threshold;
+  const bidBucket = (isCallPhase ? 'call' : 'grab') + ':' + (report.score < 55 ? 'lt55' : (report.score > 70 ? 'gt70' : 'mid'));
+  const bidDecide = report.score >= threshold - learnAdjust('BID', bidBucket);
+  aiRecordStep(LEARN.step++, {phase: isCallPhase ? 'call' : 'grab', score: report.score, handCount: hand.length}, {action: bidDecide ? 'bid' : 'pass'}, 'BID', bidBucket, aiRoleNameFor(G.bidCurrent));
+  return bidDecide;
 }
 
 // ===== 候选生成 v3（S2：炸弹可拆，拆牌成本交给评分） =====
@@ -2632,7 +2721,13 @@ function aiCandidateScore(x,hand,who,mode,last){
   if(pattern.type==='FOUR_TWO'&&freq[pattern.main]===4&&after.length>0)score-=30; // 整副炸弹不当四带二主牌（清空手牌除外）
   // === Core 2: structure value (aiRouteValue + split penalty) ===
   score+=aiRouteValue(hand,x,who);
-  score-=aiSplitPenalty(x.cards,freq)*1.25;
+  const _sp = aiSplitPenalty(x.cards, freq);
+  score -= _sp * 1.25;
+  if(_sp > 0){
+    const penBand = _sp <= 6 ? 'p6' : (_sp <= 10 ? 'p10' : (_sp <= 25 ? 'p25' : 'p30'));
+    const handBand = hand.length <= 8 ? 'h8' : 'hm';
+    score += learnAdjust('SPLIT', penBand + ':' + handBand);
+  }
   score-=aiKickerWaste(x.cards,pattern,mode==='counter');
   // === Core 5: tracker integration ===
   if(mode!=='counter'||!last){
@@ -2642,6 +2737,12 @@ function aiCandidateScore(x,hand,who,mode,last){
   // === Counter mode ===
   if(mode==='counter'){
     score+=aiBombValue(x,hand,who,last,mode);
+    if(pattern.type==='BOMB'||pattern.type==='ROCKET'){
+      const _threat=aiThreatCount(who);
+      const threatBand=_threat<=3?'t3':(_threat<=4?'t4':'t5');
+      const handBand=hand.length<=5?'h5':(hand.length<=10?'h10':'hm');
+      score+=learnAdjust('BOMB',threatBand+':'+handBand);
+    }
     score+=aiControlTradeoff(x,hand,who,last,mode);
     const landlordPlay=role!=='landlord'&&lastPlayer===G.landlord,partnerPlay=role!=='landlord'&&lastPlayer===partner;
     if(landlordPlay){
@@ -2655,6 +2756,12 @@ function aiCandidateScore(x,hand,who,mode,last){
   }else{
     // === Lead mode ===
     score+=aiBombValue(x,hand,who,last,mode);
+    if(pattern.type==='BOMB'||pattern.type==='ROCKET'){
+      const _threat2=aiThreatCount(who);
+      const threatBand2=_threat2<=3?'t3':(_threat2<=4?'t4':'t5');
+      const handBand2=hand.length<=5?'h5':(hand.length<=10?'h10':'hm');
+      score+=learnAdjust('BOMB',threatBand2+':'+handBand2);
+    }
     if(after.length===0)score+=120;
     if(hand.length<=6){
       // 收尾先小后大：能清空手牌 → 正常加分；控制牌(A/2/王)没清空先出 → 重罚留到收尾；小/中牌正常加
@@ -2899,6 +3006,10 @@ function aiShouldPassCounter(hand,last,who,candidates){
       if(hasMid)return false;
     }
   }
+  // Lv9: 学习修正（渐进）——正=更愿压，负=更愿让
+  const passBias = learnPassBias(role, landlordCount);
+  if(passBias < -8) return true;
+  if(passBias > 8) return false;
   // Default: play normally
   return false;
 }
@@ -2952,8 +3063,60 @@ function aiPickScored(scored){
   return near[Math.floor(Math.random()*near.length)].x.cards;
 }
 
-function aiFindCounter(hand,last,who,strategy){aiObservePlay();const allCands=aiCandidates(hand).filter(x=>aiCanBeat(x,last));if(!allCands.length)return null;if(aiShouldPassCounter(hand,last,who,allCands))return null;const sameType=allCands.filter(x=>x.pattern.type===last.type&&x.pattern.len===last.len);let candidates=allCands;if(sameType.length>=1){const minMain=Math.min(...sameType.map(c=>c.pattern.main));candidates=sameType.filter(c=>c.pattern.main===minMain);}return aiPickScored(candidates.map(x=>({x,score:aiCandidateScore(x,hand,who,'counter',last)})));}
-function aiLead(hand,who,strategy){aiObservePlay();const candidates=aiCandidates(hand);if(!candidates.length)return hand.slice(0,1);const rem=(function(){try{return aiRemainingMap();}catch(e){return{};}})();return aiPickScored(candidates.map(x=>({x,score:aiCandidateScore(x,hand,who,'lead-'+strategy,null)})))||hand.slice(0,1);}
+function aiFindCounter(hand,last,who,strategy){
+  aiObservePlay();
+  const allCands=aiCandidates(hand).filter(x=>aiCanBeat(x,last));
+  const role=aiRole(who);
+  const landlordCount=aiLandlordCount();
+  const lband=landlordCount<=3?'lt3':(landlordCount<=8?'lt8':'gt8');
+  if(!allCands.length){
+    aiRecordStep(LEARN.step++, {phase:'counter', role:role, handCount:hand.length, landlordCount:landlordCount, lastType:last.type, lastMain:last.main}, {passed:true, cards:[]}, 'PASS', 'pass:'+role+':'+lband, aiRoleNameFor(who));
+    return null;
+  }
+  if(aiShouldPassCounter(hand,last,who,allCands)){
+    aiRecordStep(LEARN.step++, {phase:'counter', role:role, handCount:hand.length, landlordCount:landlordCount, lastType:last.type, lastMain:last.main}, {passed:true, cards:[]}, 'PASS', 'pass:'+role+':'+lband, aiRoleNameFor(who));
+    return null;
+  }
+  const sameType=allCands.filter(x=>x.pattern.type===last.type&&x.pattern.len===last.len);
+  let candidates=allCands;
+  if(sameType.length>=1){const minMain=Math.min(...sameType.map(c=>c.pattern.main));candidates=sameType.filter(c=>c.pattern.main===minMain);}
+  const picked=aiPickScored(candidates.map(x=>({x,score:aiCandidateScore(x,hand,who,'counter',last)})));
+  const freq=aiCountRanks(hand);
+  const samePicked=candidates.filter(c=>c.cards.length===picked.length&&c.cards.every(cd=>picked.some(p=>p.id===cd.id)));
+  const cand=samePicked[0]||null;
+  const at=aiActionTypeOf(cand,freq);
+  if(at==='BOMB'){
+    const threatBand=aiThreatCount(who)<=3?'t3':(aiThreatCount(who)<=4?'t4':'t5');
+    const handBand=hand.length<=5?'h5':(hand.length<=10?'h10':'hm');
+    aiRecordStep(LEARN.step++, {phase:'counter', role:role, handCount:hand.length, landlordCount:landlordCount, lastType:last.type, lastMain:last.main}, {passed:false, cards:picked, pattern:(cand?cand.pattern:null)}, 'BOMB', threatBand+':'+handBand, aiRoleNameFor(who));
+  }else if(at==='SPLIT'){
+    const penBandBase=aiSplitPenalty(picked,freq);
+    const penBand=penBandBase<=6?'p6':(penBandBase<=10?'p10':(penBandBase<=25?'p25':'p30'));
+    aiRecordStep(LEARN.step++, {phase:'counter', role:role, handCount:hand.length, landlordCount:landlordCount, lastType:last.type, lastMain:last.main}, {passed:false, cards:picked, pattern:(cand?cand.pattern:null)}, 'SPLIT', penBand+':'+(hand.length<=8?'h8':'hm'), aiRoleNameFor(who));
+  }else{
+    aiRecordStep(LEARN.step++, {phase:'counter', role:role, handCount:hand.length, landlordCount:landlordCount, lastType:last.type, lastMain:last.main}, {passed:false, cards:picked, pattern:(cand?cand.pattern:null)}, 'PASS', 'beat:'+role+':'+lband, aiRoleNameFor(who));
+  }
+  return picked;
+}
+function aiLead(hand,who,strategy){
+  aiObservePlay();
+  const candidates=aiCandidates(hand);
+  if(!candidates.length)return hand.slice(0,1);
+  const rem=(function(){try{return aiRemainingMap();}catch(e){return{};}})();
+  const picked=aiPickScored(candidates.map(x=>({x,score:aiCandidateScore(x,hand,who,'lead-'+strategy,null)})))||hand.slice(0,1);
+  const freq=aiCountRanks(hand);
+  const samePicked=candidates.filter(c=>c.cards.length===picked.length&&c.cards.every(cd=>picked.some(p=>p.id===cd.id)));
+  const cand=samePicked[0]||null;
+  const at=aiActionTypeOf(cand,freq);
+  if(at!=='NORMAL'){
+    const threatBand=aiThreatCount(who)<=3?'t3':(aiThreatCount(who)<=4?'t4':'t5');
+    const handBand=hand.length<=5?'h5':(hand.length<=10?'h10':'hm');
+    const penBandBase=(cand?aiSplitPenalty(cand.cards,freq):0);
+    const penBand=penBandBase<=6?'p6':(penBandBase<=10?'p10':(penBandBase<=25?'p25':'p30'));
+    aiRecordStep(LEARN.step++, {phase:'lead', role:aiRole(who), handCount:hand.length, landlordCount:aiLandlordCount()}, {cards:picked, pattern:(cand?cand.pattern:null)}, at, at==='BOMB'?(threatBand+':'+handBand):(penBand+':'+(hand.length<=8?'h8':'hm')), aiRoleNameFor(who));
+  }
+  return picked;
+}
 
 
 

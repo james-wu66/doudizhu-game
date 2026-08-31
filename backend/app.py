@@ -260,11 +260,31 @@ def init_db():
                 hand_state LONGTEXT,
                 action_taken LONGTEXT,
                 action_type VARCHAR(100),
+                who VARCHAR(10),
+                bucket VARCHAR(100),
                 result VARCHAR(50),
                 score_change FLOAT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         """)
+        
+        # 迁移：给老表补 AI 学习新列（已存在则忽略）
+        try:
+            c.execute("ALTER TABLE ai_learning ADD COLUMN round_id TEXT")
+        except: pass
+        try:
+            c.execute("ALTER TABLE ai_learning ADD COLUMN who TEXT")
+        except: pass
+        try:
+            c.execute("ALTER TABLE ai_learning ADD COLUMN bucket TEXT")
+        except: pass
+        # 索引（MySQL 8.0 不支持 IF NOT EXISTS，重复执行报错忽略即可）
+        try:
+            c.execute("CREATE INDEX idx_ai_learning_round ON ai_learning(round_id)")
+        except: pass
+        try:
+            c.execute("CREATE INDEX idx_ai_learning_stat ON ai_learning(action_type, bucket)")
+        except: pass
         
         conn.close()
         print("[数据库] MySQL 表初始化完成")
@@ -307,11 +327,31 @@ def init_db():
                 hand_state TEXT,
                 action_taken TEXT,
                 action_type TEXT,
+                who TEXT,
+                bucket TEXT,
                 result TEXT,
                 score_change REAL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        
+        # 迁移：给老表补 AI 学习新列（已存在则忽略）
+        try:
+            c.execute("ALTER TABLE ai_learning ADD COLUMN round_id TEXT")
+        except: pass
+        try:
+            c.execute("ALTER TABLE ai_learning ADD COLUMN who TEXT")
+        except: pass
+        try:
+            c.execute("ALTER TABLE ai_learning ADD COLUMN bucket TEXT")
+        except: pass
+        # 索引
+        try:
+            c.execute("CREATE INDEX IF NOT EXISTS idx_ai_learning_round ON ai_learning(round_id)")
+        except: pass
+        try:
+            c.execute("CREATE INDEX IF NOT EXISTS idx_ai_learning_stat ON ai_learning(action_type, bucket)")
+        except: pass
         
         # 迁移：给老数据库补字段（已存在则忽略）
         try:
@@ -571,12 +611,14 @@ def record_ai_step():
     conn = get_db()
     c = conn.cursor()
     c.execute("""
-        INSERT INTO ai_learning (game_id, step_number, hand_state, action_taken, action_type, result, score_change)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO ai_learning (game_id, step_number, hand_state, action_taken, action_type, who, bucket, result, score_change, round_id)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """, (data.get("game_id"), data.get("step"),
           json.dumps(data.get("hand_state", []), ensure_ascii=False),
           json.dumps(data.get("action", {}), ensure_ascii=False),
-          data.get("action_type", ""), data.get("result", ""), data.get("score_change", 0)))
+          data.get("action_type", ""), data.get("who", ""), data.get("bucket", ""),
+          data.get("result", ""), data.get("score_change", 0),
+          data.get("round_id", "")))
     conn.commit()
     conn.close()
     return jsonify({"success": True})
@@ -605,6 +647,57 @@ def ai_insights():
             "avg_score": round(row["avg_score"], 2)
         })
     return jsonify(result)
+
+
+@app.route("/api/ai/backfill", methods=["POST"])
+def backfill_ai_results():
+    """局终回填：按 round_id + who 把该局所有 AI 步骤的胜负结果补上"""
+    data = request.json
+    conn = get_db()
+    c = conn.cursor()
+    for item in data.get("results", []):
+        c.execute("""
+            UPDATE ai_learning SET result = %s, game_id = COALESCE(%s, game_id)
+            WHERE round_id = %s AND who = %s AND (result = '' OR result = 'pending')
+        """, (item.get("result", ""), data.get("game_id"), data.get("round_id", ""), item.get("who", "")))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True})
+
+
+@app.route("/api/ai/learning")
+def ai_learning():
+    """返回各策略基准胜率 + 桶级胜率（total>=30 才返回，前端据此算修正分）"""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        SELECT action_type,
+               SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) * 1.0 / COUNT(*) as win_rate,
+               COUNT(*) as total
+        FROM ai_learning
+        WHERE result IN ('win','lose') AND action_type != '' AND action_type != 'NORMAL'
+        GROUP BY action_type
+    """)
+    base = {}
+    for r in c.fetchall():
+        base[r["action_type"]] = {"win_rate": round(r["win_rate"], 4), "total": r["total"]}
+    c.execute("""
+        SELECT action_type, bucket,
+               SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) * 1.0 / COUNT(*) as win_rate,
+               COUNT(*) as total
+        FROM ai_learning
+        WHERE result IN ('win','lose') AND action_type != '' AND bucket != ''
+        GROUP BY action_type, bucket
+        HAVING COUNT(*) >= 30
+    """)
+    buckets = []
+    for r in c.fetchall():
+        buckets.append({
+            "action_type": r["action_type"], "bucket": r["bucket"],
+            "win_rate": round(r["win_rate"], 4), "total": r["total"]
+        })
+    conn.close()
+    return jsonify({"base": base, "buckets": buckets})
 
 
 
