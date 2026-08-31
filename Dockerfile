@@ -13,6 +13,7 @@ RUN npm install -g @cloudbase/cli
 COPY backend/ backend/
 COPY frontend/ frontend/
 COPY audio/ audio/
+COPY 斗地主最终版工作台/ 斗地主最终版工作台/
 
 # 云托管默认端口
 ENV PORT=8080

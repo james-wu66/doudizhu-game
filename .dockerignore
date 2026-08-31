@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 *.bat
 *.md
+!斗地主最终版工作台/**
 verify_replay.js
 Procfile
 render.yaml
