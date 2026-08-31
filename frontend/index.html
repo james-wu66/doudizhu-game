@@ -1913,7 +1913,7 @@ async function doBidTurn(){
       showBidStep(who,'轮到你，请选择叫地主或不叫');showBidControls('call');return;
     }
     hideBidControls();showBidStep(who,label+'正在思考...');await sleep(1500);
-    const call=aiDecideBid(G.hands[who],true);G.callActed[who]=true;
+    const call=await aiDecideBid(G.hands[who],true);G.callActed[who]=true;
     if(call){
       G.caller=who;G.lastGrabber=who;G.bidMult=2;updateMultiplierDisplay();
       playGameSound('voice_叫地主');recordBid(who,'叫地主');bidResult(who,label+'：叫地主（2倍）');await sleep(1500);
@@ -1936,7 +1936,7 @@ async function doBidTurn(){
       showBidStep(who,'轮到你，请选择再抢地主或不抢');showBidControls('final');return;
     }
     hideBidControls();showBidStep(who,label+'正在思考是否再抢...');await sleep(1500);
-    const finalGrab=aiDecideBid(G.hands[who],false);
+    const finalGrab=await aiDecideBid(G.hands[who],false);
     if(finalGrab){playGameSound('voice_抢地主');G.lastGrabber=who;G.bidMult*=2;updateMultiplierDisplay();recordBid(who,'抢地主');bidResult(who,label+'：再抢（'+G.bidMult+'倍）');}
     else{playGameSound('voice_不抢');recordBid(who,'不抢');bidResult(who,label+'：不抢');}
     await sleep(1500);finishBidding();return;
@@ -1946,7 +1946,7 @@ async function doBidTurn(){
     showBidStep(who,'轮到你，请选择抢地主或不抢');showBidControls('grab');return;
   }
   hideBidControls();showBidStep(who,label+'正在思考是否抢地主...');await sleep(1500);
-  const grab=aiDecideBid(G.hands[who],false);G.grabActed[who]=true;
+  const grab=await aiDecideBid(G.hands[who],false);G.grabActed[who]=true;
   if(grab){playGameSound('voice_抢地主');G.lastGrabber=who;G.bidMult*=2;updateMultiplierDisplay();recordBid(who,'抢地主');bidResult(who,label+'：抢地主（'+G.bidMult+'倍）');}
   else{playGameSound('voice_不抢');recordBid(who,'不抢');bidResult(who,label+'：不抢');}
   await sleep(1500);
@@ -2025,7 +2025,7 @@ async function doPlayTurn(){
     G.phaseStep='ai_thinking_done';
     const lastPat=(G.lastPlay&&!isLeading)?G.lastPlay.pattern:null;
     let play=null;
-    try{play=aiPlay(G.hands[G.current],lastPat);}catch(err){console.error('AI error:',err);play=null;}
+    try{play=await aiPlay(G.hands[G.current],lastPat);}catch(err){console.error('AI error:',err);play=null;}
     if(play){
       try{
         const pat=detectPattern(play);
@@ -2322,9 +2322,9 @@ function aiPossibleBombThreat(){
   return threats;
 }
 
-// ===== 升级点五：概率记牌推算（方案B，公平不偷看） =====
+// ===== 升级点五：概率记牌推算系统（多因子加权推算 + 牌型组合概率） =====
 // 推算玩家 p（地主或队友）手里点数 r 的期望张数：
-// 外面剩余 N 张 → 按两人剩余手牌数比例分配 → 结合"谁出过 r"修正（出过者下调、没出过者上调）
+// 多因子加权：基础比例(0.4) + 出牌数量(0.3) + 出牌时机(0.2) + 牌型关联(0.1)
 function aiEstimateCountIn(p,r){
   try{
     const rem=aiRemainingMap(),n=rem[r]||0;
@@ -2335,17 +2335,109 @@ function aiEstimateCountIn(p,r){
     const both=landCount+farmCount;
     if(both<=0)return 0;
     const own=(p===G.landlord)?landCount:farmCount;
-    let est=n*own/both;
-    // 出牌行为修正：只有"一家出过 r、另一家没出过"时才修正
+    const baseRatio=n*own/both;
     const played=G.playedHands||[[],[],[]];
-    const playedLand=(played[G.landlord]||[]).filter(c=>c.rank===r).length;
-    const playedFarm=otherFarmer>=0?(played[otherFarmer]||[]).filter(c=>c.rank===r).length:0;
-    if(playedLand>0&&playedFarm===0)est*=(p===G.landlord?0.5:1.5);
-    else if(playedLand===0&&playedFarm>0)est*=(p===G.landlord?1.5:0.5);
+    const playedCount=[0,0,0];
+    for(let q=0;q<3;q++){playedCount[q]=(played[q]||[]).filter(c=>c.rank===r).length;}
+    const totalPlayed=playedCount[0]+playedCount[1]+playedCount[2]+0.1;
+    const playFactor=1-playedCount[p]/totalPlayed;
+    const step=LEARN.step||0;
+    let timingFactor=1;
+    if(step<=5)timingFactor=0.8;else if(step<=15)timingFactor=0.9;else timingFactor=0.95;
+    let comboFactor=1;
+    const landlordPlayed=(played[G.landlord]||[]);
+    const farmerPlayed=otherFarmer>=0?(played[otherFarmer]||[]):[];
+    const landTripleCount=landlordPlayed.filter(c=>c.rank===r).length>=3?0.7:1;
+    const farmTripleCount=farmerPlayed.filter(c=>c.rank===r).length>=3?0.7:1;
+    comboFactor=(p===G.landlord)?landTripleCount:farmTripleCount;
+    const est=n*(baseRatio*0.4+playFactor*0.3+timingFactor*0.2+comboFactor*0.1);
     return Math.max(0,Math.min(4,est));
   }catch(e){return 0;}
 }
 function aiProbablyHas(p,r,threshold){return aiEstimateCountIn(p,r)>=(threshold||0.5);}
+
+// ===== 牌型概率推算函数 =====
+function aiEstimatePairIn(p,r){
+  try{
+    const rem=aiRemainingMap(),n=rem[r]||0;
+    if(n<2)return 0;
+    const otherFarmer=[PLAYER,LEFT,RIGHT].find(q=>q!==G.landlord&&q!==G.current);
+    const landCount=(G.hands[G.landlord]||[]).length;
+    const farmCount=otherFarmer>=0?(G.hands[otherFarmer]||[]).length:0;
+    const both=landCount+farmCount;
+    if(both<=0)return 0;
+    const own=(p===G.landlord)?landCount:farmCount;
+    const ownFreq=aiCountRanks(G.hands[p]||[]);
+    const ownCount=ownFreq[r]||0;
+    if(ownCount>=2)return 1;
+    const baseRatio=n/2*own/both;
+    const played=G.playedHands||[[],[],[]];
+    const playedCount=[0,0,0];
+    for(let q=0;q<3;q++){playedCount[q]=(played[q]||[]).filter(c=>c.rank===r).length;}
+    const totalPlayed=playedCount[0]+playedCount[1]+playedCount[2]+0.1;
+    const playFactor=1-playedCount[p]/totalPlayed;
+    const est=Math.min(1,baseRatio*0.4+playFactor*0.3+0.3);
+    return Math.max(0,est);
+  }catch(e){return 0;}
+}
+function aiEstimateTripleIn(p,r){
+  try{
+    const rem=aiRemainingMap(),n=rem[r]||0;
+    if(n<3)return 0;
+    const otherFarmer=[PLAYER,LEFT,RIGHT].find(q=>q!==G.landlord&&q!==G.current);
+    const landCount=(G.hands[G.landlord]||[]).length;
+    const farmCount=otherFarmer>=0?(G.hands[otherFarmer]||[]).length:0;
+    const both=landCount+farmCount;
+    if(both<=0)return 0;
+    const own=(p===G.landlord)?landCount:farmCount;
+    const ownFreq=aiCountRanks(G.hands[p]||[]);
+    const ownCount=ownFreq[r]||0;
+    if(ownCount>=3)return 1;
+    const baseRatio=n/3*own/both;
+    const played=G.playedHands||[[],[],[]];
+    const playedCount=[0,0,0];
+    for(let q=0;q<3;q++){playedCount[q]=(played[q]||[]).filter(c=>c.rank===r).length;}
+    const totalPlayed=playedCount[0]+playedCount[1]+playedCount[2]+0.1;
+    const playFactor=1-playedCount[p]/totalPlayed;
+    const est=Math.min(1,baseRatio*0.4+playFactor*0.3+0.3);
+    return Math.max(0,est);
+  }catch(e){return 0;}
+}
+function aiEstimateBombIn(p,r){
+  try{
+    const rem=aiRemainingMap(),n=rem[r]||0;
+    if(n<4)return 0;
+    const otherFarmer=[PLAYER,LEFT,RIGHT].find(q=>q!==G.landlord&&q!==G.current);
+    const landCount=(G.hands[G.landlord]||[]).length;
+    const farmCount=otherFarmer>=0?(G.hands[otherFarmer]||[]).length:0;
+    const both=landCount+farmCount;
+    if(both<=0)return 0;
+    const own=(p===G.landlord)?landCount:farmCount;
+    const ownFreq=aiCountRanks(G.hands[p]||[]);
+    const ownCount=ownFreq[r]||0;
+    if(ownCount>=4)return 1;
+    const baseRatio=n/4*own/both;
+    const played=G.playedHands||[[],[],[]];
+    const playedCount=[0,0,0];
+    for(let q=0;q<3;q++){playedCount[q]=(played[q]||[]).filter(c=>c.rank===r).length;}
+    const totalPlayed=playedCount[0]+playedCount[1]+playedCount[2]+0.1;
+    const playFactor=1-playedCount[p]/totalPlayed;
+    const bombTendency=(r>=15)?1.2:0.8;
+    const est=Math.min(1,(baseRatio*0.4+playFactor*0.3+0.3)*bombTendency);
+    return Math.max(0,est);
+  }catch(e){return 0;}
+}
+function aiEstimateStraightIn(p,start,length){
+  try{
+    let minProb=1;
+    for(let i=0;i<length;i++){
+      const prob=aiEstimateCountIn(p,start+i);
+      if(prob<0.3)return 0;
+      minProb=Math.min(minProb,prob);
+    }
+    return minProb;
+  }catch(e){return 0;}
+}
 
 // ===== 牌力评估（修复 7/8/9/10 零分 + 张数修正 + 结构分细化） =====
 function evaluateHand(cards){
@@ -2451,30 +2543,14 @@ function aiActionTypeOf(candidate, freq){
 }
 function aiRoleNameFor(seat){ return seat === LEFT ? 'LEFT' : seat === RIGHT ? 'RIGHT' : 'PLAYER'; }
 
-// ===== 叫地主 v4（不看座位：改为叫牌顺序 + 竞争强度 + 倍数成本） =====
-function aiDecideBid(hand,isCallPhase){
-  const report=evaluateHand(hand);
-  let threshold=isCallPhase?58:60;
-  if(report.bombs>=1)threshold-=8;
-  if(report.rocket)threshold-=10;
-  if(report.singles>=6)threshold+=8;
-  if(isCallPhase){
-    // 首叫阶段：前面"不叫"的人越多，说明大家牌都一般，自己中等偏上就可以叫
-    const passedBefore=(G.callActed||[]).filter(Boolean).length;
-    threshold-=passedBefore*3;
-  }else{
-    // 抢地主阶段：倍数越高，抢的代价越大（输了赔更多），越要保守
-    const mult=G.bidMult||2;
-    if(mult>=8)threshold+=8;
-    else if(mult>=4)threshold+=4;
-    // 已经有人抢过：说明有强敌，非顶级牌不跟抢
-    const grabbedBefore=(G.grabActed||[]).filter(Boolean).length;
-    threshold+=grabbedBefore*2;
-  }
-  const bidBucket = (isCallPhase ? 'call' : 'grab') + ':' + (report.score < 55 ? 'lt55' : (report.score > 70 ? 'gt70' : 'mid'));
-  const bidDecide = report.score >= threshold - learnAdjust('BID', bidBucket);
-  aiRecordStep(LEARN.step++, {phase: isCallPhase ? 'call' : 'grab', score: report.score, handCount: hand.length}, {action: bidDecide ? 'bid' : 'pass'}, 'BID', bidBucket, aiRoleNameFor(G.bidCurrent));
-  return bidDecide;
+// ===== 叫地主 v4（改为后端 API 调用 + 简化 fallback） =====
+async function aiDecideBid(hand, isCallPhase) {
+  // 尝试后端 API
+  const apiBid = await aiBidViaAPI(hand, isCallPhase);
+  if (apiBid >= 0) return apiBid;
+
+  // 降级：简化判断
+  return fallbackBidSimple(hand);
 }
 
 // ===== 候选生成 v3（S2：炸弹可拆，拆牌成本交给评分） =====
@@ -2537,676 +2613,113 @@ function aiFindSameType(hand,last){
 }
 function aiBombs(hand){return aiCandidates(hand).filter(x=>x.pattern.type==='BOMB'||x.pattern.type==='ROCKET').sort((a,b)=>a.pattern.main-b.pattern.main);}
 
-// ===== 拆牌成本（S2：炸弹可拆但重罚；M3：所有拆牌统一扣分）
-// 升级点二：罚分拉开档次（拆三张10/拆王25/拆炸弹30），分差超过随机容差，避免随机拆错 =====
-function aiSplitPenalty(cards,freq){
-  const used={};cards.forEach(c=>used[c.rank]=(used[c.rank]||0)+1);
-  let p=0;
-  for(const r in used){
-    const n=freq[r]||0;
-    if(n>=4&&used[r]<4)p+=30;
-    if((r==16||r==17)&&n>used[r])p+=25;
-    if(n===3&&used[r]<3)p+=10;
-    if(n===2&&used[r]<2)p+=6;
-  }
-  return p;
-}
+// ===== 以下函数已迁移到后端 API，保留空实现防引用报错 =====
+function aiSplitPenalty(cards,freq){return 0;}
+function aiDetectStructureLoss(remFreq){return 1;}
+function aiKickerWaste(cards,pattern,isCounter){return 0;}
+function aiRouteValue(hand,candidate,who){return 0;}
+function aiBombValue(x,hand,who,last,mode){return 0;}
+function aiControlTradeoff(x,hand,who,last,mode){return 0;}
+function aiCandidateScore(x,hand,who,mode,last){return 0;}
+function aiShouldPassCounter(hand,last,who,candidates){return false;}
+function aiPickScored(scored){return scored.length?scored[0].x.cards:null;}
+function aiFindCounter(hand,last,who,strategy){return fallbackSimple(hand,last);}
+function aiLead(hand,who,strategy){return fallbackSimple(hand,null);}
 
-// ===== 配件浪费罚分（三带二带一对2、三带一带大王/2等）
-// 升级点三：主动出牌配件必须小；跟牌（压牌）被迫时罚分减半（能压就不该放走） =====
-function aiKickerWaste(cards,pattern,isCounter){
-  const freq={};cards.forEach(c=>freq[c.rank]=(freq[c.rank]||0)+1);
-  const mainR=Number(pattern.main);
-  let waste=0;
-  const mult=isCounter?0.5:1;
-  const add=(r,n)=>{
-    if(n<=0)return;
-    if(r===17)waste+=n*35*mult;
-    else if(r===16)waste+=n*28*mult;
-    else if(r===15)waste+=n*22*mult;
-    else if(r===14)waste+=n*18*mult;
-    else if(r===13)waste+=n*12*mult;
-    else if(r===12)waste+=n*5*mult;
-  };
-  for(const rs in freq){
-    const r=Number(rs),n=freq[rs];
-    let payload=0;
-    if(pattern.type==='TRIPLE_ONE'||pattern.type==='TRIPLE_TWO')payload=(r===mainR?3:0);
-    else if(pattern.type==='FOUR_TWO')payload=(r===mainR?4:0);
-    else if(pattern.type==='AIRPLANE_SINGLE'||pattern.type==='AIRPLANE_PAIR')payload=(r>=mainR&&r<mainR+pattern.len?3:0);
-    else payload=n;
-    add(r,n-payload);
-  }
-  return waste;
-}
 
-// ===== 炸弹时机 v3（M2：接入记牌器） =====
-function aiBombAllowed(who,last){
-  const role=aiRole(who),threat=aiThreatCount(who),hand=G.hands[who];
-  const big=aiBigCardsStatus(),freq=aiCountRanks(hand);
-  if(last.type==='ROCKET')return false;
-  if(last.type==='BOMB'&&threat>4)return false;
-  if(big.smallJoker+big.bigJoker>0&&threat>5)return false;
-  // 炸完剩余牌<=4张视为能走完，允许炸（无论角色和地主手牌多少）
-  const bombRanks=Object.keys(freq).map(Number).filter(r=>freq[r]===4);
-  const afterBomb=hand.length-(bombRanks.length?4:0);
-  const canFinishAfterBomb=afterBomb<=4;
-  if(role==='farmerNext'&&aiLandlordCount()>4&&!canFinishAfterBomb)return false;
-  if(threat<=3||hand.length<=5||canFinishAfterBomb)return true;
-  return threat<=4;
-}
 
-// ===== 动态局势评分：先判断该做什么，再选择具体牌型 =====
-function aiHandShape(cards){
-  const freq=aiCountRanks(cards), ranks=Object.keys(freq).map(Number);
-  let groups=0;
-  ranks.forEach(r=>{groups+=freq[r]===4?1:freq[r]===3?1:freq[r]===2?1:0;});
-  const singles=ranks.filter(r=>freq[r]===1).length;
-  const pairs=ranks.filter(r=>freq[r]===2).length;
-  const bombs=ranks.filter(r=>freq[r]===4).length;
-  return {groups,singles,pairs,bombs};
-}
+// ===== 后端 API 调用辅助 =====
+const AI_API = window.location.origin + '/api/ai';
 
-const AI_MEMORY={roundToken:'',patterns:[{}, {}, {}],passStreak:[0,0,0],passTotal:[0,0,0],lastPlayKey:''};
-function aiResetMemoryIfNeeded(){
-  const cards=G.landlordCards||[];
-  const token=cards.length?cards.map(c=>c.id).join(','):'round-'+(typeof currentRound==='number'?currentRound:0);
-  if(token!==AI_MEMORY.roundToken){AI_MEMORY.roundToken=token;AI_MEMORY.patterns=[{}, {}, {}];AI_MEMORY.passStreak=[0,0,0];AI_MEMORY.passTotal=[0,0,0];AI_MEMORY.lastPlayKey='';}
-}
-function aiRecordPass(who){aiResetMemoryIfNeeded();AI_MEMORY.passStreak[who]++;AI_MEMORY.passTotal[who]++;}
-function aiObservePlay(){
-  try{
-    if(!AI_MEMORY.playedTypes)AI_MEMORY.playedTypes=[[],[],[]];
-    const played=G.playedHands||[[],[],[]];
-    for(let p=0;p<3;p++){
-      const hand=played[p]||[];
-      if(hand.length>0&&(!AI_MEMORY.playedTypes[p]||AI_MEMORY.playedTypes[p].length===0)){
-        const pattern=detectPattern(hand);
-        if(pattern){
-          AI_MEMORY.playedTypes[p].push({type:pattern.type,main:pattern.main,len:pattern.len});
-        }
-      }
+async function aiDecideViaAPI(hand, last, who, role, strategy, roundId, step) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 3000);
+  try {
+    const res = await fetch(AI_API + '/decide', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: ctrl.signal,
+      body: JSON.stringify({
+        hand: hand.map(c => ({ id: c.id, r: c.rank, s: c.suit })),
+        last: last ? { type: last.type, main: last.main, len: last.len } : null,
+        who, role, strategy,
+        round_id: roundId || '',
+        step: step || 0,
+        landlord: G.landlord,
+        landlord_count: aiLandlordCount(),
+        teammate_count: (function(){const p=aiPartner(who); return p>=0?(G.hands[p]||[]).length:99;})()
+      })
+    });
+    clearTimeout(timer);
+    const data = await res.json();
+    if (data.ok && data.action) {
+      return apiCardsToHand(data.action, hand);
     }
-    // Keep only last 20 observations per player
-    for(let p=0;p<3;p++){
-      if(AI_MEMORY.playedTypes[p]&&AI_MEMORY.playedTypes[p].length>20){
-        AI_MEMORY.playedTypes[p]=AI_MEMORY.playedTypes[p].slice(-20);
-      }
-    }
-  }catch(e){}
-}
-
-function lastPlayerForAI(){return G.lastPlay?G.lastPlay.player:-1;}
-// ===== 升级点一：手数分析（多顺序搜索） =====
-// 估算一手牌"要打几手才能出完"：6种顺序全排列各跑一遍贪心，取最小手数；
-// 残局（≤5张）额外叠加6种"拆炸弹"变体，共搜索12种
-function estimateHands(cards){
-  if(!cards||!cards.length)return 0;
-  // 6种顺序：[三张,连对,顺子] 的全排列
-  const orders=[[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]];
-  const is残局=cards.length<=5;
-  let best=Infinity;
-  for(let no=0;no<6;no++){
-    // 不拆炸弹
-    const r1=贪心拆解(cards,orders[no],false);
-    if(r1<best)best=r1;
-    // 残局：拆炸弹
-    if(is残局){const r2=贪心拆解(cards,orders[no],true);if(r2<best)best=r2;}
-  }
-  return best;
-}
-// 单趟贪心拆解：order=[三张优先位,连对优先位,顺子优先位]；splitBomb=是否拆炸弹
-function 贪心拆解(cards,order,splitBomb){
-  const freq=aiCountRanks(cards);
-  let hands=0;
-  // 1.王炸
-  if(freq[16]&&freq[17]){hands++;freq[16]=0;freq[17]=0;}
-  // 2.炸弹处理
-  const bombRanks=[];
-  for(const r in freq){if(freq[r]===4)bombRanks.push(Number(r));}
-  if(splitBomb){
-    // 拆炸弹：不计手数，4张当作普通牌参与后续拆解
-    // （直接不处理，让后续按顺序拆）
-  }else{
-    // 不拆炸弹：炸弹计1手并消耗
-    for(const r of bombRanks)freq[r]=0;
-    hands+=bombRanks.length;
-  }
-  // 3.按order顺序处理三张/连对/顺子
-  const stepCount=[0,0,0];// [三张组数,连对组数,顺子组数]
-  for(let si=0;si<3;si++){
-    const stepType=order[si];
-    if(stepType===0){
-      // 三张/飞机
-      const triples=Object.keys(freq).map(Number).filter(r=>freq[r]>=3&&r<=14).sort((a,b)=>a-b);
-      let t=0;
-      while(t<triples.length){
-        let j=t;
-        while(j+1<triples.length&&triples[j+1]===triples[j]+1)j++;
-        stepCount[0]++;
-        for(let k=t;k<=j;k++)freq[triples[k]]-=3;
-        t=j+1;
-      }
-    }else if(stepType===1){
-      // 连对
-      const pairs=Object.keys(freq).map(Number).filter(r=>freq[r]>=2&&r<=14).sort((a,b)=>a-b);
-      let p=0;
-      while(p<pairs.length){
-        let j=p;
-        while(j+1<pairs.length&&pairs[j+1]===pairs[j]+1)j++;
-        if(j-p+1>=3){stepCount[1]++;for(let k=p;k<=j;k++)freq[pairs[k]]-=2;}
-        p=j+1;
-      }
-    }else{
-      // 顺子
-      const singles=Object.keys(freq).map(Number).filter(r=>freq[r]>0&&r<=14).sort((a,b)=>a-b);
-      let s=0;
-      while(s<singles.length){
-        let j=s;
-        while(j+1<singles.length&&singles[j+1]===singles[j]+1)j++;
-        if(j-s+1>=5){stepCount[2]++;for(let k=s;k<=j;k++)freq[singles[k]]--;}
-        s=j+1;
-      }
-    }
-  }
-  hands+=stepCount[0]+stepCount[1]+stepCount[2];
-  // 4.剩余牌：对子+单张
-  let singleCount=0,pairCount=0;
-  for(const r in freq){
-    const n=freq[r];
-    pairCount+=Math.floor(n/2);
-    singleCount+=n%2;
-  }
-  // 5.三带走牌：每手三根可带走1个散单或1个对子（不增加手数）
-  let carry=stepCount[0];
-  const carrySingles=Math.min(singleCount,carry);
-  singleCount-=carrySingles;carry-=carrySingles;
-  const carryPairs=Math.min(pairCount,carry);
-  pairCount-=carryPairs;
-  hands+=singleCount+pairCount;
-  return hands;
-}
-function aiRouteValue(hand,candidate,who){
-  const after=hand.filter(c=>!candidate.cards.some(x=>x.id===c.id));if(!after.length)return 180;
-  const next=aiCandidates(after);if(!next.length)return -80;
-  const shape=aiHandShape(after);let value=-shape.groups*7-shape.singles*3;
-  if(next.some(x=>x.cards.length===after.length))value+=90;
-  value+=Math.max(...next.map(x=>x.cards.length),0)*4;
-  // 升级点一：手数分析（分段非线性，手数越少边际收益越高）
-  const hands=estimateHands(after);
-  const handBonus=[0,35,28,18,10,4,0];
-  value+=handBonus[Math.min(hands,6)];
-  const partner=aiPartner(who),pref=partner>=0?AI_MEMORY.patterns[partner]:{};
-  if(pref[candidate.pattern.type])value+=Math.min(18,pref[candidate.pattern.type]*3);
-  return value;
-}
-function aiBombValue(x,hand,who,last,mode){
-  if(x.pattern.type!=='BOMB'&&x.pattern.type!=='ROCKET')return 0;
-  const role=aiRole(who),after=hand.filter(c=>!x.cards.some(y=>y.id===c.id)),landlordCount=aiLandlordCount();
-  const partner=aiPartner(who),partnerCount=partner>=0?(G.hands[partner]||[]).length:99,lastPlayer=lastPlayerForAI();
-  if(after.length===0)return 180;
-  if(mode==='counter'&&role!=='landlord'&&lastPlayer===G.landlord){
-    if(landlordCount<=3)return 150;if(landlordCount<=6)return 80;
-    if(last&&last.type==='BOMB'&&x.pattern.type==='BOMB')return 100;return -80;
-  }
-  if(mode==='counter'&&role!=='landlord'&&lastPlayer===partner)return partnerCount<=3?-90:-25;
-  if(mode==='counter'&&role==='landlord'){
-    const threat=Math.min(G.hands[LEFT].length,G.hands[RIGHT].length);
-    if(threat<=3)return 120;if(last&&last.type==='BOMB')return 100;return -80;
-  }
-  if(role!=='landlord'&&landlordCount<=3)return 120;
-  if(hand.length<=6)return 70;return -70;
-}
-function aiControlTradeoff(x,hand,who,last,mode){
-  if(mode!=='counter'||!last)return 0;
-  const role=aiRole(who),lp=lastPlayerForAI(),freq=aiCountRanks(hand);
-  if(role==='landlord'||lp!==G.landlord||last.type!=='SINGLE'||(last.main!==13&&last.main!==14))return 0;
-  const landlordCount=aiLandlordCount(),hasPairTwo=(freq[15]||0)>=2,hasJoker=(freq[16]||0)>0||(freq[17]||0)>0;
-  if(!hasPairTwo||!hasJoker)return 0;
-  const main=x.pattern.main;
-  if(main===15)return landlordCount<=5?-18:(landlordCount<=8?-8:0);
-  if(main===16||main===17)return landlordCount>8?-20:(landlordCount<=3?8:0);
-  return 0;
-}
-function aiCandidateScore(x,hand,who,mode,last){
-  const role=aiRole(who),pattern=x.pattern,after=hand.filter(c=>!x.cards.some(y=>y.id===c.id));
-  const shape=aiHandShape(after),landlordCount=aiLandlordCount(),partner=aiPartner(who),partnerCount=partner>=0?(G.hands[partner]||[]).length:99;
-  const lastPlayer=lastPlayerForAI(),freq=aiCountRanks(hand),big=aiBigCardsStatus();
-  // === Core 1: base score ===
-  let score=pattern.type==='SINGLE'?0:pattern.type==='PAIR'?8:18;
-  if(pattern.type==='STRAIGHT'||pattern.type==='STRAIGHT_PAIR'||pattern.type.startsWith('AIRPLANE'))score+=12;
-  if(pattern.type==='FOUR_TWO')score+=10;
-  if(pattern.type==='FOUR_TWO'&&freq[pattern.main]===4&&after.length>0)score-=30; // 整副炸弹不当四带二主牌（清空手牌除外）
-  // === Core 2: structure value (aiRouteValue + split penalty) ===
-  score+=aiRouteValue(hand,x,who);
-  const _sp = aiSplitPenalty(x.cards, freq);
-  score -= _sp * 1.25;
-  if(_sp > 0){
-    const penBand = _sp <= 6 ? 'p6' : (_sp <= 10 ? 'p10' : (_sp <= 25 ? 'p25' : 'p30'));
-    const handBand = hand.length <= 8 ? 'h8' : 'hm';
-    score += learnAdjust('SPLIT', penBand + ':' + handBand);
-  }
-  score-=aiKickerWaste(x.cards,pattern,mode==='counter');
-  // === Core 3: hand count delta（手数变化奖励：出牌后手数减少越多越好） ===
-  const handsBefore=estimateHands(hand);
-  const handsAfter=estimateHands(after);
-  const delta=handsBefore-handsAfter;
-  if(delta>=2)score+=15;
-  else if(delta===1)score+=8;
-  else if(delta===0){}
-  else score-=12;
-  // === Core 5: tracker integration ===
-  if(mode!=='counter'||!last){
-    if(big.bigJoker===0&&big.smallJoker===0){}else if(pattern.type==='SINGLE'&&pattern.main===15){score-=10;}
-    if(big.A===0&&pattern.type==='SINGLE'&&pattern.main===13)score+=5;
-  }
-  // === Counter mode ===
-  if(mode==='counter'){
-    score+=aiBombValue(x,hand,who,last,mode);
-    if(pattern.type==='BOMB'||pattern.type==='ROCKET'){
-      const _threat=aiThreatCount(who);
-      const threatBand=_threat<=3?'t3':(_threat<=4?'t4':'t5');
-      const handBand=hand.length<=5?'h5':(hand.length<=10?'h10':'hm');
-      score+=learnAdjust('BOMB',threatBand+':'+handBand);
-    }
-    score+=aiControlTradeoff(x,hand,who,last,mode);
-    const landlordPlay=role!=='landlord'&&lastPlayer===G.landlord,partnerPlay=role!=='landlord'&&lastPlayer===partner;
-    if(landlordPlay){
-      score+=landlordCount<=2?120:landlordCount<=3?95:landlordCount<=5?65:landlordCount<=8?30:8;
-      if(role==='farmerPrev')score+=landlordCount<=6?30:14;
-      if(role==='farmerPrev'&&landlordCount<=2)score+=60;
-      if(pattern.type==='SINGLE'&&pattern.main<=10)score+=8;
-    }
-    if(partnerPlay){score-=partnerCount<=2?70:partnerCount<=4?35:8;if(landlordCount<=3)score+=90;else if(landlordCount<=6)score+=42;if(pattern.type!=='BOMB'&&pattern.type!=='ROCKET'){const maxRank=Math.max(...x.cards.map(c=>c.rank));if(maxRank>=13)score-=30;if(maxRank>=15)score-=20;}}
-    if(after.length===0)score+=140;
-  }else{
-    // === Lead mode ===
-    score+=aiBombValue(x,hand,who,last,mode);
-    if(pattern.type==='BOMB'||pattern.type==='ROCKET'){
-      const _threat2=aiThreatCount(who);
-      const threatBand2=_threat2<=3?'t3':(_threat2<=4?'t4':'t5');
-      const handBand2=hand.length<=5?'h5':(hand.length<=10?'h10':'hm');
-      score+=learnAdjust('BOMB',threatBand2+':'+handBand2);
-    }
-    if(after.length===0)score+=120;
-    if(hand.length<=6){
-      // 收尾先小后大：能清空手牌 → 正常加分；控制牌(A/2/王)没清空先出 → 重罚留到收尾；小/中牌正常加
-      if(after.length===0)score+=x.cards.length*14;
-      else if(pattern.main>=14&&pattern.type!=='BOMB'&&pattern.type!=='ROCKET')score-=25;
-      else score+=x.cards.length*14;
-    }
-    // 控制牌保留（通用）：A/2/王 单/对 没清空手牌先出 → 重罚（所有角色），压过"出大牌后结构好"的诱因
-    if(after.length>0&&pattern.main>=14&&(pattern.type==='SINGLE'||pattern.type==='PAIR')&&pattern.type!=='BOMB'&&pattern.type!=='ROCKET')score-=25;
-    // 带牌更优：三带一/三带二比裸三张多走牌（三带二带对子走5张最优）
-    if(pattern.type==='TRIPLE_ONE')score+=8;
-    if(pattern.type==='TRIPLE_TWO')score+=12;
-    // 带牌不带大牌：三带/飞机配件含 2/王（非清空手牌）→ 额外重罚（收尾前绝不把2/王当配件带走）
-    if(after.length>0&&(pattern.type==='TRIPLE_ONE'||pattern.type==='TRIPLE_TWO'||pattern.type==='AIRPLANE_SINGLE'||pattern.type==='AIRPLANE_PAIR')){
-      const mainCnt=x.cards.filter(c=>c.rank===pattern.main).length;
-      const kickerBig=x.cards.some(c=>c.rank>=15&&!(c.rank===pattern.main&&mainCnt>=3));
-      if(kickerBig)score-=40;
-    }
-    // 大牌型整合奖励：只给小组合——连对最高点≤11(到J)先出（小连对 334455 该出就出）；
-    // 含 Q/K/A 的大连对不先出（大对子留后期控场），含 A 的顺子不优先（A 留后期抢牌权）
-    if(pattern.type==='STRAIGHT_PAIR'&&pattern.len>=5&&pattern.main+pattern.len-1<=11)score+=50;
-    else if(pattern.type==='STRAIGHT_PAIR'&&pattern.len>=3&&pattern.main+pattern.len-1<=11)score+=25;
-    else if(pattern.type==='STRAIGHT_PAIR'&&pattern.main+pattern.len-1>=12)score-=15;
-    if(pattern.type==='STRAIGHT'&&pattern.len>=5&&pattern.main+pattern.len-1<=13)score+=40;
-    else if(pattern.type==='STRAIGHT'&&pattern.main+pattern.len-1>=14)score-=10;
-    if(pattern.type==='AIRPLANE')score+=45;
-    // 飞机带翅膀走更多张，更优：带对翅膀(333444+88+99) 比裸飞机多走 len*2 张 → 额外加分
-    if(pattern.type==='AIRPLANE_PAIR')score+=45;
-    else if(pattern.type==='AIRPLANE_SINGLE')score+=25;
-    // 回收能力：出完这手后，手里还有没有能压回这个牌型的牌（同牌型更大，或炸弹/王炸兜底）。
-    // 能接回 → 保持牌权；接不回来（如甩唯一对子）→ 牌权易手，除非迫不得已或能直接赢
-    if(after.length>0&&pattern.type!=='BOMB'&&pattern.type!=='ROCKET'){
-      const recover=aiCandidates(after).some(c=>
-        (c.pattern.type===pattern.type&&c.pattern.len===pattern.len&&c.pattern.main>pattern.main)||
-        c.pattern.type==='BOMB'||c.pattern.type==='ROCKET');
-      if(recover)score+=8;else score-=12;
-    }
-    // 升级点四：送牌三原则 + 防送地主（队友快出完时正确送队友走）
-    if(role!=='landlord'&&partner>=0&&partnerCount<=2&&partner===aiNext(who)){
-      // ① 位置✅（队友是自己的下家，相邻安全，中间无地主）
-      // ② 牌型匹配：队友剩1张只送单张，剩2张送单张或对子
-      // ③ 队友快出完时，绝不能拿控制牌(2/王)单出当送牌/甩控制牌——重罚（压过"清散牌+完美结构"的诱因）
-      if((pattern.type==='SINGLE'||pattern.type==='PAIR')&&pattern.main>=15)score-=70;
-      const sendOk=(partnerCount===1&&pattern.type==='SINGLE')||(partnerCount===2&&(pattern.type==='SINGLE'||pattern.type==='PAIR'));
-      if(sendOk){
-        const sendSplit=aiSplitPenalty(x.cards,freq);
-        const maxSendRank=Math.max(...x.cards.map(c=>c.rank));
-        // ③ 代价：不拆大结构（最多拆一个散对）、不送控制牌(A/2/王)
-        let sendGood=sendSplit<8&&maxSendRank<14&&after.length>0;
-        // 防送地主：地主也快出完(≤2张)时，送单张风险极大（地主几乎总能截胡接走、直接赢）→ 不送单张
-        if(sendGood&&landlordCount<=2&&pattern.type==='SINGLE')sendGood=false;
-        if(sendGood){
-          if(pattern.type==='SINGLE')score+=40;
-          else if(pattern.type==='PAIR')score+=30;
-        }
-      }
-    }else if(role!=='landlord'&&partnerCount>=3&&partnerCount<=5&&partnerCount<hand.length){
-      // 队友牌还多(3~5张)：温和倾向出小牌，方便后续配合（队友≤2张时只走严格送牌，不在此）
-      if(pattern.type==='SINGLE'&&pattern.main<=6)score+=34;
-      if(pattern.type==='PAIR'&&pattern.main<=8)score+=20;
-    }
-    if(role!=='landlord'&&landlordCount<=5&&(pattern.type==='BOMB'||pattern.type==='ROCKET'))score+=24;
-    if(role==='landlord'&&pattern.type!=='SINGLE')score+=10;
-    // 升级点六：地主 AI 专属策略（电脑当地主也要聪明）
-    if(role==='landlord'){
-      // ① 中前期(手牌>8)探路：出小单张(≤7)试探农民；甩大牌单/对重罚（保留控制牌）
-      if(hand.length>8){
-        if(pattern.type==='SINGLE'&&pattern.main<=7)score+=24;
-        if((pattern.type==='SINGLE'||pattern.type==='PAIR')&&pattern.main>=14)score-=20;
-      }
-      // ② 手牌多(>10)不轻易拆结构：拆对子/三张/炸弹再加重
-      if(hand.length>10&&aiSplitPenalty(x.cards,freq)>0)score-=10;
-      // ③ 剩≤5张快速收尾：能多走牌就多走
-      if(hand.length<=5&&after.length>0)score+=x.cards.length*8;
-      // ④ 残局剩2张：若手里是对子且农民最少剩牌≤2 → 出对子更安全（农民难接对子）
-      if(hand.length===2&&pattern.type==='PAIR'){
-        const minFarm=Math.min(G.hands[LEFT].length,G.hands[RIGHT].length);
-        if(minFarm<=2)score+=25;
-      }
-    }
-    // ===== 基本排序（正常人思维第一层）：单/对/三带按"小牌优先"给基础分，机制上保证先小后大 =====
-    if(pattern.type!=='BOMB'&&pattern.type!=='ROCKET')score+=(14-pattern.main)*2;
-    // ===== 位置修正（第二层）=====
-    if(role==='farmerPrev'){
-      // 上家领出：下一个是地主 → 中牌(7~J)从小到大先出（防地主过小牌、又不浪费控制牌）
-      if(pattern.type==='SINGLE'){
-        if(pattern.main>=7&&pattern.main<=11)score+=21-3*(pattern.main-7); // 7→+21,8→+18,9→+15,10→+12,J→+9（梯度递减=从小到大）
-        if(pattern.main<=6)score-=8;      // 小单会送地主过牌 → 轻减
-        if(pattern.main>=12)score-=18;    // Q/A/2/王 控制牌 → 重减（留后期控场）
-        if(landlordCount<=2&&pattern.main>=13)score+=25; // 地主快出完：必须用大牌顶
-      }
-      if(pattern.type==='PAIR'){
-        if(pattern.main>=7&&pattern.main<=11)score+=18-3*(pattern.main-7); // 对7→+18...对J→+6（从小到大）
-        if(pattern.main<=6)score-=8;
-        if(pattern.main>=12)score-=15;    // 对Q/对K/对A 留后期
-        if(landlordCount<=2&&pattern.main>=13)score+=20;
-      }
-      if(hand.length<=3)score+=30;
-    }
-    if(role==='farmerNext'){
-      // 下家领出：下一个是队友 → 小牌优先（先小后大，队友能接），大牌保留；地主快出完时中牌顶
-      if(pattern.type==='SINGLE'){
-        if(pattern.main>=14)score-=15;    // A/2/王 控制牌保留
-        if(landlordCount<=2&&pattern.main>=8&&pattern.main<=14)score+=20; // 地主快出完：中牌顶
-      }
-      if(pattern.type==='PAIR'){
-        if(pattern.main>=14)score-=12;    // 对A/对2 保留
-        if(landlordCount<=2&&pattern.main>=8)score+=15;
-      }
-      if(hand.length<=3)score+=30;
-    }
-    const strat=String(mode||'').replace('lead-','');
-    if(strat==='aggressive'){
-      if(after.length<=2)score+=18;
-      else if(hand.length<=5)score+=x.cards.length*6;
-    }else if(strat==='support'){
-      if(partnerCount<=4){
-        if(pattern.type==='SINGLE'&&pattern.main<=7)score+=22;
-        if(pattern.type==='PAIR'&&pattern.main<=9)score+=16;
-      }
-      if(pattern.type==='BOMB'||pattern.type==='ROCKET')score-=15;
-    }else if(strat==='defensive'){
-      const maxCardRank=Math.max(...x.cards.map(c=>c.rank));
-      if(after.length>2&&maxCardRank>=14&&pattern.type!=='BOMB'&&pattern.type!=='ROCKET')score-=12;
-    }
-  }
-  return score;
-}
-
-function aiShouldPassCounter(hand,last,who,candidates){
-  const role=aiRole(who),partner=aiPartner(who),lp=lastPlayerForAI(),landlordCount=aiLandlordCount(),partnerCount=partner>=0?(G.hands[partner]||[]).length:99;
-  const otherFarmer=role!=='landlord'?[PLAYER,LEFT,RIGHT].find(p=>p!==who&&p!==G.landlord):-1;
-  const partnerPlay=role!=='landlord'&&lp===partner;
-  const dangerousLandlord=landlordCount<=3;
-  if(role==='landlord'){
-    const freq=aiCountRanks(hand),normal=candidates.filter(x=>x.pattern.type!=='BOMB'&&x.pattern.type!=='ROCKET'&&x.pattern.main<=14&&aiSplitPenalty(x.cards,freq)<25);
-    const threat=Math.min(G.hands[LEFT].length,G.hands[RIGHT].length);
-    if(!normal.length&&threat>3)return true;
-    return false;
-  }
-  const canFinishAll=candidates.some(x=>x.cards.length===hand.length);
-  const hasMid=candidates.some(x=>x.pattern.type!=='BOMB'&&x.pattern.type!=='ROCKET'&&x.cards.every(c=>c.rank>=13&&c.rank<=14));
-  const freq=aiCountRanks(hand);
-  const isBig=x=>x.pattern.type==='BOMB'||x.pattern.type==='ROCKET'||x.cards.some(c=>c.rank>=15);
-  const canUseMid=candidates.some(x=>!isBig(x));
-  const allTop=candidates.every(x=>isBig(x));
-  // Lv1: can finish all in one play
-  if(canFinishAll)return false;
-  // Lv1.5: 放水送队友——地主出小牌、我是地主下家(farmerNext)、队友(我的下家)剩≤2张且大概率能接 → 让牌放水，
-  // 让牌权自然轮给队友接走出完（逆时针 0→2→1→0 固定：地主出牌→我→队友→地主，放水队友必轮到）。
-  // 放水=送队友直接赢，优先于 Lv2 死压（队友接住就赢，比压牌更优）。
-  if(lp===G.landlord&&role==='farmerNext'&&partnerCount<=2){
-    if(partnerCount===1&&last.type==='SINGLE'){
-      // 队友1张只能接单：用记牌器算队友手里 >last.main 的单牌期望，大概率能接才放
-      let catchP=0;
-      for(let r=last.main+1;r<=17;r++)catchP+=aiEstimateCountIn(partner,r);
-      if(catchP>=0.8)return true;
-    }else if(partnerCount===2&&last.type==='SINGLE'&&last.main<=8){
-      // 队友2张只放单牌（两张单接单牌大概率能接）；对子不放——队友2张可能是两张单牌，接不住对子
-      return true;
-    }
-  }
-  // Lv2: landlord <=2 cards
-  if(lp===G.landlord&&landlordCount<=2)return false;
-  // Lv3: partner <=1 card
-  if(partnerPlay&&partnerCount<=1)return true;
-  // Lv3.4: 上家接力——队友(下家)出的牌太小(≤8)、地主牌还多(>5)、队友牌也多(>4张)时，
-  // 上家(最后防线)用最小能压的牌接力抬价，防止地主用小牌轻松接走队友的小牌（两个农民轮流抬价）
-  if(partnerPlay&&role==='farmerPrev'&&last.main<=8&&landlordCount>5&&partnerCount>4&&!canFinishAll)return false;
-  // Lv3.5: 队友出牌且地主牌还多(>5张) → 让队友继续出，不抢牌权（通用配合规则）
-  if(partnerPlay&&!canFinishAll&&landlordCount>5)return true;
-  // Lv3.6: 队友快出完(≤4张)且地主未到危险线(>3张) → 绝不让队友失去牌权
-  if(partnerPlay&&!canFinishAll&&partnerCount<=4&&landlordCount>3)return true;
-  // Lv4: farmerNext and landlord <=8（地主进入收尾危险区，下家必须顶，阻止地主清牌）
-  if(lp===G.landlord&&role==='farmerNext'&&landlordCount<=8)return false;
-  // Lv4.5: farmerNext raise price when landlord plays big cards
-  if(lp===G.landlord&&role==='farmerNext'){
-    if(last.main>=13){
-      const hasCounter=candidates.some(x=>x.pattern.type!=='BOMB'&&x.pattern.type!=='ROCKET'&&x.pattern.main>last.main);
-      if(hasCounter)return false;
-    }
-  }
-  // Lv5: farmerPrev and landlord <=5（上家是最后防线：地主≤5张必须死顶）
-  if(lp===G.landlord&&role==='farmerPrev'&&landlordCount<=5)return false;
-  // Lv5.5: farmerPrev must block landlord (flexible if hand is strong) ——地主≤8张时手牌中等(≤65)也强制顶
-  if(lp===G.landlord&&role==='farmerPrev'){
-    const myHandStrength=evaluateHand(hand).score;
-    if(landlordCount<=8?myHandStrength<=65:myHandStrength<=55){
-      const hasNormal=candidates.some(x=>x.pattern.type!=='BOMB'&&x.pattern.type!=='ROCKET');
-      if(hasNormal)return false;
-    }
-  }
-  // Lv6: partner played big card, mid cards available
-  if(partnerPlay&&last.main>=13){
-    if(canUseMid)return false;
-    if(allTop)return true;
-  }
-  // Lv7: partner close to finish, only top cards
-  if(partnerPlay&&partnerCount<=6&&landlordCount>5&&allTop)return true;
-  // bomb takeover
-  if(partnerPlay&&last.type!=='BOMB'&&last.type!=='ROCKET'){
-    const bombCands=candidates.filter(x=>x.pattern.type==='BOMB'||x.pattern.type==='ROCKET');
-    const winAfterBomb=bombCands.some(x=>(hand.length-x.cards.length)<=3);
-    const partnerCanWin=partnerCount<=2&&last.main<=12;
-    if(winAfterBomb&&!partnerCanWin&&landlordCount<=5)return false;
-  }
-  // Hard rule: never bomb partner unless can finish immediately
-  if(partnerPlay){
-    const hasBomb=candidates.some(x=>x.pattern.type==='BOMB'||x.pattern.type==='ROCKET');
-    if(hasBomb){
-      const bombFinish=candidates.some(x=>(x.pattern.type==='BOMB'||x.pattern.type==='ROCKET')&&(hand.length-x.cards.length)<=1);
-      if(!bombFinish)return true;
-    }
-  }
-  // Lv8: card counter suggests cheap cards in partner（升级点五：改用 aiEstimateCountIn 概率推算）
-  if(lp===G.landlord&&!dangerousLandlord&&landlordCount>5&&otherFarmer>=0&&AI_MEMORY.passStreak[otherFarmer]===0){
-    const cheap=candidates.some(x=>x.pattern.type!=='BOMB'&&x.pattern.type!=='ROCKET'&&x.pattern.main<14);
-    if(!cheap){
-      const partnerH=partner>=0?(G.hands[partner]||[]).length:0;
-      const landlordH=landlordCount;
-      if(partnerH>=landlordH){
-        let cheaperInPartner=false;
-        if(last.type==='SINGLE'){for(let r=last.main+1;r<=14;r++){if(aiEstimateCountIn(partner,r)>=0.8){cheaperInPartner=true;break;}}}
-        else if(last.type==='PAIR'){for(let r=last.main+1;r<=14;r++){if(aiEstimateCountIn(partner,r)>=1.5){cheaperInPartner=true;break;}}}
-        else if(last.type==='TRIPLE'||last.type==='TRIPLE_ONE'||last.type==='TRIPLE_TWO'){for(let r=last.main+1;r<=14;r++){if(aiEstimateCountIn(partner,r)>=2.2){cheaperInPartner=true;break;}}}
-        if(cheaperInPartner)return true;
-      }
-    }
-  }
-  // Special: both partner and landlord close to finish
-  if(partnerPlay&&partnerCount<=3&&landlordCount<=3)return false;
-  // 下家面对地主出的牌：有便宜牌(<10)就顶；只能拿≥10的中牌压时，让给上家(最后防线)顶——
-  // 两个农民轮流顶地主，避免"下家顶太狠、上家整局看戏"；地主快出完(≤5张)时下家仍必须顶（Lv4）
-  if(role==='farmerNext'&&lp===G.landlord&&landlordCount>5&&otherFarmer>=0){
-    const cheap=candidates.some(x=>x.pattern.type!=='BOMB'&&x.pattern.type!=='ROCKET'&&x.pattern.main<10);
-    if(!cheap)return true;
-  }
-  // farmerNext take back when partner led medium cards and landlord passed
-  if(role==='farmerNext'&&lp===partner&&AI_MEMORY.passStreak[G.landlord]>0){
-    if(last.main>=7&&last.main<=11){
-      const hasMid=candidates.some(x=>x.pattern.type!=='BOMB'&&x.pattern.type!=='ROCKET'&&x.pattern.main>=7&&x.pattern.main<=11);
-      if(hasMid)return false;
-    }
-  }
-  // Lv9: 学习修正（渐进）——正=更愿压，负=更愿让
-  const passBias = learnPassBias(role, landlordCount);
-  if(passBias < -8) return true;
-  if(passBias > 8) return false;
-  // 升级点一补充：手数变化倾向——跟牌会导致手数增加时，更愿让牌
-  if(candidates.length>0){
-    const handsBefore=estimateHands(hand);
-    // 取最小delta（跟最小牌的手数变化）
-    let minDelta=Infinity;
-    for(const x of candidates){
-      const after2=hand.filter(c=>!x.cards.some(y=>y.id===c.id));
-      const delta2=handsBefore-estimateHands(after2);
-      if(delta2<minDelta)minDelta=delta2;
-    }
-    if(minDelta<0)return true;
-  }
-  // Default: play normally
-  return false;
-}
-
-function aiPickScored(scored){
-  if(!scored.length)return null;
-  scored.sort((a,b)=>b.score-a.score||b.x.cards.length-a.x.cards.length);
-  const topN=scored.slice(0,5);
-  const rem=(function(){try{return aiRemainingMap();}catch(e){return{};}})();
-  for(let i=0;i<topN.length;i++){
-    try{
-      const v=topN[i],after=G.hands[G.current].filter(c=>!v.x.cards.some(y=>y.id===c.id));
-      if(!after.length){v.score+=60;continue;}
-      let bonus=0;
-      // Step 2
-      const c2=aiCandidates(after);
-      if(!c2.length)continue;
-      const s2=c2.map(x=>({x,score:aiCandidateScore(x,after,G.current,'lead-lookahead',null)}));
-      s2.sort((a,b)=>b.score-a.score);
-      const best2=s2[0];
-      if(!best2)continue;
-      const safe2=Object.keys(rem).every(r=>{const n=rem[r]||0;return n<=0||!best2.x.cards.some(c=>String(c.rank)===r);});
-      const after2=after.filter(c=>!best2.x.cards.some(y=>y.id===c.id));
-      if(!after2.length){bonus+=50+(safe2?5:0);}
-      else{
-        bonus+=30;
-        // Step 3
-        const c3=aiCandidates(after2);
-        if(c3.length){
-          const s3=c3.map(x=>({x,score:aiCandidateScore(x,after2,G.current,'lead-lookahead',null)}));
-          s3.sort((a,b)=>b.score-a.score);
-          const best3=s3[0];
-          if(best3){
-            const after3=after2.filter(c=>!best3.x.cards.some(y=>y.id===c.id));
-            if(!after3.length){bonus+=20;}
-            else{bonus+=10;}
-          }
-        }
-      }
-      // Penalty for risky plays
-      const maxRank=Math.max(...v.x.cards.map(c=>c.rank));
-      if(maxRank>=15&&v.x.pattern.type!=='BOMB'&&v.x.pattern.type!=='ROCKET'){
-        const jokerOut=(rem[16]||0)+(rem[17]||0);
-        if(jokerOut>0)bonus-=8;
-      }
-      v.score+=bonus;
-    }catch(e){}
-  }
-  topN.sort((a,b)=>b.score-a.score||b.x.cards.length-a.x.cards.length);
-  const top=topN[0].score,near=topN.filter(v=>v.score>=top-1);
-  return near[Math.floor(Math.random()*near.length)].x.cards;
-}
-
-function aiFindCounter(hand,last,who,strategy){
-  aiObservePlay();
-  const allCands=aiCandidates(hand).filter(x=>aiCanBeat(x,last));
-  const role=aiRole(who);
-  const landlordCount=aiLandlordCount();
-  const lband=landlordCount<=3?'lt3':(landlordCount<=8?'lt8':'gt8');
-  if(!allCands.length){
-    aiRecordStep(LEARN.step++, {phase:'counter', role:role, handCount:hand.length, landlordCount:landlordCount, lastType:last.type, lastMain:last.main}, {passed:true, cards:[]}, 'PASS', 'pass:'+role+':'+lband, aiRoleNameFor(who));
     return null;
+  } catch(e) {
+    clearTimeout(timer);
+    return null; // 超时/网络错误 → 用 fallback
   }
-  if(aiShouldPassCounter(hand,last,who,allCands)){
-    aiRecordStep(LEARN.step++, {phase:'counter', role:role, handCount:hand.length, landlordCount:landlordCount, lastType:last.type, lastMain:last.main}, {passed:true, cards:[]}, 'PASS', 'pass:'+role+':'+lband, aiRoleNameFor(who));
-    return null;
-  }
-  const sameType=allCands.filter(x=>x.pattern.type===last.type&&x.pattern.len===last.len);
-  let candidates=allCands;
-  if(sameType.length>=1){const minMain=Math.min(...sameType.map(c=>c.pattern.main));candidates=sameType.filter(c=>c.pattern.main===minMain);}
-  const picked=aiPickScored(candidates.map(x=>({x,score:aiCandidateScore(x,hand,who,'counter',last)})));
-  const freq=aiCountRanks(hand);
-  const samePicked=candidates.filter(c=>c.cards.length===picked.length&&c.cards.every(cd=>picked.some(p=>p.id===cd.id)));
-  const cand=samePicked[0]||null;
-  const at=aiActionTypeOf(cand,freq);
-  if(at==='BOMB'){
-    const threatBand=aiThreatCount(who)<=3?'t3':(aiThreatCount(who)<=4?'t4':'t5');
-    const handBand=hand.length<=5?'h5':(hand.length<=10?'h10':'hm');
-    aiRecordStep(LEARN.step++, {phase:'counter', role:role, handCount:hand.length, landlordCount:landlordCount, lastType:last.type, lastMain:last.main}, {passed:false, cards:picked, pattern:(cand?cand.pattern:null)}, 'BOMB', threatBand+':'+handBand, aiRoleNameFor(who));
-  }else if(at==='SPLIT'){
-    const penBandBase=aiSplitPenalty(picked,freq);
-    const penBand=penBandBase<=6?'p6':(penBandBase<=10?'p10':(penBandBase<=25?'p25':'p30'));
-    aiRecordStep(LEARN.step++, {phase:'counter', role:role, handCount:hand.length, landlordCount:landlordCount, lastType:last.type, lastMain:last.main}, {passed:false, cards:picked, pattern:(cand?cand.pattern:null)}, 'SPLIT', penBand+':'+(hand.length<=8?'h8':'hm'), aiRoleNameFor(who));
-  }else{
-    aiRecordStep(LEARN.step++, {phase:'counter', role:role, handCount:hand.length, landlordCount:landlordCount, lastType:last.type, lastMain:last.main}, {passed:false, cards:picked, pattern:(cand?cand.pattern:null)}, 'PASS', 'beat:'+role+':'+lband, aiRoleNameFor(who));
-  }
-  return picked;
-}
-function aiLead(hand,who,strategy){
-  aiObservePlay();
-  const candidates=aiCandidates(hand);
-  if(!candidates.length)return hand.slice(0,1);
-  const rem=(function(){try{return aiRemainingMap();}catch(e){return{};}})();
-  const picked=aiPickScored(candidates.map(x=>({x,score:aiCandidateScore(x,hand,who,'lead-'+strategy,null)})))||hand.slice(0,1);
-  const freq=aiCountRanks(hand);
-  const samePicked=candidates.filter(c=>c.cards.length===picked.length&&c.cards.every(cd=>picked.some(p=>p.id===cd.id)));
-  const cand=samePicked[0]||null;
-  const at=aiActionTypeOf(cand,freq);
-  if(at!=='NORMAL'){
-    const threatBand=aiThreatCount(who)<=3?'t3':(aiThreatCount(who)<=4?'t4':'t5');
-    const handBand=hand.length<=5?'h5':(hand.length<=10?'h10':'hm');
-    const penBandBase=(cand?aiSplitPenalty(cand.cards,freq):0);
-    const penBand=penBandBase<=6?'p6':(penBandBase<=10?'p10':(penBandBase<=25?'p25':'p30'));
-    aiRecordStep(LEARN.step++, {phase:'lead', role:aiRole(who), handCount:hand.length, landlordCount:aiLandlordCount()}, {cards:picked, pattern:(cand?cand.pattern:null)}, at, at==='BOMB'?(threatBand+':'+handBand):(penBand+':'+(hand.length<=8?'h8':'hm')), aiRoleNameFor(who));
-  }
-  return picked;
 }
 
+async function aiBidViaAPI(hand, isCallPhase) {
+  try {
+    const res = await fetch(AI_API + '/bid', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hand: hand.map(c => ({ id: c.id, r: c.rank, s: c.suit })), isCallPhase })
+    });
+    const data = await res.json();
+    return data.ok ? data.bid : -1;
+  } catch(e) {
+    return -1;
+  }
+}
 
+// 简化 fallback：出最小能压的牌（不依赖复杂评分，不出错即可）
+function fallbackSimple(hand, last) {
+  const cands = aiCandidates(hand).filter(x => last ? aiCanBeat(x, last) : true);
+  if (!cands.length) return null;
+  if (!last) return cands[0].cards; // 主动出最小
+  const sorted = cands.sort((a,b) => (a.pattern.main||0) - (b.pattern.main||0));
+  return sorted[0].cards;
+}
 
-// ===== 出牌入口 v3 =====
-function aiPlay(hand,lastPattern){
-  const who=G.current,role=aiRole(who),teammate=aiPartner(who);
-  const teammateCount=teammate>=0?(G.hands[teammate]||[]).length:99;
-  const landlordCount=aiLandlordCount();
-  const _ehScore=evaluateHand(hand).score;
-  const strategy=hand.length<=5?'aggressive':(_ehScore>60&&hand.length<=8?'aggressive':(role!=='landlord'&&teammateCount<=4?'support':(_ehScore<35&&hand.length>8?'defensive':(landlordCount<=4?(role==='landlord'?'aggressive':'defensive'):(_ehScore<40&&hand.length>10?'defensive':'balanced')))));
-  if(!lastPattern)return aiLead(hand,who,strategy);
-  return aiFindCounter(hand,lastPattern,who,strategy);
+function fallbackBidSimple(hand) {
+  const eh = evaluateHand(hand);
+  let threshold = 58;
+  if (eh.bombs >= 1) threshold -= 8;
+  return eh.score >= threshold ? 1 : 0;
+}
+
+// 后端格式转前端 card 对象（从手牌中匹配）
+function apiCardsToHand(apiCards, hand) {
+  const used = new Set();
+  return apiCards.map(a => {
+    const match = hand.find(c => c.rank === a.r && c.suit === a.s && !used.has(c.id));
+    if (match) { used.add(match.id); return match; }
+    return { id: -1, rank: a.r, suit: a.s };
+  });
+}
+
+// ===== 出牌入口（改为后端 API 调用 + 简化 fallback） =====
+async function aiPlay(hand, lastPattern) {
+  const who = G.current, role = aiRole(who), teammate = aiPartner(who);
+  const teammateCount = teammate >= 0 ? (G.hands[teammate] || []).length : 99;
+  const landlordCount = aiLandlordCount();
+  const _ehScore = evaluateHand(hand).score;
+  const strategy = hand.length <= 5 ? 'aggressive' : (_ehScore > 60 && hand.length <= 8 ? 'aggressive' : (role !== 'landlord' && teammateCount <= 4 ? 'support' : (_ehScore < 35 && hand.length > 8 ? 'defensive' : (landlordCount <= 4 ? (role === 'landlord' ? 'aggressive' : 'defensive') : (_ehScore < 40 && hand.length > 10 ? 'defensive' : 'balanced')))));
+
+  // 尝试后端 API
+  const apiResult = await aiDecideViaAPI(hand, lastPattern, who, role, strategy, LEARN.roundId, LEARN.step);
+  if (apiResult) {
+    LEARN.step++;
+    return apiResult;
+  }
+
+  // 降级：后端挂了用简化 fallback
+  console.warn('AI API failed, using fallback');
+  return fallbackSimple(hand, lastPattern);
 }
 
 // ===== 工具函数（hint 依赖，勿删） =====
