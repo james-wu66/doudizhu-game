@@ -616,6 +616,19 @@ body{display:flex;justify-content:center;align-items:center;}
 .settings-item label{color:var(--text-light);font-size:15px;cursor:pointer;}
 /* 2026-08-30：设置滑块允许移动端手势拖动（不被页面手势拦截） */
 #bgm-volume,#sfx-volume{touch-action:manipulation;}
+/* 学习进度看板样式 */
+.learn-stat-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:14px;color:var(--text-light);}
+.learn-stat-row:last-child{border-bottom:none;}
+.learn-stat-label{flex:1;min-width:0;}
+.learn-stat-value{width:50px;text-align:right;font-variant-numeric:tabular-nums;}
+.learn-stat-bar-wrap{width:120px;height:8px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;margin:0 10px;flex-shrink:0;}
+.learn-stat-bar{height:100%;border-radius:4px;transition:width 0.3s;}
+.learn-stat-bar.green{background:#4ade80;}
+.learn-stat-bar.yellow{background:#facc15;}
+.learn-stat-tag{font-size:11px;padding:1px 6px;border-radius:6px;font-weight:600;white-space:nowrap;}
+.learn-stat-tag.ok{background:rgba(74,222,128,0.15);color:#4ade80;}
+.learn-stat-tag.wait{background:rgba(250,204,21,0.15);color:#facc15;}
+.learn-summary{color:#94a3b8;font-size:13px;margin-bottom:10px;line-height:1.6;}
 .toggle{position:relative;width:50px;height:26px;background:rgba(255,255,255,0.15);border-radius:13px;cursor:pointer;transition:background 0.3s;border:none;outline:none;flex-shrink:0;}
 .toggle::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;background:#fff;border-radius:50%;transition:transform 0.3s;box-shadow:0 2px 4px rgba(0,0,0,0.3);}
 .toggle.active{background:linear-gradient(135deg,#4ade80,#22c55e);}
@@ -951,7 +964,12 @@ body.replay-mode #bid-actions{
         <p>农民赢：地主输2倍基础分；两个农民各赢基础分。</p>
       </div>
     </div>
-    
+
+    <div class="settings-section" id="ai-learning-section">
+      <h3>🤖 AI 学习进度</h3>
+      <div id="ai-learning-content" class="learn-summary">加载中...</div>
+    </div>
+
     <button class="settings-btn settings-btn-secondary" onclick="closeSettings()">关闭设置</button>
     <button class="settings-btn settings-btn-secondary" onclick="goToLobby()" style="margin-top:8px;">🏠 返回大厅</button>
     <button class="settings-btn settings-btn-danger" id="btn-logout" onclick="logoutUser()" style="display:none;">退出登录</button>
@@ -3475,6 +3493,7 @@ function openSettings() {
   document.getElementById('settings-modal').classList.add('show');
   loadStats();
   loadLeaderboard();
+  loadAiProgress();
   // 同步音量滑块
   var bgmVol=localStorage.getItem('doudizhu_bgm_vol');
   var sfxVol=localStorage.getItem('doudizhu_sfx_vol');
@@ -3489,6 +3508,59 @@ function openSettings() {
 
 function closeSettings() {
   document.getElementById('settings-modal').classList.remove('show');
+}
+
+function loadAiProgress() {
+  var el = document.getElementById('ai-learning-content');
+  if (!el) return;
+  fetch(API + '/ai/learning/progress')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.strategies || d.strategies.length === 0) {
+        el.innerHTML = '<div class="learn-summary">暂无数据——打几局后自动开始记录。</div>';
+        return;
+      }
+      var total = d.total || 0;
+      var th = d.threshold || 30;
+      var html = '<div class="learn-summary">共积累 <b style="color:#4ade80">' + total + '</b> 条决策记录，达标门槛 <b>' + th + '</b> 条/桶</div>';
+      // 策略汇总
+      html += '<div style="font-size:13px;color:#94a3b8;margin:8px 0 4px;font-weight:600">策略汇总</div>';
+      for (var i = 0; i < d.strategies.length; i++) {
+        var s = d.strategies[i];
+        var pct = Math.min(100, Math.round(s.total / th * 100));
+        var barClass = s.threshold_met ? 'green' : 'yellow';
+        var tagClass = s.threshold_met ? 'ok' : 'wait';
+        var tagText = s.threshold_met ? '已生效' : '积累中';
+        html += '<div class="learn-stat-row">'
+          + '<span class="learn-stat-label">' + s.action_type + '</span>'
+          + '<div class="learn-stat-bar-wrap"><div class="learn-stat-bar ' + barClass + '" style="width:' + pct + '%"></div></div>'
+          + '<span class="learn-stat-value">' + s.total + '/' + th + '</span>'
+          + '<span class="learn-stat-tag ' + tagClass + '">' + tagText + '</span>'
+          + '<span class="learn-stat-value" style="color:#94a3b8">' + (s.total > 0 ? Math.round(s.win_rate * 100) + '%' : '-') + '</span>'
+          + '</div>';
+      }
+      // 桶级明细
+      if (d.buckets.length > 0) {
+        html += '<div style="font-size:13px;color:#94a3b8;margin:12px 0 4px;font-weight:600">桶级明细（策略×局面）</div>';
+        for (var j = 0; j < d.buckets.length; j++) {
+          var b = d.buckets[j];
+          var bpct = Math.min(100, Math.round(b.total / th * 100));
+          var bbar = b.threshold_met ? 'green' : 'yellow';
+          var btag = b.threshold_met ? 'ok' : 'wait';
+          var btext = b.threshold_met ? '已生效' : b.total + '/' + th;
+          html += '<div class="learn-stat-row">'
+            + '<span class="learn-stat-label" title="' + b.bucket + '">' + b.action_type + ' · ' + b.bucket + '</span>'
+            + '<div class="learn-stat-bar-wrap"><div class="learn-stat-bar ' + bbar + '" style="width:' + bpct + '%"></div></div>'
+            + '<span class="learn-stat-value">' + b.total + '/' + th + '</span>'
+            + '<span class="learn-stat-tag ' + btag + '">' + btext + '</span>'
+            + '</div>';
+        }
+      }
+      el.innerHTML = html;
+    })
+    .catch(function() {
+      el.innerHTML = '<div class="learn-summary">加载失败</div>';
+    });
 }
 
 // 点击背景关闭

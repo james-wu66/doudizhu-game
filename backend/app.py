@@ -703,6 +703,55 @@ def ai_learning():
 
 
 
+
+@app.route("/api/ai/learning/progress")
+def ai_learning_progress():
+    """学习进度看板：返回所有策略和桶的详细统计（包括未达标的）"""
+    THRESHOLD = 30
+    conn = get_db()
+    c = conn.cursor()
+    # 总记录数
+    c.execute("SELECT COUNT(*) as total FROM ai_learning")
+    total = c.fetchone()["total"]
+    # 各策略统计
+    c.execute("""
+        SELECT action_type,
+               COUNT(*) as total,
+               SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) as wins,
+               SUM(CASE WHEN result = 'lose' THEN 1 ELSE 0 END) as losses
+        FROM ai_learning
+        WHERE action_type != '' AND action_type != 'NORMAL'
+        GROUP BY action_type ORDER BY total DESC
+    """)
+    strategies = []
+    for r in c.fetchall():
+        strategies.append({
+            "action_type": r["action_type"], "total": r["total"],
+            "wins": r["wins"], "losses": r["losses"],
+            "win_rate": round(r["wins"] / r["total"], 4) if r["total"] > 0 else 0,
+            "threshold_met": r["total"] >= THRESHOLD
+        })
+    # 各桶统计（不设门槛，全部返回）
+    c.execute("""
+        SELECT action_type, bucket,
+               COUNT(*) as total,
+               SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) as wins
+        FROM ai_learning
+        WHERE bucket != '' AND result IN ('win','lose')
+        GROUP BY action_type, bucket ORDER BY action_type, total DESC
+    """)
+    buckets = []
+    for r in c.fetchall():
+        buckets.append({
+            "action_type": r["action_type"], "bucket": r["bucket"],
+            "total": r["total"], "wins": r["wins"],
+            "win_rate": round(r["wins"] / r["total"], 4) if r["total"] > 0 else 0,
+            "threshold_met": r["total"] >= THRESHOLD
+        })
+    conn.close()
+    return jsonify({"total": total, "threshold": THRESHOLD, "strategies": strategies, "buckets": buckets})
+
+
 @app.route("/api/users/<name>")
 def get_user_profile(name):
     from urllib.parse import unquote
