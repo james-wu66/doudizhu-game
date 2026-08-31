@@ -448,6 +448,23 @@ def lobby():
     return resp
 
 
+@app.route("/workbench")
+@app.route("/workbench/")
+def workbench_index():
+    """多AI协作工作台控制台（只读展示页）"""
+    resp = send_from_directory("../斗地主最终版工作台", "控制台.html")
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return resp
+
+
+@app.route("/workbench/<path:filename>")
+def workbench_file(filename):
+    """工作台目录内的其他文件（文档/测试工具），仅供查看"""
+    resp = send_from_directory("../斗地主最终版工作台", filename)
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return resp
+
+
 @app.route("/api/register", methods=["POST"])
 def register():
     data = request.json
