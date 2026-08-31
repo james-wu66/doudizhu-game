@@ -386,6 +386,7 @@ def diag():
         "db_host": DB_HOST,
         "db_name": DB_NAME,
         "use_mysql_flag": USE_MYSQL,
+        "version": "stage2-606fd08-20260831",
     }
     # 主动测试 MySQL 连接（短超时5秒），返回失败原因
     mysql_test = {"ok": False, "error": ""}
