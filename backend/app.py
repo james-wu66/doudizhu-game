@@ -29,24 +29,27 @@ app = Flask(__name__)
 CORS(app)
 
 # === 数据库配置 ===
-# 优先读 config_local.py（本地密钥文件），其次环境变量，最后用腾讯云内网默认值
+# 强制使用外网地址（忽略 CloudBase 环境变量，避免内网地址不通导致降级 SQLite）
+os.environ["DB_HOST"] = "sh-cynosdbmysql-grp-dujxvcs6.sql.tencentcdb.com"
+os.environ["DB_PORT"] = "21142"
+os.environ["DB_USER"] = "doudizhu_game"
+os.environ["DB_PASSWORD"] = "wzm13002104610."
+os.environ["DB_NAME"] = "james-wu-d2gcojd404e6b8137"
+# 优先读 config_local.py（本地密钥文件），覆盖上面的默认值
 try:
     from config_local import DB_HOST as _CL_DB_HOST, DB_PORT as _CL_DB_PORT, DB_USER as _CL_DB_USER, DB_PASSWORD as _CL_DB_PASSWORD, DB_NAME as _CL_DB_NAME
-    os.environ.setdefault("DB_HOST", _CL_DB_HOST)
-    os.environ.setdefault("DB_PORT", str(_CL_DB_PORT))
-    os.environ.setdefault("DB_USER", _CL_DB_USER)
-    os.environ.setdefault("DB_PASSWORD", _CL_DB_PASSWORD)
-    os.environ.setdefault("DB_NAME", _CL_DB_NAME)
+    os.environ["DB_HOST"] = _CL_DB_HOST
+    os.environ["DB_PORT"] = str(_CL_DB_PORT)
+    os.environ["DB_USER"] = _CL_DB_USER
+    os.environ["DB_PASSWORD"] = _CL_DB_PASSWORD
+    os.environ["DB_NAME"] = _CL_DB_NAME
 except ImportError:
-    pass  # config_local.py 不存在，用环境变量或默认值
-# 2026-08-30 连接地址最终定版：改用【外网地址】（公网访问已开启，本地/云端都能连）
-# 内网 172.17.0.2 云端实测 timed out（云托管与 MySQL 不在同一 VPC），本地也连不通
-DB_HOST = os.environ.get("DB_HOST") or "sh-cynosdbmysql-grp-dujxvcs6.sql.tencentcdb.com"
-DB_PORT = int(os.environ.get("DB_PORT") or "21142")
-# 兼容：如果环境变量还残留旧的内网地址，自动修正为外网地址
-if DB_HOST == "172.17.0.2":
-    DB_HOST = "sh-cynosdbmysql-grp-dujxvcs6.sql.tencentcdb.com"
-    DB_PORT = 21142
+    pass  # config_local.py 不存在，用上面的默认值
+DB_HOST = os.environ["DB_HOST"]
+DB_PORT = int(os.environ["DB_PORT"])
+DB_USER = os.environ["DB_USER"]
+DB_PASSWORD = os.environ["DB_PASSWORD"]
+DB_NAME = os.environ["DB_NAME"]
 DB_USER = os.environ.get("DB_USER") or "doudizhu_game"
 DB_PASSWORD = os.environ.get("DB_PASSWORD") or "wzm13002104610."
 DB_NAME = os.environ.get("DB_NAME") or "james-wu-d2gcojd404e6b8137"
