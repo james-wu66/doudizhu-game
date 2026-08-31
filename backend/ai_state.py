@@ -50,6 +50,9 @@ class GameState:
         self.grabActed = [False, False, False]
         # 前端选中的牌 ID（Set），保留但可能不需要在后端使用
         self.selectedIds = set()
+        # 前端传入的真实张数（替代从不完整 hands 计算）
+        self.landlord_count_override = -1
+        self.teammate_count_override = -1
     
     @classmethod
     def from_dict(cls, d):
@@ -210,10 +213,14 @@ class GameState:
     def get_landlord_count(self):
         """
         返回地主剩余张数。
+        优先使用前端传入的真实值（landlord_count_override），
+        仅当 override 为 -1 时才从 hands 计算。
         
         Returns:
             int: 地主手牌数量，如果未定地主则返回 0
         """
+        if self.landlord_count_override >= 0:
+            return self.landlord_count_override
         if self.landlord == -1:
             return 0
         return len(self.hands[self.landlord])

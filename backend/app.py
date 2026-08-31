@@ -1008,6 +1008,9 @@ def ai_decide():
     gs.landlord = landlord
     gs.lastPlay = {"cards": [], "pattern": last, "player": -1} if last else None
     gs.passCount = 0
+    # 注入前端传来的真实张数（修复：GameState 只有当前玩家手牌，无法自己计算）
+    gs.landlord_count_override = landlord_count
+    gs.teammate_count_override = teammate_count
     # 学习参数
     round_id = data.get("round_id", "")
     step = data.get("step", 0)

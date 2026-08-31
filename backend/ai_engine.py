@@ -1952,7 +1952,7 @@ def ai_play(gs, hand, last_pattern):
     elif score > 60 and hand_len <= 8:
         strategy = 'aggressive'
     elif role != 'landlord' and teammate >= 0:
-        teammate_count = len(gs.hands[teammate]) if teammate < len(gs.hands) else 99
+        teammate_count = gs.teammate_count_override if gs.teammate_count_override >= 0 else (len(gs.hands[teammate]) if teammate < len(gs.hands) else 99)
         if teammate_count <= 4:
             strategy = 'support'
     elif score < 35 and hand_len > 8:
