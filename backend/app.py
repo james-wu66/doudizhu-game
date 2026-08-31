@@ -22,6 +22,9 @@ except ImportError:
     pymysql = None
     DictCursor = None
 
+from ai_state import GameState, PLAYER, LEFT, RIGHT
+from ai_engine import ai_play as ai_play_engine, ai_candidates, detect_pattern, count_ranks, evaluate_hand
+
 app = Flask(__name__)
 CORS(app)
 
@@ -979,6 +982,98 @@ def get_avatar(name):
         return "", 404
 
     return send_from_directory(UPLOAD_FOLDER, user["avatar_url"])
+
+
+@app.route("/api/ai/decide", methods=["POST"])
+def ai_decide():
+    """AI 出牌决策接口（无状态：前端传完整局面，后端返回出什么牌）"""
+    data = request.json or {}
+    # 解析手牌
+    hand_raw = data.get("hand", [])
+    hand = [{"id": c.get("id", i), "rank": c.get("r", c.get("rank", 0)), "suit": c.get("s", c.get("suit", 0))} for i, c in enumerate(hand_raw)]
+    # 解析上家牌型
+    last = data.get("last")
+    if last and not isinstance(last, dict):
+        last = None
+    who = data.get("who", PLAYER)
+    role = data.get("role", "balanced")
+    strategy = data.get("strategy", "balanced")
+    landlord = data.get("landlord", -1)
+    landlord_count = data.get("landlord_count", 99)
+    teammate_count = data.get("teammate_count", 99)
+    # 构建 GameState
+    gs = GameState()
+    gs.hands = [hand if i == who else [] for i in range(3)]
+    gs.current = who
+    gs.landlord = landlord
+    gs.lastPlay = {"cards": [], "pattern": last, "player": -1} if last else None
+    gs.passCount = 0
+    # 学习参数
+    round_id = data.get("round_id", "")
+    step = data.get("step", 0)
+    try:
+        result = ai_play_engine(gs, hand, last)
+        if result is None:
+            return jsonify({"ok": True, "action": None, "pattern": None, "passed": True})
+        else:
+            action = result["action"]
+            pattern = result["pattern"]
+            # 记录学习数据
+            if round_id:
+                _record_ai_step(round_id, step, {"hand_count": len(hand), "role": role}, action, pattern, who)
+            # 返回格式：前端需要 rank 列表
+            return jsonify({
+                "ok": True,
+                "action": [{"r": c["rank"], "s": c["suit"]} for c in action],
+                "pattern": pattern,
+                "passed": False
+            })
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+
+@app.route("/api/ai/bid", methods=["POST"])
+def ai_bid():
+    """AI 叫地主决策接口"""
+    data = request.json or {}
+    hand_raw = data.get("hand", [])
+    hand = [{"id": c.get("id", i), "rank": c.get("r", c.get("rank", 0)), "suit": c.get("s", c.get("suit", 0))} for i, c in enumerate(hand_raw)]
+    is_call_phase = data.get("isCallPhase", True)
+    # 评估手牌
+    report = evaluate_hand(hand)
+    threshold = 58 if is_call_phase else 60
+    if report["bombs"] >= 1:
+        threshold -= 8
+    bid = 0
+    if report["score"] >= threshold:
+        bid = 1
+    if report["score"] >= threshold + 10:
+        bid = 2
+    if report["score"] >= threshold + 20:
+        bid = 3
+    return jsonify({"ok": True, "bid": bid, "score": report["score"]})
+
+
+def _record_ai_step(round_id, step, hand_state, action, pattern, who):
+    """记录 AI 学习数据到数据库（静默，失败不影响游戏）"""
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        action_type = "NORMAL"
+        if pattern:
+            if pattern.get("type") in ("BOMB", "ROCKET"):
+                action_type = "BOMB"
+        bucket = ""
+        c.execute("""
+            INSERT INTO ai_learning (round_id, step_number, hand_state, action_taken, action_type, result, score_change, who, bucket)
+            VALUES (%s, %s, %s, %s, %s, '', 0, %s, %s)
+        """, (round_id, step, json.dumps(hand_state, ensure_ascii=False),
+              json.dumps([{"r": card["rank"], "s": card["suit"]} for card in (action or [])], ensure_ascii=False),
+              action_type, str(who), bucket))
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass  # 记录失败静默，不影响游戏
 
 
 if __name__ == "__main__":
