@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多AI三角色协作控制台 v2</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #00d2ff, #3a7bd5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            color: #aaa;
+            font-size: 14px;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .role-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .role-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .role-card.active {
+            border-color: #00d2ff;
+            box-shadow: 0 0 20px rgba(0, 210, 255, 0.2);
+        }
+
+        .role-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .role-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-right: 15px;
+        }
+
+        .role-icon.engineer {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .role-icon.developer {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+
+        .role-icon.tester {
+            background: linear-gradient(135deg, #fc5c7d 0%, #6a82fb 100%);
+        }
+
+        .role-title {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .role-status {
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 5px;
+        }
+
+        .role-status.online {
+            color: #38ef7d;
+        }
+
+        .role-status.busy {
+            color: #fc5c7d;
+        }
+
+        .role-status.idle {
+            color: #aaa;
+        }
+
+        .role-tasks {
+            margin-top: 15px;
+        }
+
+        .task-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .task-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+
+        .task-item.active {
+            border-left: 3px solid #00d2ff;
+        }
+
+        .task-item.completed {
+            opacity: 0.6;
+            text-decoration: line-through;
+        }
+
+        .task-status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            margin-left: 10px;
+        }
+
+        .task-status.pending {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+        }
+
+        .task-status.in-progress {
+            background: rgba(0, 210, 255, 0.2);
+            color: #00d2ff;
+        }
+
+        .task-status.testing {
+            background: rgba(255, 107, 107, 0.2);
+            color: #ff6b6b;
+        }
+
+        .task-status.completed {
+            background: rgba(56, 239, 125, 0.2);
+            color: #38ef7d;
+        }
+
+        .workflow {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .workflow h2 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: #00d2ff;
+        }
+
+        .workflow-steps {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+        }
+
+        .workflow-step {
+            text-align: center;
+            flex: 1;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .workflow-step:hover .step-circle {
+            transform: scale(1.1);
+        }
+
+        .step-circle {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            font-size: 24px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .step-circle.active {
+            background: rgba(0, 210, 255, 0.2);
+            border-color: #00d2ff;
+            box-shadow: 0 0 15px rgba(0, 210, 255, 0.3);
+        }
+
+        .step-circle.completed {
+            background: rgba(56, 239, 125, 0.2);
+            border-color: #38ef7d;
+        }
+
+        .step-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .step-desc {
+            font-size: 12px;
+            color: #aaa;
+        }
+
+        .step-arrow {
+            position: absolute;
+            top: 30px;
+            right: -15px;
+            color: #aaa;
+            font-size: 20px;
+        }
+
+        .task-board {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .task-board h2 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: #38ef7d;
+        }
+
+        .board-columns {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+
+        .board-column {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            padding: 15px;
+            min-height: 200px;
+        }
+
+        .column-header {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .column-header.pending {
+            color: #ffc107;
+        }
+
+        .column-header.in-progress {
+            color: #00d2ff;
+        }
+
+        .column-header.testing {
+            color: #ff6b6b;
+        }
+
+        .column-header.completed {
+            color: #38ef7d;
+        }
+
+        .board-task {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .board-task:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+
+        .board-task .task-id {
+            color: #00d2ff;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .board-task .task-name {
+            margin-bottom: 8px;
+        }
+
+        .board-task .task-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #aaa;
+        }
+
+        .priority-high {
+            color: #ff6b6b;
+        }
+
+        .priority-medium {
+            color: #ffc107;
+        }
+
+        .priority-low {
+            color: #38ef7d;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #aaa;
+            font-size: 12px;
+        }
+
+        .footer a {
+            color: #00d2ff;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* 模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        .modal-content {
+            background-color: #1a1a2e;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 15px;
+            width: 80%;
+            max-width: 600px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #00d2ff;
+        }
+
+        .close-btn {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close-btn:hover {
+            color: #fff;
+        }
+
+        .modal-body {
+            line-height: 1.6;
+        }
+
+        .modal-body h3 {
+            color: #38ef7d;
+            margin: 15px 0 10px;
+        }
+
+        .modal-body p {
+            margin-bottom: 10px;
+            color: #ccc;
+        }
+
+        .modal-body ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        .modal-body li {
+            margin-bottom: 5px;
+            color: #ccc;
+        }
+
+        @media (max-width: 1200px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .board-columns {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .board-columns {
+                grid-template-columns: 1fr;
+            }
+            
+            .workflow-steps {
+                flex-direction: column;
+            }
+            
+            .step-arrow {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>多AI三角色协作控制台</h1>
+            <p>斗地主AI引擎升级项目 | 提示词工程师 · 代码执行者 · 测试验证者</p>
+        </div>
+
+        <div class="dashboard">
+            <!-- 提示词工程师 -->
+            <div class="role-card active" onclick="showRoleDetails('engineer')">
+                <div class="role-header">
+                    <div class="role-icon engineer">📝</div>
+                    <div>
+                        <div class="role-title">提示词工程师</div>
+                        <div class="role-status online">● 在线</div>
+                    </div>
+                </div>
+                <div class="role-tasks">
+                    <div class="task-item active" onclick="showTaskDetails('TASK-001', 'design')">
+                        <span>设计手数分析功能</span>
+                        <span class="task-status in-progress">进行中</span>
+                    </div>
+                    <div class="task-item" onclick="showTaskDetails('TASK-005', 'design')">
+                        <span>设计概率记牌推算</span>
+                        <span class="task-status pending">待处理</span>
+                    </div>
+                    <div class="task-item" onclick="showTaskDetails('TASK-002', 'design')">
+                        <span>设计拆牌罚分层级</span>
+                        <span class="task-status pending">待处理</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 代码执行者 -->
+            <div class="role-card" onclick="showRoleDetails('developer')">
+                <div class="role-header">
+                    <div class="role-icon developer">💻</div>
+                    <div>
+                        <div class="role-title">代码执行者</div>
+                        <div class="role-status idle">● 等待中</div>
+                    </div>
+                </div>
+                <div class="role-tasks">
+                    <div class="task-item" onclick="showTaskDetails('wait', 'code')">
+                        <span>等待提示词文档</span>
+                        <span class="task-status pending">待处理</span>
+                    </div>
+                    <div class="task-item" onclick="showTaskDetails('TASK-001', 'code')">
+                        <span>实现手数分析</span>
+                        <span class="task-status pending">待处理</span>
+                    </div>
+                    <div class="task-item" onclick="showTaskDetails('TASK-005', 'code')">
+                        <span>实现概率记牌推算</span>
+                        <span class="task-status pending">待处理</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 测试验证者 -->
+            <div class="role-card" onclick="showRoleDetails('tester')">
+                <div class="role-header">
+                    <div class="role-icon tester">🔍</div>
+                    <div>
+                        <div class="role-title">测试验证者</div>
+                        <div class="role-status idle">● 等待中</div>
+                    </div>
+                </div>
+                <div class="role-tasks">
+                    <div class="task-item" onclick="showTaskDetails('config', 'test')">
+                        <span>配置测试环境</span>
+                        <span class="task-status pending">待处理</span>
+                    </div>
+                    <div class="task-item" onclick="showTaskDetails('TASK-001', 'test')">
+                        <span>设计手数分析测试</span>
+                        <span class="task-status pending">待处理</span>
+                    </div>
+                    <div class="task-item" onclick="showTaskDetails('run', 'test')">
+                        <span>运行功能测试</span>
+                        <span class="task-status pending">待处理</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="workflow">
+            <h2>协作流程</h2>
+            <div class="workflow-steps">
+                <div class="workflow-step" onclick="showWorkflowStep('design')">
+                    <div class="step-circle active">📝</div>
+                    <div class="step-title">提示词设计</div>
+                    <div class="step-desc">分析需求，设计策略</div>
+                    <div class="step-arrow">→</div>
+                </div>
+                <div class="workflow-step" onclick="showWorkflowStep('confirm')">
+                    <div class="step-circle">👤</div>
+                    <div class="step-title">用户确认</div>
+                    <div class="step-desc">确认方向，授权修改</div>
+                    <div class="step-arrow">→</div>
+                </div>
+                <div class="workflow-step" onclick="showWorkflowStep('code')">
+                    <div class="step-circle">💻</div>
+                    <div class="step-title">代码执行</div>
+                    <div class="step-desc">实现功能，自测验证</div>
+                    <div class="step-arrow">→</div>
+                </div>
+                <div class="workflow-step" onclick="showWorkflowStep('test')">
+                    <div class="step-circle">🔍</div>
+                    <div class="step-title">测试验证</div>
+                    <div class="step-desc">完整测试，生成报告</div>
+                    <div class="step-arrow">→</div>
+                </div>
+                <div class="workflow-step" onclick="showWorkflowStep('complete')">
+                    <div class="step-circle">✅</div>
+                    <div class="step-title">交付完成</div>
+                    <div class="step-desc">测试通过，正式交付</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="task-board">
+            <h2>任务看板</h2>
+            <div class="board-columns">
+                <div class="board-column">
+                    <div class="column-header pending">待处理</div>
+                    <div class="board-task" onclick="showTaskBoardDetails('TASK-001')">
+                        <div class="task-id">TASK-001</div>
+                        <div class="task-name">手数分析</div>
+                        <div class="task-meta">
+                            <span class="priority-high">高优先级</span>
+                            <span>2-3天</span>
+                        </div>
+                    </div>
+                    <div class="board-task" onclick="showTaskBoardDetails('TASK-005')">
+                        <div class="task-id">TASK-005</div>
+                        <div class="task-name">概率记牌推算</div>
+                        <div class="task-meta">
+                            <span class="priority-high">高优先级</span>
+                            <span>3-4天</span>
+                        </div>
+                    </div>
+                    <div class="board-task" onclick="showTaskBoardDetails('TASK-002')">
+                        <div class="task-id">TASK-002</div>
+                        <div class="task-name">拆牌罚分层级</div>
+                        <div class="task-meta">
+                            <span class="priority-medium">中优先级</span>
+                            <span>2-3天</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="board-column">
+                    <div class="column-header in-progress">进行中</div>
+                    <div class="board-task" onclick="showTaskBoardDetails('TASK-001-design')">
+                        <div class="task-id">TASK-001</div>
+                        <div class="task-name">手数分析设计</div>
+                        <div class="task-meta">
+                            <span>提示词工程师</span>
+                            <span>进行中</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="board-column">
+                    <div class="column-header testing">测试中</div>
+                    <div class="board-task" style="opacity: 0.3;">
+                        <div class="task-id">暂无任务</div>
+                        <div class="task-name">等待测试任务</div>
+                    </div>
+                </div>
+
+                <div class="board-column">
+                    <div class="column-header completed">已完成</div>
+                    <div class="board-task" style="opacity: 0.3;">
+                        <div class="task-id">暂无任务</div>
+                        <div class="task-name">等待任务完成</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>多AI三角色协作架构 v1.0 | 基于斗地主AI引擎升级项目</p>
+            <p>配置文件：<a onclick="openFile('配置/jest.config.js')">Jest配置</a> | <a onclick="openFile('配置/pytest.ini')">Pytest配置</a> | <a onclick="openFile('配置/package.json')">依赖管理</a></p>
+            <p>测试工具：<a onclick="openFile('测试工具/GameSimulator.js')">牌局模拟器</a> | <a onclick="openFile('测试工具/AIDecisionRecorder.js')">决策记录器</a> | <a onclick="openFile('测试工具/WinRateCalculator.js')">胜率统计器</a></p>
+        </div>
+    </div>
+
+    <!-- 模态框 -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="modal-title">详情</div>
+                <span class="close-btn" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- 动态内容 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 任务数据
+        const taskData = {
+            'TASK-001': {
+                name: '手数分析',
+                priority: '高',
+                time: '2-3天',
+                description: '计算出完手牌需要的最少次数',
+                requirements: [
+                    '能够正确计算单手牌的手数',
+                    '能够分析拆牌后的手数变化',
+                    '准确率 ≥ 80%'
+                ],
+                details: '手数分析是斗地主AI的核心功能之一，用于评估玩家出完手牌所需的最少回合数。这有助于AI做出更优的出牌决策。'
+            },
+            'TASK-005': {
+                name: '概率记牌推算',
+                priority: '高',
+                time: '3-4天',
+                description: '基于出牌历史推算对手牌型',
+                requirements: [
+                    '能够根据出牌历史推算剩余牌型',
+                    '概率计算准确率 ≥ 70%',
+                    '实时更新推算结果'
+                ],
+                details: '概率记牌推算是AI的重要能力，通过分析已出的牌来推断对手手中可能的牌型，从而制定更优策略。'
+            },
+            'TASK-002': {
+                name: '拆牌罚分层级',
+                priority: '中',
+                time: '2-3天',
+                description: '评估拆牌代价，设置罚分层级',
+                requirements: [
+                    '能够识别拆牌情况',
+                    '能够计算拆牌代价',
+                    '罚分层级设置合理'
+                ],
+                details: '拆牌罚分用于评估将炸弹、顺子等牌型拆开使用的代价，帮助AI做出更合理的出牌决策。'
+            }
+        };
+
+        // 角色数据
+        const roleData = {
+            'engineer': {
+                name: '提示词工程师',
+                responsibilities: [
+                    '分析需求，理解业务目标',
+                    '设计AI策略和算法逻辑',
+                    '撰写详细的提示词文档',
+                    '审阅代码方案，确保符合设计意图',
+                    '记录决策和架构选择（ADR）'
+                ],
+                tools: ['保险库', '任务看板', '文档编辑器'],
+                currentTask: '设计手数分析功能'
+            },
+            'developer': {
+                name: '代码执行者',
+                responsibilities: [
+                    '根据提示词文档执行具体代码修改',
+                    '实现功能，修复bug',
+                    '遵守代码规范和防坑规则',
+                    '每修改一个点立即自行测试',
+                    '生成执行日志'
+                ],
+                tools: ['代码编辑器', 'Git', '本地开发环境'],
+                currentTask: '等待提示词文档'
+            },
+            'tester': {
+                name: '测试验证者',
+                responsibilities: [
+                    '运行完整测试体系',
+                    '验证功能是否符合预期',
+                    '发现边界情况和潜在问题',
+                    '生成详细的测试报告',
+                    '回归测试，确保修改不引入新问题'
+                ],
+                tools: ['Jest', 'Pytest', '测试用例库'],
+                currentTask: '配置测试环境'
+            }
+        };
+
+        // 流程步骤数据
+        const workflowData = {
+            'design': {
+                name: '提示词设计',
+                description: '提示词工程师分析需求，设计AI策略，撰写提示词文档',
+                steps: [
+                    '分析业务需求和技术约束',
+                    '设计AI策略和算法逻辑',
+                    '撰写详细的提示词文档',
+                    '准备验收清单'
+                ],
+                output: '提示词文档 + 验收清单'
+            },
+            'confirm': {
+                name: '用户确认',
+                description: '用户审阅提示词文档，确认方向或提出修改意见',
+                steps: [
+                    '用户审阅提示词文档',
+                    '确认方向或提出修改意见',
+                    '明确说"你现在改/你来改/去改"',
+                    '授权代码执行者开始工作'
+                ],
+                output: '用户确认授权'
+            },
+            'code': {
+                name: '代码执行',
+                description: '代码执行者根据提示词文档执行具体代码修改',
+                steps: [
+                    '接收提示词文档',
+                    '分析影响范围，制定修改计划',
+                    '执行代码修改（每修改一个点立即测试）',
+                    '生成执行日志'
+                ],
+                output: '修改后的代码 + 执行日志'
+            },
+            'test': {
+                name: '测试验证',
+                description: '测试验证者运行完整测试体系，验证功能正确性',
+                steps: [
+                    '设计测试用例',
+                    '运行单元测试、集成测试、功能测试',
+                    '验证AI决策是否符合预期',
+                    '生成测试报告'
+                ],
+                output: '测试报告 + 问题清单'
+            },
+            'complete': {
+                name: '交付完成',
+                description: '测试通过，任务正式交付',
+                steps: [
+                    '所有测试用例通过',
+                    '测试覆盖率达标',
+                    '用户确认验收',
+                    '更新项目状态'
+                ],
+                output: '已交付功能'
+            }
+        };
+
+        // 显示模态框
+        function showModal(title, content) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-body').innerHTML = content;
+            document.getElementById('modal').style.display = 'block';
+        }
+
+        // 关闭模态框
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        // 显示角色详情
+        function showRoleDetails(role) {
+            const data = roleData[role];
+            let content = `
+                <h3>主要职责</h3>
+                <ul>
+                    ${data.responsibilities.map(r => `<li>${r}</li>`).join('')}
+                </ul>
+                <h3>使用工具</h3>
+                <p>${data.tools.join('、')}</p>
+                <h3>当前任务</h3>
+                <p>${data.currentTask}</p>
+            `;
+            showModal(data.name + ' - 角色详情', content);
+        }
+
+        // 显示任务详情
+        function showTaskDetails(taskId, type) {
+            let title, content;
+            
+            if (taskId === 'wait') {
+                title = '等待提示词文档';
+                content = `
+                    <h3>状态说明</h3>
+                    <p>代码执行者当前正在等待提示词工程师完成设计。</p>
+                    <h3>下一步行动</h3>
+                    <p>等待提示词工程师完成手数分析功能的设计文档。</p>
+                `;
+            } else if (taskId === 'config') {
+                title = '配置测试环境';
+                content = `
+                    <h3>任务说明</h3>
+                    <p>配置测试框架和测试环境，为后续测试工作做准备。</p>
+                    <h3>具体工作</h3>
+                    <ul>
+                        <li>安装Jest和Pytest</li>
+                        <li>配置测试环境</li>
+                        <li>创建基础测试用例</li>
+                    </ul>
+                `;
+            } else if (taskId === 'run') {
+                title = '运行功能测试';
+                content = `
+                    <h3>任务说明</h3>
+                    <p>运行已设计的测试用例，验证功能正确性。</p>
+                    <h3>测试范围</h3>
+                    <ul>
+                        <li>功能测试：叫地主、出牌、胜负判断</li>
+                        <li>AI策略测试：验证AI决策是否符合预期</li>
+                        <li>单元测试：关键函数的正确性</li>
+                    </ul>
+                `;
+            } else {
+                const data = taskData[taskId];
+                title = data.name + ' - ' + (type === 'design' ? '设计' : type === 'code' ? '实现' : '测试');
+                content = `
+                    <h3>任务描述</h3>
+                    <p>${data.description}</p>
+                    <h3>优先级与时间</h3>
+                    <p>优先级：${data.priority} | 预计时间：${data.time}</p>
+                    <h3>验收标准</h3>
+                    <ul>
+                        ${data.requirements.map(r => `<li>${r}</li>`).join('')}
+                    </ul>
+                    <h3>详细说明</h3>
+                    <p>${data.details}</p>
+                `;
+            }
+            
+            showModal(title, content);
+        }
+
+        // 显示流程步骤详情
+        function showWorkflowStep(step) {
+            const data = workflowData[step];
+            let content = `
+                <h3>步骤说明</h3>
+                <p>${data.description}</p>
+                <h3>具体步骤</h3>
+                <ul>
+                    ${data.steps.map(s => `<li>${s}</li>`).join('')}
+                </ul>
+                <h3>产出物</h3>
+                <p>${data.output}</p>
+            `;
+            showModal(data.name + ' - 流程详情', content);
+        }
+
+        // 显示任务看板详情
+        function showTaskBoardDetails(taskId) {
+            if (taskId === 'TASK-001-design') {
+                showModal('手数分析设计 - 进行中', `
+                    <h3>任务状态</h3>
+                    <p>提示词工程师正在设计手数分析功能。</p>
+                    <h3>当前进度</h3>
+                    <p>已完成需求分析，正在撰写提示词文档。</p>
+                    <h3>预计完成</h3>
+                    <p>预计今天完成设计，等待用户确认。</p>
+                `);
+            } else {
+                showTaskDetails(taskId, 'board');
+            }
+        }
+
+        // 打开文件
+        function openFile(filePath) {
+            showModal('打开文件', `
+                <h3>文件路径</h3>
+                <p>${filePath}</p>
+                <h3>文件说明</h3>
+                <p>这是一个配置文件，用于配置测试框架。</p>
+                <p>您可以在文件管理器中打开此文件查看内容。</p>
+            `);
+        }
+
+        // 点击模态框外部关闭
+        window.onclick = function(event) {
+            const modal = document.getElementById('modal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('多AI三角色协作控制台 v2 已加载');
+            console.log('点击任何卡片或任务查看详细信息');
+        });
+    </script>
+</body>
+</html>

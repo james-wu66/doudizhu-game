@@ -1,0 +1,33 @@
+{
+  "name": "doudizhu-ai-collaboration",
+  "version": "1.0.0",
+  "description": "斗地主AI三角色协作架构测试环境",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "test:watch": "jest --watch",
+    "test:frontend": "jest --config 配置/jest.config.js",
+    "test:backend": "pytest 配置/pytest.ini",
+    "lint": "eslint 配置/测试工具/测试用例/"
+  },
+  "dependencies": {
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "@babel/core": "^7.24.0",
+    "@babel/preset-env": "^7.24.0",
+    "babel-jest": "^29.7.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "prettier": "^3.2.5"
+  },
+  "keywords": [
+    "斗地主",
+    "AI",
+    "测试",
+    "协作架构"
+  ],
+  "author": "James Wu",
+  "license": "MIT"
+}
