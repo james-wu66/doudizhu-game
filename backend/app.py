@@ -43,6 +43,10 @@ except ImportError:
 # 内网 172.17.0.2 云端实测 timed out（云托管与 MySQL 不在同一 VPC），本地也连不通
 DB_HOST = os.environ.get("DB_HOST") or "sh-cynosdbmysql-grp-dujxvcs6.sql.tencentcdb.com"
 DB_PORT = int(os.environ.get("DB_PORT") or "21142")
+# 兼容：如果环境变量还残留旧的内网地址，自动修正为外网地址
+if DB_HOST == "172.17.0.2":
+    DB_HOST = "sh-cynosdbmysql-grp-dujxvcs6.sql.tencentcdb.com"
+    DB_PORT = 21142
 DB_USER = os.environ.get("DB_USER") or "doudizhu_game"
 DB_PASSWORD = os.environ.get("DB_PASSWORD") or "wzm13002104610."
 DB_NAME = os.environ.get("DB_NAME") or "james-wu-d2gcojd404e6b8137"
