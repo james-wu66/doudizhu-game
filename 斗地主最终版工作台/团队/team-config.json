@@ -1,0 +1,135 @@
+{
+  "project": {
+    "name": "斗地主AI引擎升级项目",
+    "location": "C:\\hermes 斗地主终极版 软件",
+    "workspace": "C:\\hermes 斗地主终极版 软件\\斗地主最终版工作台",
+    "tasks": [
+      {
+        "id": "TASK-001",
+        "name": "手数分析",
+        "status": "已完成",
+        "description": "分析斗地主牌局中的手数统计"
+      },
+      {
+        "id": "TASK-002",
+        "name": "拆牌罚分层级",
+        "status": "待处理",
+        "description": "实现拆牌罚分的多层级机制"
+      },
+      {
+        "id": "TASK-003",
+        "name": "禁用2/王当kicker",
+        "status": "待处理",
+        "description": "禁止使用2和王作为kicker牌"
+      },
+      {
+        "id": "TASK-004",
+        "name": "让牌三原则",
+        "status": "待处理",
+        "description": "实现让牌的三个核心原则"
+      },
+      {
+        "id": "TASK-005",
+        "name": "概率记牌推算",
+        "status": "待处理",
+        "description": "基于概率的记牌和推算系统"
+      },
+      {
+        "id": "TASK-006",
+        "name": "专属地主AI",
+        "status": "待处理",
+        "description": "创建专属的地主AI策略"
+      }
+    ]
+  },
+  "team": {
+    "leader": {
+      "id": "leader-001",
+      "name": "项目经理",
+      "role": "组长",
+      "responsibilities": [
+        "接收用户需求并分解任务",
+        "协调团队成员工作分配",
+        "监督项目进度和质量",
+        "汇报项目结果和问题",
+        "处理跨职能协调问题"
+      ],
+      "tasks": ["TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006"],
+      "communication": "负责与用户沟通，每周提交进度报告"
+    },
+    "prompt_engineer": {
+      "id": "prompt-001",
+      "name": "提示词工程师",
+      "role": "提示词工程师",
+      "responsibilities": [
+        "需求分析和功能分解",
+        "撰写详细的提示词文档",
+        "定义AI引擎的行为规范",
+        "创建测试用例提示词",
+        "优化提示词效果"
+      ],
+      "tasks": ["TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006"],
+      "deliverables": ["需求分析文档", "提示词规范", "测试用例提示词"]
+    },
+    "frontend_developer": {
+      "id": "frontend-001",
+      "name": "前端开发者",
+      "role": "前端开发者",
+      "responsibilities": [
+        "修改AI引擎代码 (frontend/index.html)",
+        "实现用户界面交互",
+        "优化前端性能",
+        "处理浏览器兼容性",
+        "实现响应式设计"
+      ],
+      "primary_file": "frontend/index.html",
+      "tasks": ["TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006"],
+      "skills": ["JavaScript", "HTML/CSS", "前端性能优化"]
+    },
+    "backend_developer": {
+      "id": "backend-001",
+      "name": "后端开发者",
+      "role": "后端开发者",
+      "responsibilities": [
+        "修改Flask后端代码 (backend/app.py)",
+        "实现API接口",
+        "数据库设计和优化",
+        "服务器性能优化",
+        "安全性和权限管理"
+      ],
+      "primary_file": "backend/app.py",
+      "tasks": ["TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006"],
+      "skills": ["Python", "Flask", "REST API", "数据库"]
+    },
+    "test_engineer": {
+      "id": "test-001",
+      "name": "测试工程师",
+      "role": "测试工程师",
+      "responsibilities": [
+        "编写测试用例",
+        "执行单元测试和集成测试",
+        "生成测试报告",
+        "发现和报告缺陷",
+        "验证修复效果"
+      ],
+      "test_directory": "tests/",
+      "tasks": ["TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006"],
+      "skills": ["单元测试", "集成测试", "自动化测试"]
+    }
+  },
+  "workflow": {
+    "development_flow": "需求分析 → 提示词编写 → 前端开发 → 后端开发 → 测试验证",
+    "communication_rules": [
+      "每日站会：上午9:00同步进度",
+      "代码审查：所有代码变更需要至少一人审查",
+      "问题升级：严重问题立即上报组长",
+      "文档更新：每次变更后更新相关文档"
+    ],
+    "tools": [
+      "版本控制：Git",
+      "项目管理：任务看板",
+      "文档协作：Markdown文件",
+      "测试框架：pytest"
+    ]
+  }
+}

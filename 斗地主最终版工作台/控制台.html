@@ -3,949 +3,277 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>多AI三角色协作控制台 v2</title>
+    <title>斗地主工作台 · 真实数据控制台</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Microsoft YaHei', sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            color: #fff;
+            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+            background: #0f1420;
+            color: #e6e9f0;
             min-height: 100vh;
-            padding: 20px;
+            padding: 24px;
+            line-height: 1.5;
         }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
+        .container { max-width: 1280px; margin: 0 auto; }
         .header {
-            text-align: center;
-            margin-bottom: 30px;
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            backdrop-filter: blur(10px);
-        }
-
-        .header h1 {
-            font-size: 28px;
-            margin-bottom: 10px;
-            background: linear-gradient(90deg, #00d2ff, #3a7bd5);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .header p {
-            color: #aaa;
-            font-size: 14px;
-        }
-
-        .dashboard {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .role-card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            padding: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        .role-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            background: rgba(255, 255, 255, 0.08);
-        }
-
-        .role-card.active {
-            border-color: #00d2ff;
-            box-shadow: 0 0 20px rgba(0, 210, 255, 0.2);
-        }
-
-        .role-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .role-icon {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            margin-right: 15px;
-        }
-
-        .role-icon.engineer {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-
-        .role-icon.developer {
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-        }
-
-        .role-icon.tester {
-            background: linear-gradient(135deg, #fc5c7d 0%, #6a82fb 100%);
-        }
-
-        .role-title {
-            font-size: 18px;
-            font-weight: bold;
-        }
-
-        .role-status {
-            font-size: 12px;
-            color: #aaa;
-            margin-top: 5px;
-        }
-
-        .role-status.online {
-            color: #38ef7d;
-        }
-
-        .role-status.busy {
-            color: #fc5c7d;
-        }
-
-        .role-status.idle {
-            color: #aaa;
-        }
-
-        .role-tasks {
-            margin-top: 15px;
-        }
-
-        .task-item {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 8px;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .task-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-            transform: translateX(5px);
-        }
-
-        .task-item.active {
-            border-left: 3px solid #00d2ff;
-        }
-
-        .task-item.completed {
-            opacity: 0.6;
-            text-decoration: line-through;
-        }
-
-        .task-status {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 11px;
-            margin-left: 10px;
-        }
-
-        .task-status.pending {
-            background: rgba(255, 193, 7, 0.2);
-            color: #ffc107;
-        }
-
-        .task-status.in-progress {
-            background: rgba(0, 210, 255, 0.2);
-            color: #00d2ff;
-        }
-
-        .task-status.testing {
-            background: rgba(255, 107, 107, 0.2);
-            color: #ff6b6b;
-        }
-
-        .task-status.completed {
-            background: rgba(56, 239, 125, 0.2);
-            color: #38ef7d;
-        }
-
-        .workflow {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 30px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .workflow h2 {
-            font-size: 20px;
-            margin-bottom: 20px;
-            color: #00d2ff;
-        }
-
-        .workflow-steps {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: relative;
-        }
-
-        .workflow-step {
-            text-align: center;
-            flex: 1;
-            position: relative;
-            cursor: pointer;
-        }
-
-        .workflow-step:hover .step-circle {
-            transform: scale(1.1);
-        }
-
-        .step-circle {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 10px;
-            font-size: 24px;
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            transition: all 0.3s ease;
-        }
-
-        .step-circle.active {
-            background: rgba(0, 210, 255, 0.2);
-            border-color: #00d2ff;
-            box-shadow: 0 0 15px rgba(0, 210, 255, 0.3);
-        }
-
-        .step-circle.completed {
-            background: rgba(56, 239, 125, 0.2);
-            border-color: #38ef7d;
-        }
-
-        .step-title {
-            font-size: 14px;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .step-desc {
-            font-size: 12px;
-            color: #aaa;
-        }
-
-        .step-arrow {
-            position: absolute;
-            top: 30px;
-            right: -15px;
-            color: #aaa;
-            font-size: 20px;
-        }
-
-        .task-board {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 30px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .task-board h2 {
-            font-size: 20px;
-            margin-bottom: 20px;
-            color: #38ef7d;
-        }
-
-        .board-columns {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 15px;
-        }
-
-        .board-column {
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 10px;
-            padding: 15px;
-            min-height: 200px;
-        }
-
-        .column-header {
-            font-size: 14px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .column-header.pending {
-            color: #ffc107;
-        }
-
-        .column-header.in-progress {
-            color: #00d2ff;
-        }
-
-        .column-header.testing {
-            color: #ff6b6b;
-        }
-
-        .column-header.completed {
-            color: #38ef7d;
-        }
-
-        .board-task {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .board-task:hover {
-            background: rgba(255, 255, 255, 0.1);
-            transform: translateX(5px);
-        }
-
-        .board-task .task-id {
-            color: #00d2ff;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .board-task .task-name {
-            margin-bottom: 8px;
-        }
-
-        .board-task .task-meta {
-            display: flex;
-            justify-content: space-between;
-            font-size: 11px;
-            color: #aaa;
-        }
-
-        .priority-high {
-            color: #ff6b6b;
-        }
-
-        .priority-medium {
-            color: #ffc107;
-        }
-
-        .priority-low {
-            color: #38ef7d;
-        }
-
-        .footer {
-            text-align: center;
-            padding: 20px;
-            color: #aaa;
-            font-size: 12px;
-        }
-
-        .footer a {
-            color: #00d2ff;
-            text-decoration: none;
-            cursor: pointer;
-        }
-
-        .footer a:hover {
-            text-decoration: underline;
-        }
-
-        /* 模态框样式 */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.8);
-        }
-
-        .modal-content {
-            background-color: #1a1a2e;
-            margin: 5% auto;
-            padding: 30px;
-            border-radius: 15px;
-            width: 80%;
-            max-width: 600px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .modal-title {
-            font-size: 20px;
-            font-weight: bold;
-            color: #00d2ff;
-        }
-
-        .close-btn {
-            color: #aaa;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .close-btn:hover {
-            color: #fff;
-        }
-
-        .modal-body {
-            line-height: 1.6;
-        }
-
-        .modal-body h3 {
-            color: #38ef7d;
-            margin: 15px 0 10px;
-        }
-
-        .modal-body p {
-            margin-bottom: 10px;
-            color: #ccc;
-        }
-
-        .modal-body ul {
-            margin-left: 20px;
-            margin-bottom: 15px;
-        }
-
-        .modal-body li {
-            margin-bottom: 5px;
-            color: #ccc;
-        }
-
-        @media (max-width: 1200px) {
-            .dashboard {
-                grid-template-columns: 1fr;
-            }
-            
-            .board-columns {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 768px) {
-            .board-columns {
-                grid-template-columns: 1fr;
-            }
-            
-            .workflow-steps {
-                flex-direction: column;
-            }
-            
-            .step-arrow {
-                display: none;
-            }
-        }
+            background: linear-gradient(135deg, #1b2a4a 0%, #16213e 100%);
+            border: 1px solid #2a3a5c;
+            border-radius: 14px;
+            padding: 22px 26px;
+            margin-bottom: 22px;
+        }
+        .header h1 { font-size: 24px; color: #5fb0ff; margin-bottom: 6px; }
+        .header .meta { color: #8a94a8; font-size: 13px; }
+        .header .live { color: #4ade80; font-weight: bold; }
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+        .card {
+            background: #161d2e;
+            border: 1px solid #28344f;
+            border-radius: 12px;
+            padding: 18px 20px;
+        }
+        .card.full { grid-column: 1 / -1; }
+        .card h2 {
+            font-size: 16px; color: #cfe0ff; margin-bottom: 14px;
+            padding-bottom: 8px; border-bottom: 1px solid #28344f;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .badge {
+            display: inline-block; padding: 2px 8px; border-radius: 6px;
+            font-size: 11px; font-weight: bold; margin-left: auto;
+        }
+        .b-ok { background: #14532d; color: #4ade80; }
+        .b-warn { background: #5c3a14; color: #fbbf24; }
+        .b-bad { background: #5c1421; color: #f87171; }
+        .b-info { background: #14305c; color: #60a5fa; }
+        .kv { display: flex; gap: 10px; font-size: 13px; margin: 5px 0; }
+        .kv .k { color: #8a94a8; min-width: 84px; }
+        .kv .v { color: #e6e9f0; word-break: break-all; }
+        pre.status {
+            background: #0c111c; border: 1px solid #28344f; border-radius: 8px;
+            padding: 12px; font-size: 12px; color: #a9b6cc; overflow-x: auto;
+            white-space: pre-wrap; word-break: break-all;
+        }
+        .fn-list { display: flex; flex-direction: column; gap: 6px; max-height: 340px; overflow-y: auto; }
+        .fn {
+            display: flex; align-items: center; gap: 10px;
+            background: #0f1626; border: 1px solid #233048; border-radius: 8px;
+            padding: 7px 11px; font-size: 13px; text-decoration: none; color: #d6e0f2;
+        }
+        .fn:hover { border-color: #5fb0ff; background: #14203a; }
+        .fn .name { font-family: 'Consolas', monospace; color: #7dd3fc; }
+        .fn .ln { color: #6b7689; font-size: 11px; margin-left: auto; }
+        .fn .tag {
+            font-size: 10px; padding: 1px 6px; border-radius: 5px; font-weight: bold;
+        }
+        .tag-t1 { background: #1e3a5f; color: #7dd3fc; }
+        .tag-t2 { background: #3a2a5f; color: #c4b5fd; }
+        .tag-t5 { background: #1e5f3a; color: #6ee7b7; }
+        .tag-core { background: #5f3a1e; color: #fdba74; }
+        .tag-shell { background: #3a1e1e; color: #fca5a5; }
+        .tag-ui { background: #2a3a14; color: #bef264; }
+        .tag-tool { background: #334155; color: #94a3b8; }
+        .asset-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .asset-table th, .asset-table td {
+            text-align: left; padding: 8px 10px; border-bottom: 1px solid #233048;
+        }
+        .asset-table th { color: #8a94a8; font-weight: normal; }
+        .asset-table a { color: #7dd3fc; text-decoration: none; }
+        .asset-table a:hover { text-decoration: underline; }
+        .tree { font-family: 'Consolas', monospace; font-size: 12px; color: #a9b6cc; white-space: pre; overflow-x: auto; }
+        .note {
+            background: #1a2336; border-left: 3px solid #fbbf24; border-radius: 6px;
+            padding: 10px 14px; font-size: 13px; color: #d6c08a; margin-top: 10px;
+        }
+        .refresh-box {
+            background: #0f1626; border: 1px dashed #3a4a6a; border-radius: 10px;
+            padding: 14px 16px; font-size: 13px; color: #aab4c8;
+        }
+        .refresh-box code { background: #1e293b; padding: 2px 6px; border-radius: 4px; color: #7dd3fc; }
+        .empty-shell-warn { color: #fca5a5; font-size: 12px; margin-top: 8px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>多AI三角色协作控制台</h1>
-            <p>斗地主AI引擎升级项目 | 提示词工程师 · 代码执行者 · 测试验证者</p>
-        </div>
-
-        <div class="dashboard">
-            <!-- 提示词工程师 -->
-            <div class="role-card active" onclick="showRoleDetails('engineer')">
-                <div class="role-header">
-                    <div class="role-icon engineer">📝</div>
-                    <div>
-                        <div class="role-title">提示词工程师</div>
-                        <div class="role-status online">● 在线</div>
-                    </div>
-                </div>
-                <div class="role-tasks">
-                    <div class="task-item active" onclick="showTaskDetails('TASK-001', 'design')">
-                        <span>设计手数分析功能</span>
-                        <span class="task-status in-progress">进行中</span>
-                    </div>
-                    <div class="task-item" onclick="showTaskDetails('TASK-005', 'design')">
-                        <span>设计概率记牌推算</span>
-                        <span class="task-status pending">待处理</span>
-                    </div>
-                    <div class="task-item" onclick="showTaskDetails('TASK-002', 'design')">
-                        <span>设计拆牌罚分层级</span>
-                        <span class="task-status pending">待处理</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 代码执行者 -->
-            <div class="role-card" onclick="showRoleDetails('developer')">
-                <div class="role-header">
-                    <div class="role-icon developer">💻</div>
-                    <div>
-                        <div class="role-title">代码执行者</div>
-                        <div class="role-status idle">● 等待中</div>
-                    </div>
-                </div>
-                <div class="role-tasks">
-                    <div class="task-item" onclick="showTaskDetails('wait', 'code')">
-                        <span>等待提示词文档</span>
-                        <span class="task-status pending">待处理</span>
-                    </div>
-                    <div class="task-item" onclick="showTaskDetails('TASK-001', 'code')">
-                        <span>实现手数分析</span>
-                        <span class="task-status pending">待处理</span>
-                    </div>
-                    <div class="task-item" onclick="showTaskDetails('TASK-005', 'code')">
-                        <span>实现概率记牌推算</span>
-                        <span class="task-status pending">待处理</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 测试验证者 -->
-            <div class="role-card" onclick="showRoleDetails('tester')">
-                <div class="role-header">
-                    <div class="role-icon tester">🔍</div>
-                    <div>
-                        <div class="role-title">测试验证者</div>
-                        <div class="role-status idle">● 等待中</div>
-                    </div>
-                </div>
-                <div class="role-tasks">
-                    <div class="task-item" onclick="showTaskDetails('config', 'test')">
-                        <span>配置测试环境</span>
-                        <span class="task-status pending">待处理</span>
-                    </div>
-                    <div class="task-item" onclick="showTaskDetails('TASK-001', 'test')">
-                        <span>设计手数分析测试</span>
-                        <span class="task-status pending">待处理</span>
-                    </div>
-                    <div class="task-item" onclick="showTaskDetails('run', 'test')">
-                        <span>运行功能测试</span>
-                        <span class="task-status pending">待处理</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="workflow">
-            <h2>协作流程</h2>
-            <div class="workflow-steps">
-                <div class="workflow-step" onclick="showWorkflowStep('design')">
-                    <div class="step-circle active">📝</div>
-                    <div class="step-title">提示词设计</div>
-                    <div class="step-desc">分析需求，设计策略</div>
-                    <div class="step-arrow">→</div>
-                </div>
-                <div class="workflow-step" onclick="showWorkflowStep('confirm')">
-                    <div class="step-circle">👤</div>
-                    <div class="step-title">用户确认</div>
-                    <div class="step-desc">确认方向，授权修改</div>
-                    <div class="step-arrow">→</div>
-                </div>
-                <div class="workflow-step" onclick="showWorkflowStep('code')">
-                    <div class="step-circle">💻</div>
-                    <div class="step-title">代码执行</div>
-                    <div class="step-desc">实现功能，自测验证</div>
-                    <div class="step-arrow">→</div>
-                </div>
-                <div class="workflow-step" onclick="showWorkflowStep('test')">
-                    <div class="step-circle">🔍</div>
-                    <div class="step-title">测试验证</div>
-                    <div class="step-desc">完整测试，生成报告</div>
-                    <div class="step-arrow">→</div>
-                </div>
-                <div class="workflow-step" onclick="showWorkflowStep('complete')">
-                    <div class="step-circle">✅</div>
-                    <div class="step-title">交付完成</div>
-                    <div class="step-desc">测试通过，正式交付</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="task-board">
-            <h2>任务看板</h2>
-            <div class="board-columns">
-                <div class="board-column">
-                    <div class="column-header pending">待处理</div>
-                    <div class="board-task" onclick="showTaskBoardDetails('TASK-001')">
-                        <div class="task-id">TASK-001</div>
-                        <div class="task-name">手数分析</div>
-                        <div class="task-meta">
-                            <span class="priority-high">高优先级</span>
-                            <span>2-3天</span>
-                        </div>
-                    </div>
-                    <div class="board-task" onclick="showTaskBoardDetails('TASK-005')">
-                        <div class="task-id">TASK-005</div>
-                        <div class="task-name">概率记牌推算</div>
-                        <div class="task-meta">
-                            <span class="priority-high">高优先级</span>
-                            <span>3-4天</span>
-                        </div>
-                    </div>
-                    <div class="board-task" onclick="showTaskBoardDetails('TASK-002')">
-                        <div class="task-id">TASK-002</div>
-                        <div class="task-name">拆牌罚分层级</div>
-                        <div class="task-meta">
-                            <span class="priority-medium">中优先级</span>
-                            <span>2-3天</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="board-column">
-                    <div class="column-header in-progress">进行中</div>
-                    <div class="board-task" onclick="showTaskBoardDetails('TASK-001-design')">
-                        <div class="task-id">TASK-001</div>
-                        <div class="task-name">手数分析设计</div>
-                        <div class="task-meta">
-                            <span>提示词工程师</span>
-                            <span>进行中</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="board-column">
-                    <div class="column-header testing">测试中</div>
-                    <div class="board-task" style="opacity: 0.3;">
-                        <div class="task-id">暂无任务</div>
-                        <div class="task-name">等待测试任务</div>
-                    </div>
-                </div>
-
-                <div class="board-column">
-                    <div class="column-header completed">已完成</div>
-                    <div class="board-task" style="opacity: 0.3;">
-                        <div class="task-id">暂无任务</div>
-                        <div class="task-name">等待任务完成</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="footer">
-            <p>多AI三角色协作架构 v1.0 | 基于斗地主AI引擎升级项目</p>
-            <p>配置文件：<a onclick="openFile('配置/jest.config.js')">Jest配置</a> | <a onclick="openFile('配置/pytest.ini')">Pytest配置</a> | <a onclick="openFile('配置/package.json')">依赖管理</a></p>
-            <p>测试工具：<a onclick="openFile('测试工具/GameSimulator.js')">牌局模拟器</a> | <a onclick="openFile('测试工具/AIDecisionRecorder.js')">决策记录器</a> | <a onclick="openFile('测试工具/WinRateCalculator.js')">胜率统计器</a></p>
+<div class="container">
+    <div class="header">
+        <h1>斗地主工作台 · 真实数据控制台</h1>
+        <div class="meta">
+            数据生成时间：<span class="live" id="gen-time">—</span>
+            &nbsp;|&nbsp; 本控制台所有数据由 <code>引擎/生成控制台.py</code> 实时扫描真实项目生成，无写死常量。
+            &nbsp;|&nbsp; 项目根目录：<span id="proj-root">—</span>
         </div>
     </div>
 
-    <!-- 模态框 -->
-    <div id="modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-title" id="modal-title">详情</div>
-                <span class="close-btn" onclick="closeModal()">&times;</span>
+    <div class="grid">
+        <!-- Git 真实状态 -->
+        <div class="card">
+            <h2>Git 真实状态 <span class="badge" id="git-badge">—</span></h2>
+            <div class="kv"><span class="k">当前分支</span><span class="v" id="git-branch">—</span></div>
+            <div class="kv"><span class="k">工作区</span><span class="v" id="git-dirty">—</span></div>
+            <div class="kv"><span class="k">最近提交</span><span class="v" id="git-last">—</span></div>
+            <div style="margin-top:10px; font-size:12px; color:#8a94a8;">未跟踪关键目录</div>
+            <pre class="status" id="git-status">—</pre>
+        </div>
+
+        <!-- 测试真实状态 -->
+        <div class="card">
+            <h2>测试真实状态 <span class="badge" id="test-badge">—</span></h2>
+            <div class="kv"><span class="k">后端守护</span><span class="v" id="test-backend">—</span></div>
+            <div class="kv"><span class="k">tests/ 提交</span><span class="v" id="test-committed">—</span></div>
+            <div class="kv"><span class="k">前端测试</span><span class="v" id="test-jest">—</span></div>
+            <pre class="status" id="test-detail">—</pre>
+            <div class="note" id="test-note">—</div>
+        </div>
+
+        <!-- 后端 AI 引擎真实函数清单 -->
+        <div class="card full">
+            <h2>后端 AI 引擎真实函数清单 <span class="badge b-info" id="be-count">—</span></h2>
+            <div style="font-size:12px;color:#8a94a8;margin-bottom:10px;">
+                文件：<a id="be-file" href="#">../backend/ai_engine.py</a> （点击函数跳转真实文件）
             </div>
-            <div class="modal-body" id="modal-body">
-                <!-- 动态内容 -->
+            <div class="fn-list" id="be-fns"></div>
+        </div>
+
+        <!-- 前端 game.js 函数清单 -->
+        <div class="card full">
+            <h2>前端 game.js 函数清单 <span class="badge b-info" id="fe-count">—</span></h2>
+            <div style="font-size:12px;color:#8a94a8;margin-bottom:10px;">
+                文件：<a id="fe-file" href="#">../frontend/game.js</a>
+            </div>
+            <div class="fn-list" id="fe-fns"></div>
+            <div class="empty-shell-warn" id="fe-shell-note"></div>
+        </div>
+
+        <!-- 项目目录树 -->
+        <div class="card full">
+            <h2>项目真实目录树</h2>
+            <div class="tree" id="tree">—</div>
+        </div>
+
+        <!-- 工作台资产状态 -->
+        <div class="card full">
+            <h2>工作台资产状态（有效性核查）</h2>
+            <table class="asset-table">
+                <thead><tr><th>资产路径</th><th>状态</th><th>说明</th></tr></thead>
+                <tbody id="asset-body"></tbody>
+            </table>
+        </div>
+
+        <!-- 如何刷新 -->
+        <div class="card full">
+            <h2>如何刷新真实数据</h2>
+            <div class="refresh-box">
+                双击运行工作台根目录下的 <code>刷新工作台.bat</code>，它会调用
+                <code>引擎/生成控制台.py</code> 重新扫描真实项目、重新生成本页面与
+                <code>项目状态.json</code>。刷新后按 F5 重载本页面即可看到最新真实数据。
+                <br><br>
+                你也可以在终端执行：<br>
+                <code>cd "斗地主最终版工作台" &amp;&amp; python 引擎/生成控制台.py</code>
             </div>
         </div>
     </div>
+</div>
 
-    <script>
-        // 任务数据
-        const taskData = {
-            'TASK-001': {
-                name: '手数分析',
-                priority: '高',
-                time: '2-3天',
-                description: '计算出完手牌需要的最少次数',
-                requirements: [
-                    '能够正确计算单手牌的手数',
-                    '能够分析拆牌后的手数变化',
-                    '准确率 ≥ 80%'
-                ],
-                details: '手数分析是斗地主AI的核心功能之一，用于评估玩家出完手牌所需的最少回合数。这有助于AI做出更优的出牌决策。'
-            },
-            'TASK-005': {
-                name: '概率记牌推算',
-                priority: '高',
-                time: '3-4天',
-                description: '基于出牌历史推算对手牌型',
-                requirements: [
-                    '能够根据出牌历史推算剩余牌型',
-                    '概率计算准确率 ≥ 70%',
-                    '实时更新推算结果'
-                ],
-                details: '概率记牌推算是AI的重要能力，通过分析已出的牌来推断对手手中可能的牌型，从而制定更优策略。'
-            },
-            'TASK-002': {
-                name: '拆牌罚分层级',
-                priority: '中',
-                time: '2-3天',
-                description: '评估拆牌代价，设置罚分层级',
-                requirements: [
-                    '能够识别拆牌情况',
-                    '能够计算拆牌代价',
-                    '罚分层级设置合理'
-                ],
-                details: '拆牌罚分用于评估将炸弹、顺子等牌型拆开使用的代价，帮助AI做出更合理的出牌决策。'
-            }
-        };
+<script>
+const WORKBENCH_DATA = {"generated_at": "2026-09-01 13:02:24", "project": {"root": "C:\\hermes 斗地主终极版 软件", "git": {"branch": "master", "dirty": true, "status_short": "M cloudbaserc.json\n M \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\346\\216\\247\\345\\210\\266\\345\\217\\260.html\"\n M \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\346\\265\\213\\350\\257\\225\\345\\267\\245\\345\\205\\267/AIDecisionRecorder.js\"\n M \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\346\\265\\213\\350\\257\\225\\345\\267\\245\\345\\205\\267/GameSimulator.js\"\n M \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\346\\265\\213\\350\\257\\225\\345\\267\\245\\345\\205\\267/WinRateCalculator.js\"\n?? tests/\n?? \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\345\\210\\267\\346\\226\\260\\345\\267\\245\\344\\275\\234\\345\\217\\260.bat\"\n?? \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\345\\233\\242\\351\\230\\237/\"\n?? \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\345\\274\\225\\346\\223\\216/\"\n?? \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\346\\217\\220\\347\\244\\272\\350\\257\\215/TASK-002-\\346\\213\\206\\347\\211\\214\\347\\275\\232\\345\\210\\206\\345\\261\\202\\347\\272\\247.md\"\n?? \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\346\\217\\220\\347\\244\\272\\350\\257\\215/TASK-005-\\346\\246\\202\\347\\216\\207\\350\\256\\260\\347\\211\\214\\346\\216\\250\\347\\256\\227.md\"\n?? \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\346\\217\\220\\347\\244\\272\\350\\257\\215/\\346\\211\\247\\350\\241\\214\\346\\227\\245\\345\\277\\227-2026-08-31.md\"\n?? \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\346\\265\\213\\350\\257\\225\\346\\212\\245\\345\\221\\212/\"\n?? \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\350\\265\\204\\344\\272\\247\\347\\212\\266\\346\\200\\201\\350\\257\\264\\346\\230\\216.md\"\n?? \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\351\\241\\271\\347\\233\\256\\347\\212\\266\\346\\200\\201.json\"", "last_commits": ["24c9219 fix: 启动 bat 自动查找 Python 路径（解决找不到 python 的问题）", "7be5bb7 fix: 本地启动端口从 5000 改为 8080（与 app.py 默认端口对齐）", "f4ed4a7 触发重新部署：确保最新 index.html 上线", "157ecec 项目结构清理：移除 base64 音频、重复目录、备份文件，更新 README", "4a4249a 修复：GitHub Actions 部署卡死（tcb 3.8.1 新增确认题导致 stdin 等待超时）"], "untracked_tests": true, "untracked_workbench": false}, "backend": {"file": "../backend/ai_engine.py", "functions": [{"name": "detect_pattern", "line": 36, "task": "牌型识别", "tagcls": "tag-tool"}, {"name": "ai_add", "line": 143, "task": null, "tagcls": ""}, {"name": "ai_candidates", "line": 155, "task": null, "tagcls": ""}, {"name": "ai_can_beat", "line": 268, "task": null, "tagcls": ""}, {"name": "_last_player_for_ai", "line": 300, "task": null, "tagcls": ""}, {"name": "count_ranks", "line": 309, "task": null, "tagcls": ""}, {"name": "consecutive_runs", "line": 321, "task": null, "tagcls": ""}, {"name": "remaining_map", "line": 343, "task": "TASK-005 概率记牌", "tagcls": "tag-t5"}, {"name": "big_cards_status", "line": 366, "task": "TASK-005 概率记牌", "tagcls": "tag-t5"}, {"name": "possible_bomb_threat", "line": 380, "task": "TASK-005 概率记牌", "tagcls": "tag-t5"}, {"name": "estimate_count_in", "line": 393, "task": "TASK-005 概率记牌", "tagcls": "tag-t5"}, {"name": "probably_has", "line": 449, "task": "TASK-005 概率记牌", "tagcls": "tag-t5"}, {"name": "estimate_pair_in", "line": 454, "task": "TASK-005 概率记牌", "tagcls": "tag-t5"}, {"name": "estimate_triple_in", "line": 498, "task": "TASK-005 概率记牌", "tagcls": "tag-t5"}, {"name": "estimate_bomb_in", "line": 542, "task": "TASK-005 概率记牌", "tagcls": "tag-t5"}, {"name": "estimate_straight_in", "line": 587, "task": "TASK-005 概率记牌", "tagcls": "tag-t5"}, {"name": "evaluate_hand", "line": 604, "task": "牌型评估", "tagcls": "tag-tool"}, {"name": "_greedy_split", "line": 689, "task": "拆牌算法", "tagcls": "tag-tool"}, {"name": "estimate_hands", "line": 782, "task": "TASK-001 手数分析", "tagcls": "tag-t1"}, {"name": "split_penalty", "line": 809, "task": "TASK-002 拆牌罚分", "tagcls": "tag-t2"}, {"name": "detect_structure_loss", "line": 864, "task": "拆牌算法", "tagcls": "tag-tool"}, {"name": "kicker_waste", "line": 912, "task": "拆牌算法", "tagcls": "tag-tool"}, {"name": "hand_shape", "line": 963, "task": "拆牌算法", "tagcls": "tag-tool"}, {"name": "bomb_allowed", "line": 980, "task": "拆牌算法", "tagcls": "tag-tool"}, {"name": "big_value", "line": 1013, "task": "决策核心", "tagcls": "tag-core"}, {"name": "route_value", "line": 1068, "task": "决策核心", "tagcls": "tag-core"}, {"name": "control_tradeoff", "line": 1106, "task": "决策核心", "tagcls": "tag-core"}, {"name": "_learn_query", "line": 1151, "task": null, "tagcls": ""}, {"name": "_learn_adjust", "line": 1159, "task": null, "tagcls": ""}, {"name": "_learn_pass_bias", "line": 1174, "task": null, "tagcls": ""}, {"name": "_ai_next", "line": 1196, "task": null, "tagcls": ""}, {"name": "candidate_score", "line": 1203, "task": "决策核心", "tagcls": "tag-core"}, {"name": "ai_should_pass_counter", "line": 1518, "task": "决策核心", "tagcls": "tag-core"}, {"name": "ai_pick_scored", "line": 1735, "task": "AI 主决策", "tagcls": "tag-core"}, {"name": "ai_observe_play", "line": 1804, "task": "学习/记录", "tagcls": "tag-tool"}, {"name": "ai_record_step", "line": 1824, "task": "学习/记录", "tagcls": "tag-tool"}, {"name": "ai_find_counter", "line": 1836, "task": "AI 主决策", "tagcls": "tag-core"}, {"name": "ai_lead", "line": 1891, "task": "AI 主决策", "tagcls": "tag-core"}, {"name": "ai_play", "line": 1930, "task": "AI 主决策", "tagcls": "tag-core"}], "line_count": 1984}, "frontend": {"file": "../frontend/game.js", "functions": [{"name": "serializeCard", "line": 25, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "saveGameState", "line": 26, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "clearSavedGame", "line": 38, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "readSavedGame", "line": 39, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "updateStartModal", "line": 43, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "restoreGameState", "line": 60, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "startFromMenu", "line": 72, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "continueFromMenu", "line": 94, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "restartFromMenu", "line": 103, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "makeCard", "line": 107, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "createDeck", "line": 108, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "shuffle", "line": 113, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "sortCards", "line": 114, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "getRankName", "line": 115, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "getSuitSymbol", "line": 116, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "getSuitColor", "line": 117, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "getFrequency", "line": 118, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "getCardsOfRank", "line": 119, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "detectPattern", "line": 122, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "detectAirplane", "line": 166, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "canBeat", "line": 193, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "patternName", "line": 206, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "renderReplayHands", "line": 318, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "parseCard", "line": 322, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "renderReplayOpponent", "line": 377, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "r2", "line": 394, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "renderReplayPlayedCards", "line": 463, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "showReplayBar", "line": 504, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "setReplaySpeed", "line": 524, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "toggleReplayPause", "line": 534, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "replaySkip", "line": 550, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "exitReplay", "line": 588, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "startReplayPlayback", "line": 598, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "executeReplayStep", "line": 614, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "removeCardsFromHand", "line": 729, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "recordBid", "line": 769, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "initGame", "line": 771, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "renderScoreTags", "line": 782, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "renderRoundDisplay", "line": 794, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "bidStatusContainer", "line": 857, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "renderBidStatus", "line": 860, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "bidAreaFor", "line": 865, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "clearBidHighlight", "line": 869, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "showBidStep", "line": 872, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "bidResult", "line": 878, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "nextPlayer", "line": 881, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "hideBidControls", "line": 882, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "showBidControls", "line": 886, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "playerPlay", "line": 1098, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "playerPass", "line": 1111, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "renderSettlementHands", "line": 1170, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "endGame", "line": 1193, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "showRoundScoreBreakdown", "line": 1297, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "showFinalRanking", "line": 1312, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "aiCountRanks", "line": 1328, "role": "AI/交互", "tagcls": "tag-ui"}, {"name": "evaluateHand", "line": 1333, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "learnLoad", "line": 1368, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "aiRecordStep", "line": 1381, "role": "AI/交互", "tagcls": "tag-ui"}, {"name": "aiActionTypeOf", "line": 1400, "role": "AI/交互", "tagcls": "tag-ui"}, {"name": "aiRoleNameFor", "line": 1405, "role": "AI/交互", "tagcls": "tag-ui"}, {"name": "aiAdd", "line": 1418, "role": "AI/交互", "tagcls": "tag-ui"}, {"name": "aiCandidates", "line": 1424, "role": "AI/交互", "tagcls": "tag-ui"}, {"name": "aiCanBeat", "line": 1471, "role": "AI/交互", "tagcls": "tag-ui"}, {"name": "aiFindSameType", "line": 1472, "role": "AI/交互", "tagcls": "tag-ui"}, {"name": "aiBombs", "line": 1475, "role": "AI/交互", "tagcls": "tag-ui"}, {"name": "aiRouteValue", "line": 1478, "role": "已迁移后端(空壳)", "tagcls": "tag-shell"}, {"name": "aiBombValue", "line": 1479, "role": "已迁移后端(空壳)", "tagcls": "tag-shell"}, {"name": "aiControlTradeoff", "line": 1480, "role": "已迁移后端(空壳)", "tagcls": "tag-shell"}, {"name": "aiCandidateScore", "line": 1481, "role": "已迁移后端(空壳)", "tagcls": "tag-shell"}, {"name": "aiShouldPassCounter", "line": 1482, "role": "已迁移后端(空壳)", "tagcls": "tag-shell"}, {"name": "aiPickScored", "line": 1483, "role": "AI/交互", "tagcls": "tag-ui"}, {"name": "aiFindCounter", "line": 1484, "role": "AI/交互", "tagcls": "tag-ui"}, {"name": "aiLead", "line": 1485, "role": "AI/交互", "tagcls": "tag-ui"}, {"name": "fallbackSimple", "line": 1538, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "fallbackBidSimple", "line": 1546, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "apiCardsToHand", "line": 1554, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "aiConsecutiveRuns", "line": 1584, "role": "AI/交互", "tagcls": "tag-ui"}, {"name": "aiNext", "line": 1591, "role": "AI/交互", "tagcls": "tag-ui"}, {"name": "aiRole", "line": 1592, "role": "AI/交互", "tagcls": "tag-ui"}, {"name": "aiPartner", "line": 1596, "role": "AI/交互", "tagcls": "tag-ui"}, {"name": "aiLandlordCount", "line": 1597, "role": "AI/交互", "tagcls": "tag-ui"}, {"name": "aiThreatCount", "line": 1598, "role": "AI/交互", "tagcls": "tag-ui"}, {"name": "findSmallestBeating", "line": 1599, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "findBomb", "line": 1600, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "findAllBeatingPlays", "line": 1601, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "findAllLeadingPlays", "line": 1602, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "renderCardEl", "line": 1605, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "renderCardBack", "line": 1632, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "renderLandlordCards", "line": 1636, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "clearLandlordCards", "line": 1644, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "renderOpponentCards", "line": 1646, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "renderPlayerHand", "line": 1653, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "refreshSelectionVisuals", "line": 1667, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "toggleSelect", "line": 1674, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "renderPlayedCards", "line": 1681, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "renderPassText", "line": 1699, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "clearAllPlayed", "line": 1704, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "updateBadges", "line": 1706, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "updateMultiplierDisplay", "line": 1716, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "showMsg", "line": 1725, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "bombEffect", "line": 1735, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "sleep", "line": 1741, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "getCardAtX", "line": 1747, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "resizeResponsiveLayout", "line": 1822, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "applyLockedLandscape", "line": 1861, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "openSettings", "line": 1923, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "closeSettings", "line": 1940, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "loadAiProgress", "line": 1944, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "togglePwd", "line": 2007, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "switchTab", "line": 2019, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "handleLogin", "line": 2032, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "guestPlay", "line": 2086, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "closeLoginModal", "line": 2098, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "logoutUser", "line": 2103, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "deleteAccount", "line": 2115, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "updateUserInfoDisplay", "line": 2143, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "playGameSound", "line": 2252, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "recordGameResult", "line": 2259, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "setBgmVolume", "line": 2300, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "toggleBgmMute", "line": 2316, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "setSfxVolume", "line": 2349, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "goToLobby", "line": 2380, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "loadStats", "line": 2389, "role": "UI/交互", "tagcls": "tag-ui"}, {"name": "loadLeaderboard", "line": 2410, "role": "UI/交互", "tagcls": "tag-ui"}]}, "tests": {"dir": "../tests/", "committed": false, "files": ["decision.test.js", "hand-count.test.js", "performance.test.js", "regression.test.js"], "jest_run": {"ran": true, "summary": "Test Suites: 1 failed, 3 passed, 4 total  Tests:       1 failed, 40 passed, 41 total", "raw": "js:43:13)\n\n    console.log\n      [P2b] 含炸弹5张残局 × 1000 次：35.789ms，单次 0.0358ms\n\n      at Object.<anonymous> (performance.test.js:50:13)\n\n    console.log\n      [P3] 补充 20张 × 1000 次：46.018ms，单次 0.0460ms\n\n      at Object.<anonymous> (performance.test.js:57:13)\n\nFAIL ./regression.test.js (40.79 s)\n  ● Console\n\n    console.log\n      [R2/R3] 100局：完成=100，异常=0，非法出牌次数=0，总步数=3783\n\n      at Object.<anonymous> (regression.test.js:62:15)\n\n  ● TASK-001 回归测试（验收清单 8.4） › R5：handCount 语义未改动 › handCount 全部仍表示\"手牌张数\"（hand.length）\n\n    expect(received).toBeGreaterThan(expected)\n\n    Expected: > 0\n    Received:   0\n\n    \u001b[0m \u001b[90m 109 |\u001b[39m       \u001b[90m// 提取所有 handCount 的使用\u001b[39m\n     \u001b[90m 110 |\u001b[39m       \u001b[36mconst\u001b[39m uses \u001b[33m=\u001b[39m aiZone\u001b[33m.\u001b[39mmatch(\u001b[35m/handCount[^,}]*/g\u001b[39m) \u001b[33m||\u001b[39m []\u001b[33m;\u001b[39m\n    \u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 111 |\u001b[39m       expect(uses\u001b[33m.\u001b[39mlength)\u001b[33m.\u001b[39mtoBeGreaterThan(\u001b[35m0\u001b[39m)\u001b[33m;\u001b[39m\n     \u001b[90m     |\u001b[39m                           \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n     \u001b[90m 112 |\u001b[39m       \u001b[36mfor\u001b[39m (\u001b[36mconst\u001b[39m u \u001b[36mof\u001b[39m uses) {\n     \u001b[90m 113 |\u001b[39m         \u001b[90m// handCount 必须作为对象键 = hand.length 传入（手牌张数）\u001b[39m\n     \u001b[90m 114 |\u001b[39m         expect(u)\u001b[33m.\u001b[39mtoMatch(\u001b[35m/handCount:\\s*hand\\.length/\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m\n\n      at Object.<anonymous> (regression.test.js:111:27)\n\nTest Suites: 1 failed, 3 passed, 4 total\nTests:       1 failed, 40 passed, 41 total\nSnapshots:   0 total\nTime:        41.793 s, estimated 44 s\nRan all test suites."}, "coverage": "覆盖 8/31 旧前端 engine.js 快照，未覆盖后端 ai_engine.py", "backend_has_tests": false}, "tree": ["hermes 斗地主终极版 软件/", "Dockerfile", "README.md", "backend/", "  ai_engine.py", "  ai_state.py", "  app.py", "  config_local.py", "  database/", "    doudizhu.db", "cloudbaserc.json", "frontend/", "  game.js", "  index.html", "  lobby.html", "  manifest.json", "  sound.js", "  style.css", "requirements.txt", "tests/", "  decision.test.js", "  engine.js", "  extract-engine.js", "  hand-count.test.js", "  jest.config.js", "  package-lock.json", "  package.json", "  performance.test.js", "  regression.test.js", "  sim-game.js", "verify_replay.js", "一键推送.bat", "一键部署.bat", "启动斗地主.bat", "斗地主最终版工作台/", "  任务看板/", "    当前任务.md", "  刷新工作台.bat", "  协作流程/", "    状态管理.md", "    角色职责.md", "    错误处理.md", "  团队/", "    roles/", "      前端开发者.md", "      后端开发者.md", "      提示词工程师.md", "      测试工程师.md", "      组长-项目经理.md", "    team-config.json", "    任务分配表.md", "    团队介绍.md", "    团队创建完成报告.md", "    团队协作流程.md", "    团队成员联系表.md", "    快速开始指南.md", "  多AI三角色协作架构设计.md", "  实施指南.md", "  引擎/", "    _selftest.js", "    控制台模板.html", "    生成控制台.py", "  控制台.html", "  提示词/", "    TASK-001-手数分析.md", "    TASK-002-拆牌罚分层级.md", "    TASK-005-概率记牌推算.md", "    执行日志-2026-08-31.md", "  架构设置确认报告.md", "  测试工具/", "    AIDecisionRecorder.js", "    GameSimulator.js", "    WinRateCalculator.js", "  测试报告/", "    测试报告-TASK001-手数分析.md", "  测试用例/", "    功能测试/", "  目录结构.md", "  资产状态说明.md", "  配置/", "    jest.config.js", "    jest.setup.js", "    package.json", "    pytest.ini", "  项目状态.json"]}, "assets": [{"path": "斗地主最终版工作台/提示词/TASK-001-手数分析.md", "status": "有效", "reason": "与后端 estimate_hands / hand_bonus 真实函数逐字吻合"}, {"path": "斗地主最终版工作台/提示词/TASK-002-拆牌罚分层级.md", "status": "有效", "reason": "与后端 split_penalty 真实函数吻合"}, {"path": "斗地主最终版工作台/提示词/TASK-005-概率记牌推算.md", "status": "有效", "reason": "与后端 probably_has / estimate_*_in 系列真实函数吻合"}, {"path": "斗地主最终版工作台/多AI三角色协作架构设计.md", "status": "有效", "reason": "协作架构说明文档，仍适用"}, {"path": "斗地主最终版工作台/目录结构.md", "status": "已过时", "reason": "未同步最终结构（README 已是权威结构说明）"}, {"path": "斗地主最终版工作台/测试报告/测试报告-TASK001-手数分析.md", "status": "已过时", "reason": "基于未提交 git、且已与后端脱钩的旧前端 tests/，'41/41 通过'对当前后端无效"}, {"path": "斗地主最终版工作台/测试工具/GameSimulator.js", "status": "已过时", "reason": "独立 JS 玩具，重写套牌逻辑，与真实后端引擎脱钩"}, {"path": "斗地主最终版工作台/测试工具/AIDecisionRecorder.js", "status": "已过时", "reason": "独立脚本，未接真实引擎"}, {"path": "斗地主最终版工作台/测试工具/WinRateCalculator.js", "status": "已过时", "reason": "独立脚本，未接真实引擎"}, {"path": "斗地主最终版工作台/测试用例/功能测试/", "status": "已过时", "reason": "目录为空，占位测试从未调用真实函数"}, {"path": "斗地主最终版工作台/团队/", "status": "有效", "reason": "三角色/多角色定义文档，作为协作参考仍有效（静态）"}, {"path": "tests/ (项目根)", "status": "已过时", "reason": "覆盖 8/31 旧前端 engine.js 快照，未覆盖后端 ai_engine.py，且未提交 git"}]};
 
-        // 角色数据
-        const roleData = {
-            'engineer': {
-                name: '提示词工程师',
-                responsibilities: [
-                    '分析需求，理解业务目标',
-                    '设计AI策略和算法逻辑',
-                    '撰写详细的提示词文档',
-                    '审阅代码方案，确保符合设计意图',
-                    '记录决策和架构选择（ADR）'
-                ],
-                tools: ['保险库', '任务看板', '文档编辑器'],
-                currentTask: '设计手数分析功能'
-            },
-            'developer': {
-                name: '代码执行者',
-                responsibilities: [
-                    '根据提示词文档执行具体代码修改',
-                    '实现功能，修复bug',
-                    '遵守代码规范和防坑规则',
-                    '每修改一个点立即自行测试',
-                    '生成执行日志'
-                ],
-                tools: ['代码编辑器', 'Git', '本地开发环境'],
-                currentTask: '等待提示词文档'
-            },
-            'tester': {
-                name: '测试验证者',
-                responsibilities: [
-                    '运行完整测试体系',
-                    '验证功能是否符合预期',
-                    '发现边界情况和潜在问题',
-                    '生成详细的测试报告',
-                    '回归测试，确保修改不引入新问题'
-                ],
-                tools: ['Jest', 'Pytest', '测试用例库'],
-                currentTask: '配置测试环境'
-            }
-        };
+function el(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 
-        // 流程步骤数据
-        const workflowData = {
-            'design': {
-                name: '提示词设计',
-                description: '提示词工程师分析需求，设计AI策略，撰写提示词文档',
-                steps: [
-                    '分析业务需求和技术约束',
-                    '设计AI策略和算法逻辑',
-                    '撰写详细的提示词文档',
-                    '准备验收清单'
-                ],
-                output: '提示词文档 + 验收清单'
-            },
-            'confirm': {
-                name: '用户确认',
-                description: '用户审阅提示词文档，确认方向或提出修改意见',
-                steps: [
-                    '用户审阅提示词文档',
-                    '确认方向或提出修改意见',
-                    '明确说"你现在改/你来改/去改"',
-                    '授权代码执行者开始工作'
-                ],
-                output: '用户确认授权'
-            },
-            'code': {
-                name: '代码执行',
-                description: '代码执行者根据提示词文档执行具体代码修改',
-                steps: [
-                    '接收提示词文档',
-                    '分析影响范围，制定修改计划',
-                    '执行代码修改（每修改一个点立即测试）',
-                    '生成执行日志'
-                ],
-                output: '修改后的代码 + 执行日志'
-            },
-            'test': {
-                name: '测试验证',
-                description: '测试验证者运行完整测试体系，验证功能正确性',
-                steps: [
-                    '设计测试用例',
-                    '运行单元测试、集成测试、功能测试',
-                    '验证AI决策是否符合预期',
-                    '生成测试报告'
-                ],
-                output: '测试报告 + 问题清单'
-            },
-            'complete': {
-                name: '交付完成',
-                description: '测试通过，任务正式交付',
-                steps: [
-                    '所有测试用例通过',
-                    '测试覆盖率达标',
-                    '用户确认验收',
-                    '更新项目状态'
-                ],
-                output: '已交付功能'
-            }
-        };
+function render(){
+    const d = WORKBENCH_DATA;
+    if(!d){ el('gen-time').textContent = '数据缺失：请先运行 刷新工作台.bat'; return; }
+    const p = d.project;
 
-        // 显示模态框
-        function showModal(title, content) {
-            document.getElementById('modal-title').textContent = title;
-            document.getElementById('modal-body').innerHTML = content;
-            document.getElementById('modal').style.display = 'block';
+    el('gen-time').textContent = d.generated_at;
+    el('proj-root').textContent = p.root;
+
+    // Git
+    const g = p.git;
+    el('git-branch').textContent = g.branch;
+    el('git-dirty').textContent = g.dirty ? '有未提交改动' : '干净';
+    el('git-last').textContent = (g.last_commits[0]||'').trim();
+    el('git-status').textContent = g.status_short || '（无）';
+    const gb = el('git-badge');
+    gb.textContent = g.dirty ? '有改动' : '已同步';
+    gb.className = 'badge ' + (g.dirty ? 'b-warn' : 'b-ok');
+
+    // Tests
+    const t = p.tests;
+    el('test-backend').textContent = t.backend_has_tests ? '有 pytest 守护' : '0 个自动化测试（裸奔）';
+    el('test-committed').textContent = t.committed ? '已提交 git' : '未提交 git（untracked）';
+    el('test-jest').textContent = t.jest_run && t.jest_run.ran
+        ? (t.jest_run.summary || '已运行')
+        : '未运行 / 运行失败';
+    el('test-detail').textContent = (t.jest_run && t.jest_run.raw ? t.jest_run.raw : '') || t.coverage || '—';
+    el('test-note').textContent = '覆盖范围：' + t.coverage;
+    const tb = el('test-badge');
+    if(t.backend_has_tests){ tb.textContent='有守护'; tb.className='badge b-ok'; }
+    else { tb.textContent='后端无测试'; tb.className='badge b-bad'; }
+
+    // Backend functions
+    el('be-file').href = p.backend.file;
+    el('be-count').textContent = p.backend.functions.length + ' 个函数';
+    const beBox = el('be-fns');
+    p.backend.functions.forEach(f=>{
+        const a = document.createElement('a');
+        a.className = 'fn';
+        a.href = p.backend.file;
+        a.innerHTML = `<span class="name">${esc(f.name)}</span>` +
+            (f.task ? `<span class="tag ${f.tagcls||''}">${esc(f.task)}</span>` : '') +
+            `<span class="ln">L${f.line}</span>`;
+        beBox.appendChild(a);
+    });
+
+    // Frontend functions
+    el('fe-file').href = p.frontend.file;
+    el('fe-count').textContent = p.frontend.functions.length + ' 个函数';
+    const feBox = el('fe-fns');
+    let shellCount = 0;
+    p.frontend.functions.forEach(f=>{
+        const a = document.createElement('a');
+        a.className = 'fn';
+        a.href = p.frontend.file;
+        if(f.role && f.role.indexOf('空壳')>=0){ shellCount++; }
+        a.innerHTML = `<span class="name">${esc(f.name)}</span>` +
+            (f.role ? `<span class="tag ${f.tagcls||''}">${esc(f.role)}</span>` : '') +
+            `<span class="ln">L${f.line}</span>`;
+        feBox.appendChild(a);
+    });
+    if(shellCount>0){
+        el('fe-shell-note').textContent =
+            `⚠ ${shellCount} 个函数已迁移到后端 API，前端仅保留 return 0 空壳防引用报错（第 1477 行注释为证）。真实 AI 决策在 backend/ai_engine.py。`;
+    }
+
+    // Tree
+    el('tree').textContent = p.tree.join('\n');
+
+    // Assets
+    const ab = el('asset-body');
+    d.assets.forEach(a=>{
+        const tr = document.createElement('tr');
+        const st = a.status==='有效' ? 'b-ok' : 'b-bad';
+        const isFile = !/[ ()]/.test(a.path);
+        let cell;
+        if (isFile) {
+            const link = a.path.replace(/^斗地主最终版工作台\//, '');
+            cell = `<a href="${esc(link)}">${esc(a.path)}</a>`;
+        } else {
+            cell = esc(a.path);
         }
+        tr.innerHTML = `<td>${cell}</td>` +
+            `<td><span class="badge ${st}">${esc(a.status)}</span></td>` +
+            `<td>${esc(a.reason)}</td>`;
+        ab.appendChild(tr);
+    });
+}
 
-        // 关闭模态框
-        function closeModal() {
-            document.getElementById('modal').style.display = 'none';
-        }
-
-        // 显示角色详情
-        function showRoleDetails(role) {
-            const data = roleData[role];
-            let content = `
-                <h3>主要职责</h3>
-                <ul>
-                    ${data.responsibilities.map(r => `<li>${r}</li>`).join('')}
-                </ul>
-                <h3>使用工具</h3>
-                <p>${data.tools.join('、')}</p>
-                <h3>当前任务</h3>
-                <p>${data.currentTask}</p>
-            `;
-            showModal(data.name + ' - 角色详情', content);
-        }
-
-        // 显示任务详情
-        function showTaskDetails(taskId, type) {
-            let title, content;
-            
-            if (taskId === 'wait') {
-                title = '等待提示词文档';
-                content = `
-                    <h3>状态说明</h3>
-                    <p>代码执行者当前正在等待提示词工程师完成设计。</p>
-                    <h3>下一步行动</h3>
-                    <p>等待提示词工程师完成手数分析功能的设计文档。</p>
-                `;
-            } else if (taskId === 'config') {
-                title = '配置测试环境';
-                content = `
-                    <h3>任务说明</h3>
-                    <p>配置测试框架和测试环境，为后续测试工作做准备。</p>
-                    <h3>具体工作</h3>
-                    <ul>
-                        <li>安装Jest和Pytest</li>
-                        <li>配置测试环境</li>
-                        <li>创建基础测试用例</li>
-                    </ul>
-                `;
-            } else if (taskId === 'run') {
-                title = '运行功能测试';
-                content = `
-                    <h3>任务说明</h3>
-                    <p>运行已设计的测试用例，验证功能正确性。</p>
-                    <h3>测试范围</h3>
-                    <ul>
-                        <li>功能测试：叫地主、出牌、胜负判断</li>
-                        <li>AI策略测试：验证AI决策是否符合预期</li>
-                        <li>单元测试：关键函数的正确性</li>
-                    </ul>
-                `;
-            } else {
-                const data = taskData[taskId];
-                title = data.name + ' - ' + (type === 'design' ? '设计' : type === 'code' ? '实现' : '测试');
-                content = `
-                    <h3>任务描述</h3>
-                    <p>${data.description}</p>
-                    <h3>优先级与时间</h3>
-                    <p>优先级：${data.priority} | 预计时间：${data.time}</p>
-                    <h3>验收标准</h3>
-                    <ul>
-                        ${data.requirements.map(r => `<li>${r}</li>`).join('')}
-                    </ul>
-                    <h3>详细说明</h3>
-                    <p>${data.details}</p>
-                `;
-            }
-            
-            showModal(title, content);
-        }
-
-        // 显示流程步骤详情
-        function showWorkflowStep(step) {
-            const data = workflowData[step];
-            let content = `
-                <h3>步骤说明</h3>
-                <p>${data.description}</p>
-                <h3>具体步骤</h3>
-                <ul>
-                    ${data.steps.map(s => `<li>${s}</li>`).join('')}
-                </ul>
-                <h3>产出物</h3>
-                <p>${data.output}</p>
-            `;
-            showModal(data.name + ' - 流程详情', content);
-        }
-
-        // 显示任务看板详情
-        function showTaskBoardDetails(taskId) {
-            if (taskId === 'TASK-001-design') {
-                showModal('手数分析设计 - 进行中', `
-                    <h3>任务状态</h3>
-                    <p>提示词工程师正在设计手数分析功能。</p>
-                    <h3>当前进度</h3>
-                    <p>已完成需求分析，正在撰写提示词文档。</p>
-                    <h3>预计完成</h3>
-                    <p>预计今天完成设计，等待用户确认。</p>
-                `);
-            } else {
-                showTaskDetails(taskId, 'board');
-            }
-        }
-
-        // 打开文件
-        function openFile(filePath) {
-            showModal('打开文件', `
-                <h3>文件路径</h3>
-                <p>${filePath}</p>
-                <h3>文件说明</h3>
-                <p>这是一个配置文件，用于配置测试框架。</p>
-                <p>您可以在文件管理器中打开此文件查看内容。</p>
-            `);
-        }
-
-        // 点击模态框外部关闭
-        window.onclick = function(event) {
-            const modal = document.getElementById('modal');
-            if (event.target == modal) {
-                closeModal();
-            }
-        }
-
-        // 初始化
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('多AI三角色协作控制台 v2 已加载');
-            console.log('点击任何卡片或任务查看详细信息');
-        });
-    </script>
+if(WORKBENCH_DATA){ render(); }
+else {
+    // 尝试从同目录加载 项目状态.json（若通过本地服务器打开）
+    fetch('项目状态.json').then(r=>r.json()).then(j=>{ WORKBENCH_DATA=j; render(); })
+        .catch(()=>{ el('gen-time').textContent='数据缺失：请先运行 刷新工作台.bat 生成数据'; });
+}
+</script>
 </body>
 </html>

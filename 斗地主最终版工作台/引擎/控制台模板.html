@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>斗地主工作台 · 真实数据控制台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+            background: #0f1420;
+            color: #e6e9f0;
+            min-height: 100vh;
+            padding: 24px;
+            line-height: 1.5;
+        }
+        .container { max-width: 1280px; margin: 0 auto; }
+        .header {
+            background: linear-gradient(135deg, #1b2a4a 0%, #16213e 100%);
+            border: 1px solid #2a3a5c;
+            border-radius: 14px;
+            padding: 22px 26px;
+            margin-bottom: 22px;
+        }
+        .header h1 { font-size: 24px; color: #5fb0ff; margin-bottom: 6px; }
+        .header .meta { color: #8a94a8; font-size: 13px; }
+        .header .live { color: #4ade80; font-weight: bold; }
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+        .card {
+            background: #161d2e;
+            border: 1px solid #28344f;
+            border-radius: 12px;
+            padding: 18px 20px;
+        }
+        .card.full { grid-column: 1 / -1; }
+        .card h2 {
+            font-size: 16px; color: #cfe0ff; margin-bottom: 14px;
+            padding-bottom: 8px; border-bottom: 1px solid #28344f;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .badge {
+            display: inline-block; padding: 2px 8px; border-radius: 6px;
+            font-size: 11px; font-weight: bold; margin-left: auto;
+        }
+        .b-ok { background: #14532d; color: #4ade80; }
+        .b-warn { background: #5c3a14; color: #fbbf24; }
+        .b-bad { background: #5c1421; color: #f87171; }
+        .b-info { background: #14305c; color: #60a5fa; }
+        .kv { display: flex; gap: 10px; font-size: 13px; margin: 5px 0; }
+        .kv .k { color: #8a94a8; min-width: 84px; }
+        .kv .v { color: #e6e9f0; word-break: break-all; }
+        pre.status {
+            background: #0c111c; border: 1px solid #28344f; border-radius: 8px;
+            padding: 12px; font-size: 12px; color: #a9b6cc; overflow-x: auto;
+            white-space: pre-wrap; word-break: break-all;
+        }
+        .fn-list { display: flex; flex-direction: column; gap: 6px; max-height: 340px; overflow-y: auto; }
+        .fn {
+            display: flex; align-items: center; gap: 10px;
+            background: #0f1626; border: 1px solid #233048; border-radius: 8px;
+            padding: 7px 11px; font-size: 13px; text-decoration: none; color: #d6e0f2;
+        }
+        .fn:hover { border-color: #5fb0ff; background: #14203a; }
+        .fn .name { font-family: 'Consolas', monospace; color: #7dd3fc; }
+        .fn .ln { color: #6b7689; font-size: 11px; margin-left: auto; }
+        .fn .tag {
+            font-size: 10px; padding: 1px 6px; border-radius: 5px; font-weight: bold;
+        }
+        .tag-t1 { background: #1e3a5f; color: #7dd3fc; }
+        .tag-t2 { background: #3a2a5f; color: #c4b5fd; }
+        .tag-t5 { background: #1e5f3a; color: #6ee7b7; }
+        .tag-core { background: #5f3a1e; color: #fdba74; }
+        .tag-shell { background: #3a1e1e; color: #fca5a5; }
+        .tag-ui { background: #2a3a14; color: #bef264; }
+        .tag-tool { background: #334155; color: #94a3b8; }
+        .asset-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .asset-table th, .asset-table td {
+            text-align: left; padding: 8px 10px; border-bottom: 1px solid #233048;
+        }
+        .asset-table th { color: #8a94a8; font-weight: normal; }
+        .asset-table a { color: #7dd3fc; text-decoration: none; }
+        .asset-table a:hover { text-decoration: underline; }
+        .tree { font-family: 'Consolas', monospace; font-size: 12px; color: #a9b6cc; white-space: pre; overflow-x: auto; }
+        .note {
+            background: #1a2336; border-left: 3px solid #fbbf24; border-radius: 6px;
+            padding: 10px 14px; font-size: 13px; color: #d6c08a; margin-top: 10px;
+        }
+        .refresh-box {
+            background: #0f1626; border: 1px dashed #3a4a6a; border-radius: 10px;
+            padding: 14px 16px; font-size: 13px; color: #aab4c8;
+        }
+        .refresh-box code { background: #1e293b; padding: 2px 6px; border-radius: 4px; color: #7dd3fc; }
+        .empty-shell-warn { color: #fca5a5; font-size: 12px; margin-top: 8px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>斗地主工作台 · 真实数据控制台</h1>
+        <div class="meta">
+            数据生成时间：<span class="live" id="gen-time">—</span>
+            &nbsp;|&nbsp; 本控制台所有数据由 <code>引擎/生成控制台.py</code> 实时扫描真实项目生成，无写死常量。
+            &nbsp;|&nbsp; 项目根目录：<span id="proj-root">—</span>
+        </div>
+    </div>
+
+    <div class="grid">
+        <!-- Git 真实状态 -->
+        <div class="card">
+            <h2>Git 真实状态 <span class="badge" id="git-badge">—</span></h2>
+            <div class="kv"><span class="k">当前分支</span><span class="v" id="git-branch">—</span></div>
+            <div class="kv"><span class="k">工作区</span><span class="v" id="git-dirty">—</span></div>
+            <div class="kv"><span class="k">最近提交</span><span class="v" id="git-last">—</span></div>
+            <div style="margin-top:10px; font-size:12px; color:#8a94a8;">未跟踪关键目录</div>
+            <pre class="status" id="git-status">—</pre>
+        </div>
+
+        <!-- 测试真实状态 -->
+        <div class="card">
+            <h2>测试真实状态 <span class="badge" id="test-badge">—</span></h2>
+            <div class="kv"><span class="k">后端守护</span><span class="v" id="test-backend">—</span></div>
+            <div class="kv"><span class="k">tests/ 提交</span><span class="v" id="test-committed">—</span></div>
+            <div class="kv"><span class="k">前端测试</span><span class="v" id="test-jest">—</span></div>
+            <pre class="status" id="test-detail">—</pre>
+            <div class="note" id="test-note">—</div>
+        </div>
+
+        <!-- 后端 AI 引擎真实函数清单 -->
+        <div class="card full">
+            <h2>后端 AI 引擎真实函数清单 <span class="badge b-info" id="be-count">—</span></h2>
+            <div style="font-size:12px;color:#8a94a8;margin-bottom:10px;">
+                文件：<a id="be-file" href="#">../backend/ai_engine.py</a> （点击函数跳转真实文件）
+            </div>
+            <div class="fn-list" id="be-fns"></div>
+        </div>
+
+        <!-- 前端 game.js 函数清单 -->
+        <div class="card full">
+            <h2>前端 game.js 函数清单 <span class="badge b-info" id="fe-count">—</span></h2>
+            <div style="font-size:12px;color:#8a94a8;margin-bottom:10px;">
+                文件：<a id="fe-file" href="#">../frontend/game.js</a>
+            </div>
+            <div class="fn-list" id="fe-fns"></div>
+            <div class="empty-shell-warn" id="fe-shell-note"></div>
+        </div>
+
+        <!-- 项目目录树 -->
+        <div class="card full">
+            <h2>项目真实目录树</h2>
+            <div class="tree" id="tree">—</div>
+        </div>
+
+        <!-- 工作台资产状态 -->
+        <div class="card full">
+            <h2>工作台资产状态（有效性核查）</h2>
+            <table class="asset-table">
+                <thead><tr><th>资产路径</th><th>状态</th><th>说明</th></tr></thead>
+                <tbody id="asset-body"></tbody>
+            </table>
+        </div>
+
+        <!-- 如何刷新 -->
+        <div class="card full">
+            <h2>如何刷新真实数据</h2>
+            <div class="refresh-box">
+                双击运行工作台根目录下的 <code>刷新工作台.bat</code>，它会调用
+                <code>引擎/生成控制台.py</code> 重新扫描真实项目、重新生成本页面与
+                <code>项目状态.json</code>。刷新后按 F5 重载本页面即可看到最新真实数据。
+                <br><br>
+                你也可以在终端执行：<br>
+                <code>cd "斗地主最终版工作台" &amp;&amp; python 引擎/生成控制台.py</code>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const WORKBENCH_DATA = /*__WORKBENCH_DATA__*/ null;
+
+function el(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+function render(){
+    const d = WORKBENCH_DATA;
+    if(!d){ el('gen-time').textContent = '数据缺失：请先运行 刷新工作台.bat'; return; }
+    const p = d.project;
+
+    el('gen-time').textContent = d.generated_at;
+    el('proj-root').textContent = p.root;
+
+    // Git
+    const g = p.git;
+    el('git-branch').textContent = g.branch;
+    el('git-dirty').textContent = g.dirty ? '有未提交改动' : '干净';
+    el('git-last').textContent = (g.last_commits[0]||'').trim();
+    el('git-status').textContent = g.status_short || '（无）';
+    const gb = el('git-badge');
+    gb.textContent = g.dirty ? '有改动' : '已同步';
+    gb.className = 'badge ' + (g.dirty ? 'b-warn' : 'b-ok');
+
+    // Tests
+    const t = p.tests;
+    el('test-backend').textContent = t.backend_has_tests ? '有 pytest 守护' : '0 个自动化测试（裸奔）';
+    el('test-committed').textContent = t.committed ? '已提交 git' : '未提交 git（untracked）';
+    el('test-jest').textContent = t.jest_run && t.jest_run.ran
+        ? (t.jest_run.summary || '已运行')
+        : '未运行 / 运行失败';
+    el('test-detail').textContent = (t.jest_run && t.jest_run.raw ? t.jest_run.raw : '') || t.coverage || '—';
+    el('test-note').textContent = '覆盖范围：' + t.coverage;
+    const tb = el('test-badge');
+    if(t.backend_has_tests){ tb.textContent='有守护'; tb.className='badge b-ok'; }
+    else { tb.textContent='后端无测试'; tb.className='badge b-bad'; }
+
+    // Backend functions
+    el('be-file').href = p.backend.file;
+    el('be-count').textContent = p.backend.functions.length + ' 个函数';
+    const beBox = el('be-fns');
+    p.backend.functions.forEach(f=>{
+        const a = document.createElement('a');
+        a.className = 'fn';
+        a.href = p.backend.file;
+        a.innerHTML = `<span class="name">${esc(f.name)}</span>` +
+            (f.task ? `<span class="tag ${f.tagcls||''}">${esc(f.task)}</span>` : '') +
+            `<span class="ln">L${f.line}</span>`;
+        beBox.appendChild(a);
+    });
+
+    // Frontend functions
+    el('fe-file').href = p.frontend.file;
+    el('fe-count').textContent = p.frontend.functions.length + ' 个函数';
+    const feBox = el('fe-fns');
+    let shellCount = 0;
+    p.frontend.functions.forEach(f=>{
+        const a = document.createElement('a');
+        a.className = 'fn';
+        a.href = p.frontend.file;
+        if(f.role && f.role.indexOf('空壳')>=0){ shellCount++; }
+        a.innerHTML = `<span class="name">${esc(f.name)}</span>` +
+            (f.role ? `<span class="tag ${f.tagcls||''}">${esc(f.role)}</span>` : '') +
+            `<span class="ln">L${f.line}</span>`;
+        feBox.appendChild(a);
+    });
+    if(shellCount>0){
+        el('fe-shell-note').textContent =
+            `⚠ ${shellCount} 个函数已迁移到后端 API，前端仅保留 return 0 空壳防引用报错（第 1477 行注释为证）。真实 AI 决策在 backend/ai_engine.py。`;
+    }
+
+    // Tree
+    el('tree').textContent = p.tree.join('\n');
+
+    // Assets
+    const ab = el('asset-body');
+    d.assets.forEach(a=>{
+        const tr = document.createElement('tr');
+        const st = a.status==='有效' ? 'b-ok' : 'b-bad';
+        const isFile = !/[ ()]/.test(a.path);
+        let cell;
+        if (isFile) {
+            const link = a.path.replace(/^斗地主最终版工作台\//, '');
+            cell = `<a href="${esc(link)}">${esc(a.path)}</a>`;
+        } else {
+            cell = esc(a.path);
+        }
+        tr.innerHTML = `<td>${cell}</td>` +
+            `<td><span class="badge ${st}">${esc(a.status)}</span></td>` +
+            `<td>${esc(a.reason)}</td>`;
+        ab.appendChild(tr);
+    });
+}
+
+if(WORKBENCH_DATA){ render(); }
+else {
+    // 尝试从同目录加载 项目状态.json（若通过本地服务器打开）
+    fetch('项目状态.json').then(r=>r.json()).then(j=>{ WORKBENCH_DATA=j; render(); })
+        .catch(()=>{ el('gen-time').textContent='数据缺失：请先运行 刷新工作台.bat 生成数据'; });
+}
+</script>
+</body>
+</html>
