@@ -432,6 +432,14 @@ def serve_audio(filename):
 def serve_sound_js():
     return send_from_directory("../frontend", "sound.js")
 
+@app.route("/style.css")
+def serve_style_css():
+    return send_from_directory("../frontend", "style.css")
+
+@app.route("/game.js")
+def serve_game_js():
+    return send_from_directory("../frontend", "game.js")
+
 @app.route("/manifest.json")
 def serve_manifest():
     return send_from_directory("../frontend", "manifest.json")
