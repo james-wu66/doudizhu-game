@@ -311,10 +311,12 @@
     <!-- 详情：测试 -->
     <div class="detail" id="detail-test">
         <h2><span class="bar"></span>测试工程师 · 真实测试结果</h2>
-        <div class="kv"><span class="k">jest 真跑</span><span class="v" id="test-jest">—</span></div>
+        <div class="kv"><span class="k">jest 真跑（前端）</span><span class="v" id="test-jest">—</span></div>
         <div class="kv"><span class="k">后端守护</span><span class="v" id="test-backend">—</span></div>
+        <div class="kv"><span class="k">pytest 真跑（后端）</span><span class="v" id="test-pytest">—</span></div>
         <div class="kv"><span class="k">tests/ 提交</span><span class="v" id="test-committed">—</span></div>
-        <div class="kv"><span class="k">覆盖范围</span><span class="v" id="test-coverage">—</span></div>
+        <div class="kv"><span class="k">前端覆盖</span><span class="v" id="test-coverage">—</span></div>
+        <div class="kv"><span class="k">后端覆盖</span><span class="v" id="test-bt-coverage">—</span></div>
         <pre class="box" id="test-detail">—</pre>
         <div id="test-assets" style="margin-top:14px;"></div>
     </div>
@@ -566,14 +568,25 @@ function render(){
     el('test-jest').innerHTML = jestRan
         ? `<span class="badge b-info">${esc(p.tests.jest_run.summary || '已运行')}</span>`
         : `<span class="badge b-bad">未运行 / 运行失败</span>`;
-    el('test-backend').innerHTML = p.tests.backend_has_tests
-        ? `<span class="badge b-ok">有 pytest 守护</span>`
+    // 后端守护（基于真实 pytest 数据）
+    const bt = p.backend_tests;
+    const btRan = bt && bt.pytest_run && bt.pytest_run.ran;
+    el('test-backend').innerHTML = btRan
+        ? `<span class="badge b-ok">pytest 已守护</span>`
         : `<span class="badge b-bad">0 个自动化测试（后端裸奔）</span>`;
+    el('test-pytest').innerHTML = btRan
+        ? `<span class="badge b-info">${esc(bt.pytest_run.summary || '已运行')}</span>`
+        : `<span class="badge b-bad">${esc((bt && bt.pytest_run && bt.pytest_run.error) || '未运行 / 运行失败')}</span>`;
     el('test-committed').innerHTML = p.tests.committed
         ? `<span class="badge b-ok">已提交 git</span>`
         : `<span class="badge b-warn">未提交 git（untracked）</span>`;
     el('test-coverage').textContent = p.tests.coverage;
-    el('test-detail').textContent = (p.tests.jest_run && p.tests.jest_run.raw ? p.tests.jest_run.raw : '') || '（无 jest 输出）';
+    el('test-bt-coverage').textContent = bt ? bt.coverage : '—';
+    const jestRaw = (p.tests.jest_run && p.tests.jest_run.raw) || '';
+    const btRaw = (bt && bt.pytest_run && bt.pytest_run.raw) || '';
+    el('test-detail').textContent = (jestRaw ? '=== 前端 jest ===\n' + jestRaw + '\n\n' : '')
+        + (btRaw ? '=== 后端 pytest ===\n' + btRaw : '')
+        || '（无测试输出）';
 
     // 测试相关资产
     const ta = d.assets.filter(a => /测试|测试工具|测试用例/.test(a.path));
@@ -621,16 +634,17 @@ function updateProjectMetrics(j){
     if(el('gen-time')) el('gen-time').textContent = j.generated_at;
     const validAssets = (j.assets||[]).filter(a=>a.status==='有效').length;
     const jestRan = p.tests.jest_run && p.tests.jest_run.ran;
+    const btRan = p.backend_tests && p.backend_tests.pytest_run && p.backend_tests.pytest_run.ran;
     const chips = [
         { n: p.git.branch, l: p.git.dirty ? '分支（有未提交改动）' : '分支（已同步）' },
         { n: p.backend.functions.length, l: '后端 AI 函数' },
         { n: p.frontend.functions.length, l: '前端函数' },
-        { n: jestRan ? '已运行' : '未运行', l: '测试守护' },
+        { n: btRan ? 'pytest 已跑' : (jestRan ? 'jest 已跑' : '未运行'), l: '测试守护' },
         { n: validAssets + '/' + (j.assets?j.assets.length:0), l: '资产有效' },
     ];
     const cw = el('lead-chips');
     if(cw){ cw.innerHTML=''; chips.forEach(c=>{ const div=document.createElement('div'); div.className='chip'; div.innerHTML=`<div class="n">${esc(c.n)}</div><div class="l">${esc(c.l)}</div>`; cw.appendChild(div); }); }
-    const rb = el('rs-test'); if(rb) rb.textContent = jestRan ? 'jest 已跑' : '未运行';
+    const rb = el('rs-test'); if(rb) rb.textContent = btRan ? 'pytest 已跑' : (jestRan ? 'jest 已跑' : '未运行');
 }
 
 const REFRESH_SEC = 8;

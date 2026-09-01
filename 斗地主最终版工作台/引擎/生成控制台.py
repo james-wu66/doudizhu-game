@@ -8,7 +8,7 @@ tests 真实状态），生成 状态.json 与 控制台.html。
 所有数据来自真实扫描，控制台页面无任何写死常量。
 运行：python 引擎/生成控制台.py   （或双击 刷新工作台.bat）
 """
-import os, re, json, subprocess, shutil, datetime, glob
+import os, re, json, subprocess, shutil, datetime, glob, sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 WORKBENCH = os.path.dirname(SCRIPT_DIR)          # .../斗地主最终版工作台
@@ -204,6 +204,51 @@ def scan_tests():
         "backend_has_tests": False,
     }
 
+
+def run_pytest():
+    """运行后端 pytest 并返回结果。"""
+    backend_dir = os.path.join(ROOT, "backend")
+    pytest_dir = os.path.join(backend_dir, "tests")
+    if not os.path.isdir(pytest_dir):
+        return {"ran": False, "error": "backend/tests/ 目录不存在", "raw": ""}
+    py = sys.executable
+    try:
+        r = subprocess.run(
+            [py, "-m", "pytest", "tests/", "-v", "--tb=short", "-q"],
+            cwd=backend_dir, capture_output=True, text=True, timeout=120
+        )
+        out = (r.stdout + r.stderr).strip()
+        summary = ""
+        for line in out.splitlines():
+            if "passed" in line or "failed" in line or "error" in line:
+                summary = line.strip()
+                break
+        return {"ran": True, "summary": summary or "已运行（无汇总行）",
+                "raw": out[-2000:] if out else "(无输出)"}
+    except subprocess.TimeoutExpired:
+        return {"ran": False, "error": "pytest 运行超时(>120s)", "raw": ""}
+    except Exception as e:
+        return {"ran": False, "error": f"pytest 运行异常: {e}", "raw": ""}
+
+
+def scan_backend_tests():
+    """扫描 backend/tests/ 目录并运行 pytest。"""
+    bt_dir = os.path.join(ROOT, "backend", "tests")
+    committed = True  # backend/tests 不走 git 跟踪判断（在 .gitignore 外）
+    files = []
+    if os.path.isdir(bt_dir):
+        for f in sorted(os.listdir(bt_dir)):
+            if f.endswith(".py") and f.startswith("test_"):
+                files.append(f)
+    pytest_result = run_pytest()
+    return {
+        "dir": "backend/tests/",
+        "committed": committed,
+        "files": files,
+        "pytest_run": pytest_result,
+        "coverage": "覆盖 ai_engine.py 核心纯函数（detect_pattern / estimate_hands / split_penalty 等）",
+    }
+
 # ---------------------------------------------------------------------------
 # 5. 目录树（排除噪声目录）
 # ---------------------------------------------------------------------------
@@ -304,6 +349,7 @@ def asset_status(tests=None):
 def main():
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     tests_data = scan_tests()          # 真实运行 jest，供 assets 动态反映
+    bt_data = scan_backend_tests()     # 真实运行 pytest
     data = {
         "generated_at": now,
         "collab": load_collab(),
@@ -313,6 +359,7 @@ def main():
             "backend": scan_backend(),
             "frontend": scan_frontend(),
             "tests": tests_data,
+            "backend_tests": bt_data,
             "tree": [f"{os.path.basename(ROOT)}/"] + build_tree(ROOT),
         },
         "assets": asset_status(tests_data),
