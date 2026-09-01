@@ -96,7 +96,8 @@ def scan_backend():
             name = m.group(1)
             tag, cls = TASK_MAP.get(name, (None, ""))
             fns.append({"name": name, "line": i, "task": tag, "tagcls": cls})
-    return {"file": "../backend/ai_engine.py", "functions": fns, "line_count": len(lines)}
+    abspath = path.replace("\\", "/")
+    return {"file": "../backend/ai_engine.py", "abspath": abspath, "functions": fns, "line_count": len(lines)}
 
 # ---------------------------------------------------------------------------
 # 3. 前端 game.js 函数清单（标注空壳）
@@ -127,7 +128,8 @@ def scan_frontend():
                 fns.append({"name": name, "line": i, "role": "AI/交互", "tagcls": "tag-ui"})
             else:
                 fns.append({"name": name, "line": i, "role": "UI/交互", "tagcls": "tag-ui"})
-    return {"file": "../frontend/game.js", "functions": fns}
+    abspath = path.replace("\\", "/")
+    return {"file": "../frontend/game.js", "abspath": abspath, "functions": fns}
 
 # ---------------------------------------------------------------------------
 # 4. tests 真实状态（尝试真实运行 jest）
@@ -246,12 +248,12 @@ def load_collab():
 def asset_status():
     wb = "斗地主最终版工作台"
     return [
-        {"path": f"{wb}/提示词/TASK-001-手数分析.md", "status": "有效",
-         "reason": "与后端 estimate_hands / hand_bonus 真实函数逐字吻合"},
-        {"path": f"{wb}/提示词/TASK-002-拆牌罚分层级.md", "status": "有效",
-         "reason": "与后端 split_penalty 真实函数吻合"},
-        {"path": f"{wb}/提示词/TASK-005-概率记牌推算.md", "status": "有效",
-         "reason": "与后端 probably_has / estimate_*_in 系列真实函数吻合"},
+        {"path": f"{wb}/提示词/TASK-001-手数分析.docx", "status": "有效",
+         "reason": "Word 版（与原始 .md 同源）；与后端 estimate_hands / hand_bonus 真实函数逐字吻合"},
+        {"path": f"{wb}/提示词/TASK-002-拆牌罚分层级.docx", "status": "有效",
+         "reason": "Word 版；与后端 split_penalty 真实函数吻合"},
+        {"path": f"{wb}/提示词/TASK-005-概率记牌推算.docx", "status": "有效",
+         "reason": "Word 版；与后端 probably_has / estimate_*_in 系列真实函数吻合"},
         {"path": f"{wb}/多AI三角色协作架构设计.md", "status": "有效",
          "reason": "协作架构说明文档，仍适用"},
         {"path": f"{wb}/目录结构.md", "status": "已过时",

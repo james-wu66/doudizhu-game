@@ -291,7 +291,7 @@
     <!-- 详情：后端 -->
     <div class="detail" id="detail-backend">
         <h2><span class="bar"></span>后端开发者 · 真实函数清单</h2>
-        <div class="kv"><span class="k">源码文件</span><span class="v"><a id="be-file" href="#" style="color:var(--blue)">../backend/ai_engine.py</a>（点击跳转真实文件）</span></div>
+        <div class="kv"><span class="k">源码文件</span><span class="v"><a id="be-file" href="#" style="color:var(--blue)">backend/ai_engine.py</a>（点击在 VS Code 中打开）</span></div>
         <div class="kv"><span class="k">函数总数</span><span class="v" id="be-count">—</span></div>
         <div class="groups" id="be-groups" style="margin-top:14px;"></div>
     </div>
@@ -299,7 +299,7 @@
     <!-- 详情：前端 -->
     <div class="detail" id="detail-frontend">
         <h2><span class="bar"></span>前端开发者 · 真实函数清单</h2>
-        <div class="kv"><span class="k">源码文件</span><span class="v"><a id="fe-file" href="#" style="color:var(--blue)">../frontend/game.js</a>（点击跳转真实文件）</span></div>
+        <div class="kv"><span class="k">源码文件</span><span class="v"><a id="fe-file" href="#" style="color:var(--blue)">frontend/game.js</a>（点击在 VS Code 中打开）</span></div>
         <div class="kv"><span class="k">函数总数</span><span class="v" id="fe-count">—</span></div>
         <div class="groups" id="fe-groups" style="margin-top:14px;"></div>
         <div class="note bad" id="fe-shell-note" style="display:none;"></div>
@@ -347,7 +347,6 @@ const BE_GROUP_ORDER = [
     ["其他", null, "gt-other"],
 ];
 const FE_GROUP_ORDER = [
-    ["已迁移后端(空壳)", "tag-shell", "gt-shell"],
     ["AI/交互", "tag-ui", "gt-ui"],
     ["UI/交互", "tag-ui", "gt-ui"],
 ];
@@ -381,7 +380,8 @@ function buildGroups(fns, order, file){
         list.forEach(f=>{
             const a = document.createElement('a');
             a.className = 'pill';
-            a.href = file;
+            a.href = 'vscode://file/' + encodeURI(file) + ':' + f.line + ':1';
+            a.title = '在 VS Code 中打开 ' + f.name + '（第 ' + f.line + ' 行）';
             a.innerHTML = `<span class="nm">${esc(f.name)}</span><span class="ln">L${f.line}</span>`;
             row.appendChild(a);
         });
@@ -436,8 +436,8 @@ function render(){
         cw.appendChild(div);
     });
 
-    // 提示词文档
-    const promptDocs = d.assets.filter(a => a.path.indexOf('提示词/') >= 0);
+    // 提示词文档（仅 Word 版）
+    const promptDocs = d.assets.filter(a => a.path.indexOf('提示词/TASK') >= 0 && a.path.endsWith('.docx'));
     const allValid = promptDocs.length>0 && promptDocs.every(a=>a.status==='有效');
     el('rs-prompt').textContent = promptDocs.length + ' 份';
     el('rc-prompt-n').textContent = promptDocs.length + ' 份提示词';
@@ -464,18 +464,18 @@ function render(){
     el('rs-backend').textContent = p.backend.functions.length + ' 个';
     el('rc-backend-n').textContent = p.backend.functions.length + ' 个函数';
     el('rc-backend-s').textContent = beTasks + ' 个带 TASK 标签（手数/拆牌/记牌）';
-    el('be-file').href = p.backend.file;
+    el('be-file').href = 'vscode://file/' + encodeURI(p.backend.abspath) + ':1:1';
     el('be-count').textContent = p.backend.functions.length + ' 个（按任务分组见下）';
-    el('be-groups').appendChild(buildGroups(p.backend.functions, BE_GROUP_ORDER, p.backend.file));
+    el('be-groups').appendChild(buildGroups(p.backend.functions, BE_GROUP_ORDER, p.backend.abspath));
 
     // 前端
     const shellCount = p.frontend.functions.filter(f=>f.role && f.role.indexOf('空壳')>=0).length;
     el('rs-frontend').textContent = p.frontend.functions.length + ' 个';
     el('rc-frontend-n').textContent = p.frontend.functions.length + ' 个函数';
     el('rc-frontend-s').textContent = shellCount + ' 个已迁后端（空壳）';
-    el('fe-file').href = p.frontend.file;
+    el('fe-file').href = 'vscode://file/' + encodeURI(p.frontend.abspath) + ':1:1';
     el('fe-count').textContent = p.frontend.functions.length + ' 个（按角色分组见下）';
-    el('fe-groups').appendChild(buildGroups(p.frontend.functions, FE_GROUP_ORDER, p.frontend.file));
+    el('fe-groups').appendChild(buildGroups(p.frontend.functions, FE_GROUP_ORDER, p.frontend.abspath));
     if(shellCount>0){
         const sn = el('fe-shell-note');
         sn.style.display = 'block';

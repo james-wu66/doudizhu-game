@@ -1474,15 +1474,6 @@ function aiFindSameType(hand,last){
 }
 function aiBombs(hand){return aiCandidates(hand).filter(x=>x.pattern.type==='BOMB'||x.pattern.type==='ROCKET').sort((a,b)=>a.pattern.main-b.pattern.main);}
 
-// ===== 以下函数已迁移到后端 API，保留空实现防引用报错 =====
-function aiRouteValue(hand,candidate,who){return 0;}
-function aiBombValue(x,hand,who,last,mode){return 0;}
-function aiControlTradeoff(x,hand,who,last,mode){return 0;}
-function aiCandidateScore(x,hand,who,mode,last){return 0;}
-function aiShouldPassCounter(hand,last,who,candidates){return false;}
-function aiPickScored(scored){return scored.length?scored[0].x.cards:null;}
-function aiFindCounter(hand,last,who,strategy){return fallbackSimple(hand,last);}
-function aiLead(hand,who,strategy){return fallbackSimple(hand,null);}
 
 
 

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-01 14:19:47",
+  "generated_at": "2026-09-01 15:08:14",
   "collab": {
     "updated_at": "2026-09-01 14:20",
     "current_task": "工作台升级为实时同步操作台（初版完成，待明天面试展示）",
@@ -45,19 +45,20 @@
     "git": {
       "branch": "workbench",
       "dirty": true,
-      "status_short": "M \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\345\\274\\225\\346\\223\\216/\\346\\216\\247\\345\\210\\266\\345\\217\\260\\346\\250\\241\\346\\235\\277.html\"\n M \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\345\\274\\225\\346\\223\\216/\\347\\224\\237\\346\\210\\220\\346\\216\\247\\345\\210\\266\\345\\217\\260.py\"\n M \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\346\\216\\247\\345\\210\\266\\345\\217\\260.html\"\n D \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\351\\241\\271\\347\\233\\256\\347\\212\\266\\346\\200\\201.json\"\n?? tests/\n?? \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\345\\215\\217\\344\\275\\234\\347\\212\\266\\346\\200\\201.json\"\n?? \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\345\\220\\257\\345\\212\\250\\345\\267\\245\\344\\275\\234\\345\\217\\260.bat\"\n?? \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\347\\212\\266\\346\\200\\201.json\"",
+      "status_short": "M README.md\n M frontend/game.js\n M \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\345\\274\\225\\346\\223\\216/\\346\\216\\247\\345\\210\\266\\345\\217\\260\\346\\250\\241\\346\\235\\277.html\"\n M \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\345\\274\\225\\346\\223\\216/\\347\\224\\237\\346\\210\\220\\346\\216\\247\\345\\210\\266\\345\\217\\260.py\"\n M \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\346\\216\\247\\345\\210\\266\\345\\217\\260.html\"\n M \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\347\\212\\266\\346\\200\\201.json\"\n?? tests/\n?? \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\345\\274\\225\\346\\223\\216/md2docx.py\"\n?? \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\346\\217\\220\\347\\244\\272\\350\\257\\215/TASK-001-\\346\\211\\213\\346\\225\\260\\345\\210\\206\\346\\236\\220.docx\"\n?? \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\346\\217\\220\\347\\244\\272\\350\\257\\215/TASK-002-\\346\\213\\206\\347\\211\\214\\347\\275\\232\\345\\210\\206\\345\\261\\202\\347\\272\\247.docx\"\n?? \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\346\\217\\220\\347\\244\\272\\350\\257\\215/TASK-005-\\346\\246\\202\\347\\216\\207\\350\\256\\260\\347\\211\\214\\346\\216\\250\\347\\256\\227.docx\"",
       "last_commits": [
+        "0ad1ec9 feat: 工作台升级为实时同步操作台",
         "43bd9aa refactor: 控制台改为角色操作台外观（组长总览+四角色卡），保留真实数据扫描",
         "a2382b7 revert: 彻底移除 style.css 中的 zoom（修复界面右侧被切）",
         "564aaad style: 桌面端全局缩放 1.25 倍（屏幕宽度>=1100px）",
-        "cbae96c feat: 斗地主工作台（动态真实控制台 + 资产状态说明）",
-        "24c9219 fix: 启动 bat 自动查找 Python 路径（解决找不到 python 的问题）"
+        "cbae96c feat: 斗地主工作台（动态真实控制台 + 资产状态说明）"
       ],
       "untracked_tests": true,
       "untracked_workbench": false
     },
     "backend": {
       "file": "../backend/ai_engine.py",
+      "abspath": "C:/hermes 斗地主终极版 软件/backend/ai_engine.py",
       "functions": [
         {
           "name": "detect_pattern",
@@ -298,6 +299,7 @@
     },
     "frontend": {
       "file": "../frontend/game.js",
+      "abspath": "C:/hermes 斗地主终极版 软件/frontend/game.js",
       "functions": [
         {
           "name": "serializeCard",
@@ -690,356 +692,308 @@
           "tagcls": "tag-ui"
         },
         {
-          "name": "aiRouteValue",
-          "line": 1478,
-          "role": "已迁移后端(空壳)",
-          "tagcls": "tag-shell"
-        },
-        {
-          "name": "aiBombValue",
-          "line": 1479,
-          "role": "已迁移后端(空壳)",
-          "tagcls": "tag-shell"
-        },
-        {
-          "name": "aiControlTradeoff",
-          "line": 1480,
-          "role": "已迁移后端(空壳)",
-          "tagcls": "tag-shell"
-        },
-        {
-          "name": "aiCandidateScore",
-          "line": 1481,
-          "role": "已迁移后端(空壳)",
-          "tagcls": "tag-shell"
-        },
-        {
-          "name": "aiShouldPassCounter",
-          "line": 1482,
-          "role": "已迁移后端(空壳)",
-          "tagcls": "tag-shell"
-        },
-        {
-          "name": "aiPickScored",
-          "line": 1483,
-          "role": "AI/交互",
-          "tagcls": "tag-ui"
-        },
-        {
-          "name": "aiFindCounter",
-          "line": 1484,
-          "role": "AI/交互",
-          "tagcls": "tag-ui"
-        },
-        {
-          "name": "aiLead",
-          "line": 1485,
-          "role": "AI/交互",
-          "tagcls": "tag-ui"
-        },
-        {
           "name": "fallbackSimple",
-          "line": 1538,
+          "line": 1529,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "fallbackBidSimple",
-          "line": 1546,
+          "line": 1537,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "apiCardsToHand",
-          "line": 1554,
+          "line": 1545,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "aiConsecutiveRuns",
-          "line": 1584,
+          "line": 1575,
           "role": "AI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "aiNext",
-          "line": 1591,
+          "line": 1582,
           "role": "AI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "aiRole",
-          "line": 1592,
+          "line": 1583,
           "role": "AI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "aiPartner",
-          "line": 1596,
+          "line": 1587,
           "role": "AI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "aiLandlordCount",
-          "line": 1597,
+          "line": 1588,
           "role": "AI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "aiThreatCount",
-          "line": 1598,
+          "line": 1589,
           "role": "AI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "findSmallestBeating",
-          "line": 1599,
+          "line": 1590,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "findBomb",
-          "line": 1600,
+          "line": 1591,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "findAllBeatingPlays",
-          "line": 1601,
+          "line": 1592,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "findAllLeadingPlays",
-          "line": 1602,
+          "line": 1593,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "renderCardEl",
-          "line": 1605,
+          "line": 1596,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "renderCardBack",
-          "line": 1632,
+          "line": 1623,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "renderLandlordCards",
-          "line": 1636,
+          "line": 1627,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "clearLandlordCards",
-          "line": 1644,
+          "line": 1635,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "renderOpponentCards",
-          "line": 1646,
+          "line": 1637,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "renderPlayerHand",
-          "line": 1653,
+          "line": 1644,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "refreshSelectionVisuals",
-          "line": 1667,
+          "line": 1658,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "toggleSelect",
-          "line": 1674,
+          "line": 1665,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "renderPlayedCards",
-          "line": 1681,
+          "line": 1672,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "renderPassText",
-          "line": 1699,
+          "line": 1690,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "clearAllPlayed",
-          "line": 1704,
+          "line": 1695,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "updateBadges",
-          "line": 1706,
+          "line": 1697,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "updateMultiplierDisplay",
-          "line": 1716,
+          "line": 1707,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "showMsg",
-          "line": 1725,
+          "line": 1716,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "bombEffect",
-          "line": 1735,
+          "line": 1726,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "sleep",
-          "line": 1741,
+          "line": 1732,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "getCardAtX",
-          "line": 1747,
+          "line": 1738,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "resizeResponsiveLayout",
-          "line": 1822,
+          "line": 1813,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "applyLockedLandscape",
-          "line": 1861,
+          "line": 1852,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "openSettings",
-          "line": 1923,
+          "line": 1914,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "closeSettings",
-          "line": 1940,
+          "line": 1931,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "loadAiProgress",
-          "line": 1944,
+          "line": 1935,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "togglePwd",
-          "line": 2007,
+          "line": 1998,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "switchTab",
-          "line": 2019,
+          "line": 2010,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "handleLogin",
-          "line": 2032,
+          "line": 2023,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "guestPlay",
-          "line": 2086,
+          "line": 2077,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "closeLoginModal",
-          "line": 2098,
+          "line": 2089,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "logoutUser",
-          "line": 2103,
+          "line": 2094,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "deleteAccount",
-          "line": 2115,
+          "line": 2106,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "updateUserInfoDisplay",
-          "line": 2143,
+          "line": 2134,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "playGameSound",
-          "line": 2252,
+          "line": 2243,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "recordGameResult",
-          "line": 2259,
+          "line": 2250,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "setBgmVolume",
-          "line": 2300,
+          "line": 2291,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "toggleBgmMute",
-          "line": 2316,
+          "line": 2307,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "setSfxVolume",
-          "line": 2349,
+          "line": 2340,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "goToLobby",
-          "line": 2380,
+          "line": 2371,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "loadStats",
-          "line": 2389,
+          "line": 2380,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         },
         {
           "name": "loadLeaderboard",
-          "line": 2410,
+          "line": 2401,
           "role": "UI/交互",
           "tagcls": "tag-ui"
         }
@@ -1057,7 +1011,7 @@
       "jest_run": {
         "ran": true,
         "summary": "Test Suites: 1 failed, 3 passed, 4 total  Tests:       1 failed, 40 passed, 41 total",
-        "raw": "s:43:13)\n\n    console.log\n      [P2b] 含炸弹5张残局 × 1000 次：35.348ms，单次 0.0353ms\n\n      at Object.<anonymous> (performance.test.js:50:13)\n\n    console.log\n      [P3] 补充 20张 × 1000 次：40.415ms，单次 0.0404ms\n\n      at Object.<anonymous> (performance.test.js:57:13)\n\nFAIL ./regression.test.js (38.274 s)\n  ● Console\n\n    console.log\n      [R2/R3] 100局：完成=100，异常=0，非法出牌次数=0，总步数=3723\n\n      at Object.<anonymous> (regression.test.js:62:15)\n\n  ● TASK-001 回归测试（验收清单 8.4） › R5：handCount 语义未改动 › handCount 全部仍表示\"手牌张数\"（hand.length）\n\n    expect(received).toBeGreaterThan(expected)\n\n    Expected: > 0\n    Received:   0\n\n    \u001b[0m \u001b[90m 109 |\u001b[39m       \u001b[90m// 提取所有 handCount 的使用\u001b[39m\n     \u001b[90m 110 |\u001b[39m       \u001b[36mconst\u001b[39m uses \u001b[33m=\u001b[39m aiZone\u001b[33m.\u001b[39mmatch(\u001b[35m/handCount[^,}]*/g\u001b[39m) \u001b[33m||\u001b[39m []\u001b[33m;\u001b[39m\n    \u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 111 |\u001b[39m       expect(uses\u001b[33m.\u001b[39mlength)\u001b[33m.\u001b[39mtoBeGreaterThan(\u001b[35m0\u001b[39m)\u001b[33m;\u001b[39m\n     \u001b[90m     |\u001b[39m                           \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n     \u001b[90m 112 |\u001b[39m       \u001b[36mfor\u001b[39m (\u001b[36mconst\u001b[39m u \u001b[36mof\u001b[39m uses) {\n     \u001b[90m 113 |\u001b[39m         \u001b[90m// handCount 必须作为对象键 = hand.length 传入（手牌张数）\u001b[39m\n     \u001b[90m 114 |\u001b[39m         expect(u)\u001b[33m.\u001b[39mtoMatch(\u001b[35m/handCount:\\s*hand\\.length/\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m\n\n      at Object.<anonymous> (regression.test.js:111:27)\n\nTest Suites: 1 failed, 3 passed, 4 total\nTests:       1 failed, 40 passed, 41 total\nSnapshots:   0 total\nTime:        39.255 s, estimated 40 s\nRan all test suites."
+        "raw": ".js:43:13)\n\n    console.log\n      [P2b] 含炸弹5张残局 × 1000 次：39.108ms，单次 0.0391ms\n\n      at Object.<anonymous> (performance.test.js:50:13)\n\n    console.log\n      [P3] 补充 20张 × 1000 次：38.411ms，单次 0.0384ms\n\n      at Object.<anonymous> (performance.test.js:57:13)\n\nFAIL ./regression.test.js (40.19 s)\n  ● Console\n\n    console.log\n      [R2/R3] 100局：完成=100，异常=0，非法出牌次数=0，总步数=3807\n\n      at Object.<anonymous> (regression.test.js:62:15)\n\n  ● TASK-001 回归测试（验收清单 8.4） › R5：handCount 语义未改动 › handCount 全部仍表示\"手牌张数\"（hand.length）\n\n    expect(received).toBeGreaterThan(expected)\n\n    Expected: > 0\n    Received:   0\n\n    \u001b[0m \u001b[90m 109 |\u001b[39m       \u001b[90m// 提取所有 handCount 的使用\u001b[39m\n     \u001b[90m 110 |\u001b[39m       \u001b[36mconst\u001b[39m uses \u001b[33m=\u001b[39m aiZone\u001b[33m.\u001b[39mmatch(\u001b[35m/handCount[^,}]*/g\u001b[39m) \u001b[33m||\u001b[39m []\u001b[33m;\u001b[39m\n    \u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 111 |\u001b[39m       expect(uses\u001b[33m.\u001b[39mlength)\u001b[33m.\u001b[39mtoBeGreaterThan(\u001b[35m0\u001b[39m)\u001b[33m;\u001b[39m\n     \u001b[90m     |\u001b[39m                           \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n     \u001b[90m 112 |\u001b[39m       \u001b[36mfor\u001b[39m (\u001b[36mconst\u001b[39m u \u001b[36mof\u001b[39m uses) {\n     \u001b[90m 113 |\u001b[39m         \u001b[90m// handCount 必须作为对象键 = hand.length 传入（手牌张数）\u001b[39m\n     \u001b[90m 114 |\u001b[39m         expect(u)\u001b[33m.\u001b[39mtoMatch(\u001b[35m/handCount:\\s*hand\\.length/\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m\n\n      at Object.<anonymous> (regression.test.js:111:27)\n\nTest Suites: 1 failed, 3 passed, 4 total\nTests:       1 failed, 40 passed, 41 total\nSnapshots:   0 total\nTime:        41.18 s, estimated 47 s\nRan all test suites."
       },
       "coverage": "覆盖 8/31 旧前端 engine.js 快照，未覆盖后端 ai_engine.py",
       "backend_has_tests": false
@@ -1124,12 +1078,16 @@
       "  多AI三角色协作架构设计.md",
       "  实施指南.md",
       "  引擎/",
+      "    md2docx.py",
       "    控制台模板.html",
       "    生成控制台.py",
       "  控制台.html",
       "  提示词/",
+      "    TASK-001-手数分析.docx",
       "    TASK-001-手数分析.md",
+      "    TASK-002-拆牌罚分层级.docx",
       "    TASK-002-拆牌罚分层级.md",
+      "    TASK-005-概率记牌推算.docx",
       "    TASK-005-概率记牌推算.md",
       "    执行日志-2026-08-31.md",
       "  架构设置确认报告.md",
@@ -1153,19 +1111,19 @@
   },
   "assets": [
     {
-      "path": "斗地主最终版工作台/提示词/TASK-001-手数分析.md",
+      "path": "斗地主最终版工作台/提示词/TASK-001-手数分析.docx",
       "status": "有效",
-      "reason": "与后端 estimate_hands / hand_bonus 真实函数逐字吻合"
+      "reason": "Word 版（与原始 .md 同源）；与后端 estimate_hands / hand_bonus 真实函数逐字吻合"
     },
     {
-      "path": "斗地主最终版工作台/提示词/TASK-002-拆牌罚分层级.md",
+      "path": "斗地主最终版工作台/提示词/TASK-002-拆牌罚分层级.docx",
       "status": "有效",
-      "reason": "与后端 split_penalty 真实函数吻合"
+      "reason": "Word 版；与后端 split_penalty 真实函数吻合"
     },
     {
-      "path": "斗地主最终版工作台/提示词/TASK-005-概率记牌推算.md",
+      "path": "斗地主最终版工作台/提示词/TASK-005-概率记牌推算.docx",
       "status": "有效",
-      "reason": "与后端 probably_has / estimate_*_in 系列真实函数吻合"
+      "reason": "Word 版；与后端 probably_has / estimate_*_in 系列真实函数吻合"
     },
     {
       "path": "斗地主最终版工作台/多AI三角色协作架构设计.md",
