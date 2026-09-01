@@ -54,7 +54,13 @@ async function aiBidViaAPI(hand, isCallPhase) {
     const res = await fetch(AI_API + '/bid', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hand: hand.map(c => ({ id: c.id, r: c.rank, s: c.suit })), isCallPhase })
+      body: JSON.stringify({
+        hand: hand.map(c => ({ id: c.id, r: c.rank, s: c.suit })),
+        isCallPhase,
+        call_acted: (G.callActed || []),
+        bid_mult: (G.bidMult || 2),
+        grab_acted: (G.grabActed || [])
+      })
     });
     const data = await res.json();
     return data.ok ? data.bid : -1;

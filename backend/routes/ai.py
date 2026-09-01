@@ -127,13 +127,27 @@ def ai_hint():
 
 @ai_bp.route("/api/ai/bid", methods=["POST"])
 def ai_bid():
-    """AI 叫地主决策接口"""
+    """AI 叫地主决策接口（恢复旧版8-18叫分逻辑：含位置/倍率/散牌调整）"""
     data = request.json or {}
     hand = _parse_hand(data.get("hand", []))
     is_call_phase = data.get("isCallPhase", True)
     report = evaluate_hand(hand)
     threshold = 58 if is_call_phase else 60
-    if report["bombs"] >= 1: threshold -= 8
+    if report.get("bombs", 0) >= 1: threshold -= 8
+    if report.get("rocket", 0): threshold -= 10  # 王炸加分叫
+    if report.get("singles", 0) >= 6: threshold += 8  # 散牌多减分
+    if is_call_phase:
+        # 首叫阶段：前面"不叫"的人越多，说明大家牌一般，自己中等偏上就可以叫（位置优势）
+        passed_before = sum(1 for v in data.get("call_acted", []) if v)
+        threshold -= passed_before * 3
+    else:
+        # 抢地主阶段：倍数越高，抢的代价越大（输了赔更多），越要保守
+        mult = data.get("bid_mult", 2) or 2
+        if mult >= 8: threshold += 8
+        elif mult >= 4: threshold += 4
+        # 已经有人抢过：说明有强敌，非顶级牌不跟抢
+        grabbed_before = sum(1 for v in data.get("grab_acted", []) if v)
+        threshold += grabbed_before * 2
     bid = 0
     if report["score"] >= threshold: bid = 1
     if report["score"] >= threshold + 10: bid = 2
