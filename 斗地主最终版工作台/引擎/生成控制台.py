@@ -17,7 +17,8 @@ ROOT = PROJECT
 
 TEMPLATE = os.path.join(SCRIPT_DIR, "控制台模板.html")
 OUT_HTML = os.path.join(WORKBENCH, "控制台.html")
-OUT_JSON = os.path.join(WORKBENCH, "项目状态.json")
+OUT_JSON = os.path.join(WORKBENCH, "状态.json")
+COLLAB_JSON = os.path.join(WORKBENCH, "协作状态.json")
 
 # ---------------------------------------------------------------------------
 # 1. Git 真实状态
@@ -210,6 +211,36 @@ def build_tree(base, prefix="", depth=0, max_depth=3):
     return out
 
 # ---------------------------------------------------------------------------
+# 5.5 协作动态（由 AI 在 WorkBuddy 侧维护，工作台自动同步显示）
+# ---------------------------------------------------------------------------
+def load_collab():
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    default = {
+        "updated_at": now,
+        "current_task": "（暂无进行中任务）",
+        "roles": {
+            "组长": {"status": "在线", "note": "协调全局、做最终检查与交付"},
+            "提示词工程师": {"status": "待命", "note": "等待组长派发提示词编写任务"},
+            "后端开发者": {"status": "待命", "note": "TASK-001/002/005 已落地，等待新需求"},
+            "前端开发者": {"status": "待命", "note": "交互/回放/UI 维护"},
+            "测试工程师": {"status": "待命", "note": "tests/ 旧快照失效，待补 Pytest"},
+        },
+        "activities": [
+            {"time": now, "role": "系统", "type": "同步",
+             "text": "工作台升级为实时同步操作台：新增协作动态流，打开网页即自动拉取最新真实数据与 AI 协作动态。"},
+        ],
+    }
+    try:
+        if os.path.exists(COLLAB_JSON):
+            with open(COLLAB_JSON, encoding="utf-8") as f:
+                return json.load(f)
+    except Exception:
+        pass
+    with open(COLLAB_JSON, "w", encoding="utf-8") as f:
+        json.dump(default, f, ensure_ascii=False, indent=2)
+    return default
+
+# ---------------------------------------------------------------------------
 # 6. 工作台资产状态（有效性核查）
 # ---------------------------------------------------------------------------
 def asset_status():
@@ -248,6 +279,7 @@ def main():
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     data = {
         "generated_at": now,
+        "collab": load_collab(),
         "project": {
             "root": ROOT,
             "git": git_status(),
@@ -258,6 +290,12 @@ def main():
         },
         "assets": asset_status(),
     }
+
+    # 删除旧产物名，避免混淆
+    old = os.path.join(WORKBENCH, "项目状态.json")
+    if os.path.exists(old):
+        try: os.remove(old)
+        except Exception: pass
 
     with open(OUT_JSON, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
@@ -276,6 +314,7 @@ def main():
     print(f"  后端函数: {len(data['project']['backend']['functions'])} 个")
     print(f"  前端函数: {len(data['project']['frontend']['functions'])} 个")
     print(f"  jest 运行: {data['project']['tests']['jest_run'].get('ran')}")
+    print(f"  协作动态: {len(data['collab']['activities'])} 条 (来源 协作状态.json)")
 
 if __name__ == "__main__":
     main()

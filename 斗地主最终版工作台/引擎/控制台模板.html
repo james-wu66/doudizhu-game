@@ -183,6 +183,27 @@
         .refresh-box { background: #fafbfc; border: 1px dashed #cdd3de; border-radius: 10px; padding: 16px 18px; font-size: 13.5px; color: #495057; }
         .refresh-box code { background: #eef1f6; padding: 2px 7px; border-radius: 5px; color: var(--blue); font-size: 12.5px; }
 
+        /* ===== 协作动态时间线 ===== */
+        .collab { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px 24px; margin-bottom: 22px; }
+        .collab h2 { font-size: 16px; margin-bottom: 6px; padding-bottom: 10px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 9px; }
+        .collab h2 .bar { width: 4px; height: 16px; border-radius: 3px; background: var(--brand); display: inline-block; }
+        .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); display: inline-block; margin-left: 6px; animation: pulse 1.8s infinite; }
+        .collab .cur-task { font-size: 13px; color: var(--ink-soft); margin-bottom: 14px; }
+        .collab .cur-task b { color: var(--ink); }
+        .timeline { position: relative; padding-left: 22px; max-height: 340px; overflow-y: auto; }
+        .timeline::before { content: ""; position: absolute; left: 6px; top: 4px; bottom: 4px; width: 2px; background: var(--line); }
+        .tl-item { position: relative; padding: 9px 0 9px 4px; }
+        .tl-item::before { content: ""; position: absolute; left: -19px; top: 14px; width: 11px; height: 11px; border-radius: 50%; background: #fff; border: 3px solid var(--brand); }
+        .tl-item.t-提示词::before, .tl-item.t-prompt::before { border-color: var(--blue); }
+        .tl-item.t-后端::before, .tl-item.t-backend::before { border-color: var(--purple); }
+        .tl-item.t-前端::before, .tl-item.t-frontend::before { border-color: var(--green); }
+        .tl-item.t-测试::before, .tl-item.t-test::before { border-color: var(--amber); }
+        .tl-item.t-系统::before, .tl-item.t-同步::before, .tl-item.t-sync::before { border-color: #868e96; }
+        .tl-head { font-size: 12.5px; color: var(--ink-soft); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .tl-role { font-weight: 700; color: var(--ink); }
+        .tl-type { font-size: 11px; padding: 1px 8px; border-radius: 10px; background: #eef1f6; color: #495057; }
+        .tl-text { font-size: 13.5px; color: #374151; margin-top: 3px; }
+
         .footer { text-align: center; color: #9aa3b2; font-size: 12px; margin-top: 26px; }
 
         @media (max-width: 880px) {
@@ -253,6 +274,13 @@
         </div>
     </div>
 
+    <!-- 协作动态（AI 在 WorkBuddy 侧维护，自动同步显示） -->
+    <div class="collab">
+        <h2><span class="bar"></span>协作动态 · 实时同步<span class="live-dot"></span></h2>
+        <div class="cur-task">当前任务：<b id="cur-task">—</b> ｜ 最后更新：<b id="collab-updated">—</b></div>
+        <div class="timeline" id="timeline"></div>
+    </div>
+
     <!-- 详情：提示词工程师 -->
     <div class="detail" id="detail-prompt">
         <h2><span class="bar"></span>提示词工程师 · 真实文档清单</h2>
@@ -292,11 +320,10 @@
     <div class="detail" id="detail-refresh" style="display:block;">
         <h2><span class="bar"></span>如何刷新真实数据</h2>
         <div class="refresh-box">
-            双击运行工作台根目录下的 <code>刷新工作台.bat</code>，它会调用
-            <code>引擎/生成控制台.py</code> 重新扫描真实项目、重新生成本页面与 <code>项目状态.json</code>。
-            刷新后按 F5 重载本页面即可看到最新真实数据。<br><br>
+            <b>方式一（推荐，自动同步）：</b>双击工作台根目录下的 <code>启动工作台.bat</code>，它会起一个本地服务并自动打开本页。打开后页面<b>每 8 秒自动拉取最新数据</b>（git / 真实函数 / 测试结果 / AI 协作动态），无需手动刷新。<br><br>
+            <b>方式二（手动刷新）：</b>双击 <code>刷新工作台.bat</code> 调用 <code>引擎/生成控制台.py</code> 重新扫描，按 F5 重载即可。<br><br>
             终端命令：<code>cd "斗地主最终版工作台" &amp;&amp; python 引擎/生成控制台.py</code><br><br>
-            说明：本控制台是"生成时刻的快照"。你本地重跑生成器才会更新；推到 GitHub 的那份别人看到的是冻结快照，碰不到你机器上的项目数据。
+            说明：本控制台数据由生成器真实扫描（非写死）。AI 在 WorkBuddy 侧产出的提示词 / 任务动态，会写入 <code>协作状态.json</code>，网页自动同步显示；推到 GitHub 的那份别人看到的是冻结快照，碰不到你机器上的项目数据。
         </div>
     </div>
 
@@ -498,11 +525,57 @@ function render(){
             tac.appendChild(row);
         });
     }
+    renderCollab(d.collab);
 }
 
-if(WORKBENCH_DATA){ render(); }
+function applyCollab(c){
+    if(!c) return;
+    if(el('cur-task')) el('cur-task').textContent = c.current_task || '—';
+    if(el('collab-updated')) el('collab-updated').textContent = c.updated_at || '—';
+    const tl = el('timeline');
+    if(!tl) return;
+    tl.innerHTML = '';
+    (c.activities||[]).slice(0,25).forEach(a=>{
+        const item = document.createElement('div');
+        const cls = 'tl-item t-' + (a.type||'系统');
+        item.className = cls;
+        const time = a.time || '';
+        item.innerHTML = `<div class="tl-head"><span class="tl-role">${esc(a.role||'系统')}</span>` +
+            `<span class="tl-type">${esc(a.type||'')}</span><span>${esc(time)}</span></div>` +
+            `<div class="tl-text">${esc(a.text||'')}</div>`;
+        tl.appendChild(item);
+    });
+}
+function renderCollab(collab){ if(collab) applyCollab(collab); }
+
+function updateProjectMetrics(j){
+    const p = j.project; if(!p) return;
+    if(el('gen-time')) el('gen-time').textContent = j.generated_at;
+    const validAssets = (j.assets||[]).filter(a=>a.status==='有效').length;
+    const jestRan = p.tests.jest_run && p.tests.jest_run.ran;
+    const chips = [
+        { n: p.git.branch, l: p.git.dirty ? '分支（有未提交改动）' : '分支（已同步）' },
+        { n: p.backend.functions.length, l: '后端 AI 函数' },
+        { n: p.frontend.functions.length, l: '前端函数' },
+        { n: jestRan ? '已运行' : '未运行', l: '测试守护' },
+        { n: validAssets + '/' + (j.assets?j.assets.length:0), l: '资产有效' },
+    ];
+    const cw = el('lead-chips');
+    if(cw){ cw.innerHTML=''; chips.forEach(c=>{ const div=document.createElement('div'); div.className='chip'; div.innerHTML=`<div class="n">${esc(c.n)}</div><div class="l">${esc(c.l)}</div>`; cw.appendChild(div); }); }
+    const rb = el('rs-test'); if(rb) rb.textContent = jestRan ? 'jest 已跑' : '未运行';
+}
+
+const REFRESH_SEC = 8;
+function startSync(){
+    setInterval(()=>{
+        fetch('协作状态.json?_=' + Date.now()).then(r=>r.json()).then(c=>applyCollab(c)).catch(()=>{});
+        fetch('状态.json?_=' + Date.now()).then(r=>r.json()).then(j=>{ if(j && j.project) updateProjectMetrics(j); }).catch(()=>{});
+    }, REFRESH_SEC*1000);
+}
+
+if(WORKBENCH_DATA){ render(); startSync(); }
 else {
-    fetch('项目状态.json').then(r=>r.json()).then(j=>{ WORKBENCH_DATA=j; render(); })
+    fetch('状态.json?_=' + Date.now()).then(r=>r.json()).then(j=>{ WORKBENCH_DATA=j; render(); startSync(); })
         .catch(()=>{ el('gen-time').textContent='数据缺失：请先运行 刷新工作台.bat 生成数据'; });
 }
 </script>

@@ -1,17 +1,57 @@
 {
-  "generated_at": "2026-09-01 13:55:03",
+  "generated_at": "2026-09-01 14:19:47",
+  "collab": {
+    "updated_at": "2026-09-01 14:20",
+    "current_task": "工作台升级为实时同步操作台（初版完成，待明天面试展示）",
+    "roles": {
+      "组长": {
+        "status": "在线",
+        "note": "协调全局、做最终检查与交付"
+      },
+      "提示词工程师": {
+        "status": "待命",
+        "note": "TASK-001/002/005 提示词已落地，等待新任务"
+      },
+      "后端开发者": {
+        "status": "待命",
+        "note": "TASK-001/002/005 已落地，等待新需求"
+      },
+      "前端开发者": {
+        "status": "待命",
+        "note": "交互/回放/UI 维护"
+      },
+      "测试工程师": {
+        "status": "待命",
+        "note": "tests/ 旧快照失效，待补 Pytest"
+      }
+    },
+    "activities": [
+      {
+        "time": "2026-09-01 14:20",
+        "role": "组长",
+        "type": "交付",
+        "text": "完成工作台实时同步升级：新增协作动态流（AI 在 WorkBuddy 侧产出自动同步显示）、本地服务自动拉取（每8秒）、角色操作台外观保留。数据仍全部来自真实扫描，无写死。"
+      },
+      {
+        "time": "2026-09-01 14:15",
+        "role": "系统",
+        "type": "同步",
+        "text": "工作台升级为实时同步操作台：新增协作动态流，打开网页即自动拉取最新真实数据与 AI 协作动态。"
+      }
+    ]
+  },
   "project": {
     "root": "C:\\hermes 斗地主终极版 软件",
     "git": {
       "branch": "workbench",
       "dirty": true,
-      "status_short": "M \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\345\\274\\225\\346\\223\\216/\\346\\216\\247\\345\\210\\266\\345\\217\\260\\346\\250\\241\\346\\235\\277.html\"\n M \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\346\\216\\247\\345\\210\\266\\345\\217\\260.html\"\n M \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\351\\241\\271\\347\\233\\256\\347\\212\\266\\346\\200\\201.json\"\n?? tests/\n?? \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/_selftest.js\"",
+      "status_short": "M \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\345\\274\\225\\346\\223\\216/\\346\\216\\247\\345\\210\\266\\345\\217\\260\\346\\250\\241\\346\\235\\277.html\"\n M \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\345\\274\\225\\346\\223\\216/\\347\\224\\237\\346\\210\\220\\346\\216\\247\\345\\210\\266\\345\\217\\260.py\"\n M \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\346\\216\\247\\345\\210\\266\\345\\217\\260.html\"\n D \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\351\\241\\271\\347\\233\\256\\347\\212\\266\\346\\200\\201.json\"\n?? tests/\n?? \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\345\\215\\217\\344\\275\\234\\347\\212\\266\\346\\200\\201.json\"\n?? \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\345\\220\\257\\345\\212\\250\\345\\267\\245\\344\\275\\234\\345\\217\\260.bat\"\n?? \"\\346\\226\\227\\345\\234\\260\\344\\270\\273\\346\\234\\200\\347\\273\\210\\347\\211\\210\\345\\267\\245\\344\\275\\234\\345\\217\\260/\\347\\212\\266\\346\\200\\201.json\"",
       "last_commits": [
+        "43bd9aa refactor: 控制台改为角色操作台外观（组长总览+四角色卡），保留真实数据扫描",
         "a2382b7 revert: 彻底移除 style.css 中的 zoom（修复界面右侧被切）",
         "564aaad style: 桌面端全局缩放 1.25 倍（屏幕宽度>=1100px）",
         "cbae96c feat: 斗地主工作台（动态真实控制台 + 资产状态说明）",
-        "24c9219 fix: 启动 bat 自动查找 Python 路径（解决找不到 python 的问题）",
-        "7be5bb7 fix: 本地启动端口从 5000 改为 8080（与 app.py 默认端口对齐）"
+        "24c9219 fix: 启动 bat 自动查找 Python 路径（解决找不到 python 的问题）"
       ],
       "untracked_tests": true,
       "untracked_workbench": false
@@ -1017,7 +1057,7 @@
       "jest_run": {
         "ran": true,
         "summary": "Test Suites: 1 failed, 3 passed, 4 total  Tests:       1 failed, 40 passed, 41 total",
-        "raw": "rformance.test.js:43:13)\n\n    console.log\n      [P2b] 含炸弹5张残局 × 1000 次：34.584ms，单次 0.0346ms\n\n      at Object.<anonymous> (performance.test.js:50:13)\n\n    console.log\n      [P3] 补充 20张 × 1000 次：40.917ms，单次 0.0409ms\n\n      at Object.<anonymous> (performance.test.js:57:13)\n\nFAIL ./regression.test.js (46.203 s)\n  ● Console\n\n    console.log\n      [R2/R3] 100局：完成=100，异常=0，非法出牌次数=0，总步数=3761\n\n      at Object.<anonymous> (regression.test.js:62:15)\n\n  ● TASK-001 回归测试（验收清单 8.4） › R5：handCount 语义未改动 › handCount 全部仍表示\"手牌张数\"（hand.length）\n\n    expect(received).toBeGreaterThan(expected)\n\n    Expected: > 0\n    Received:   0\n\n    \u001b[0m \u001b[90m 109 |\u001b[39m       \u001b[90m// 提取所有 handCount 的使用\u001b[39m\n     \u001b[90m 110 |\u001b[39m       \u001b[36mconst\u001b[39m uses \u001b[33m=\u001b[39m aiZone\u001b[33m.\u001b[39mmatch(\u001b[35m/handCount[^,}]*/g\u001b[39m) \u001b[33m||\u001b[39m []\u001b[33m;\u001b[39m\n    \u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 111 |\u001b[39m       expect(uses\u001b[33m.\u001b[39mlength)\u001b[33m.\u001b[39mtoBeGreaterThan(\u001b[35m0\u001b[39m)\u001b[33m;\u001b[39m\n     \u001b[90m     |\u001b[39m                           \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n     \u001b[90m 112 |\u001b[39m       \u001b[36mfor\u001b[39m (\u001b[36mconst\u001b[39m u \u001b[36mof\u001b[39m uses) {\n     \u001b[90m 113 |\u001b[39m         \u001b[90m// handCount 必须作为对象键 = hand.length 传入（手牌张数）\u001b[39m\n     \u001b[90m 114 |\u001b[39m         expect(u)\u001b[33m.\u001b[39mtoMatch(\u001b[35m/handCount:\\s*hand\\.length/\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m\n\n      at Object.<anonymous> (regression.test.js:111:27)\n\nTest Suites: 1 failed, 3 passed, 4 total\nTests:       1 failed, 40 passed, 41 total\nSnapshots:   0 total\nTime:        47.179 s\nRan all test suites."
+        "raw": "s:43:13)\n\n    console.log\n      [P2b] 含炸弹5张残局 × 1000 次：35.348ms，单次 0.0353ms\n\n      at Object.<anonymous> (performance.test.js:50:13)\n\n    console.log\n      [P3] 补充 20张 × 1000 次：40.415ms，单次 0.0404ms\n\n      at Object.<anonymous> (performance.test.js:57:13)\n\nFAIL ./regression.test.js (38.274 s)\n  ● Console\n\n    console.log\n      [R2/R3] 100局：完成=100，异常=0，非法出牌次数=0，总步数=3723\n\n      at Object.<anonymous> (regression.test.js:62:15)\n\n  ● TASK-001 回归测试（验收清单 8.4） › R5：handCount 语义未改动 › handCount 全部仍表示\"手牌张数\"（hand.length）\n\n    expect(received).toBeGreaterThan(expected)\n\n    Expected: > 0\n    Received:   0\n\n    \u001b[0m \u001b[90m 109 |\u001b[39m       \u001b[90m// 提取所有 handCount 的使用\u001b[39m\n     \u001b[90m 110 |\u001b[39m       \u001b[36mconst\u001b[39m uses \u001b[33m=\u001b[39m aiZone\u001b[33m.\u001b[39mmatch(\u001b[35m/handCount[^,}]*/g\u001b[39m) \u001b[33m||\u001b[39m []\u001b[33m;\u001b[39m\n    \u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 111 |\u001b[39m       expect(uses\u001b[33m.\u001b[39mlength)\u001b[33m.\u001b[39mtoBeGreaterThan(\u001b[35m0\u001b[39m)\u001b[33m;\u001b[39m\n     \u001b[90m     |\u001b[39m                           \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n     \u001b[90m 112 |\u001b[39m       \u001b[36mfor\u001b[39m (\u001b[36mconst\u001b[39m u \u001b[36mof\u001b[39m uses) {\n     \u001b[90m 113 |\u001b[39m         \u001b[90m// handCount 必须作为对象键 = hand.length 传入（手牌张数）\u001b[39m\n     \u001b[90m 114 |\u001b[39m         expect(u)\u001b[33m.\u001b[39mtoMatch(\u001b[35m/handCount:\\s*hand\\.length/\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m\n\n      at Object.<anonymous> (regression.test.js:111:27)\n\nTest Suites: 1 failed, 3 passed, 4 total\nTests:       1 failed, 40 passed, 41 total\nSnapshots:   0 total\nTime:        39.255 s, estimated 40 s\nRan all test suites."
       },
       "coverage": "覆盖 8/31 旧前端 engine.js 快照，未覆盖后端 ai_engine.py",
       "backend_has_tests": false
@@ -1058,7 +1098,6 @@
       "一键部署.bat",
       "启动斗地主.bat",
       "斗地主最终版工作台/",
-      "  _selftest.js",
       "  任务看板/",
       "    当前任务.md",
       "  刷新工作台.bat",
@@ -1066,6 +1105,8 @@
       "    状态管理.md",
       "    角色职责.md",
       "    错误处理.md",
+      "  协作状态.json",
+      "  启动工作台.bat",
       "  团队/",
       "    roles/",
       "      前端开发者.md",
@@ -1100,14 +1141,14 @@
       "    测试报告-TASK001-手数分析.md",
       "  测试用例/",
       "    功能测试/",
+      "  状态.json",
       "  目录结构.md",
       "  资产状态说明.md",
       "  配置/",
       "    jest.config.js",
       "    jest.setup.js",
       "    package.json",
-      "    pytest.ini",
-      "  项目状态.json"
+      "    pytest.ini"
     ]
   },
   "assets": [
