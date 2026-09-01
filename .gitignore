@@ -5,3 +5,7 @@ backend/database/
 backend/config_local.py
 tests/node_modules/
 doudizhu-game/
+
+# 工作台生成产物（由 引擎/生成控制台.py 生成，含时间戳，勿入库）
+斗地主最终版工作台/状态.json
+斗地主最终版工作台/控制台.html

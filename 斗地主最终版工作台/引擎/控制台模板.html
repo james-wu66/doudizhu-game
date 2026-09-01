@@ -349,6 +349,25 @@ function vscodeLink(absPath, line){
     return 'vscode://file/' + p + ':' + line + ':1';
 }
 
+// 复制绝对路径到剪贴板：兼容未装 VS Code 的 agent / 编辑器（点文件名跳 VS Code，点此复制路径自行打开）
+function copyPath(absPath, btn){
+    if(!absPath) return;
+    const text = absPath.replace(/\\/g, '/');
+    const done = ()=>{ if(btn){ const t = btn.textContent; btn.textContent = '已复制'; setTimeout(()=>btn.textContent = t, 1500); } };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done).catch(()=>fallbackCopy(text, done));
+    } else { fallbackCopy(text, done); }
+}
+function fallbackCopy(text, done){
+    try{
+        const ta = document.createElement('textarea');
+        ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta);
+        done && done();
+    }catch(e){ console.log('复制失败，路径：', text); }
+}
+
 const BE_GROUP_ORDER = [
     ["TASK-001 手数分析", "tag-t1", "gt-t1"],
     ["TASK-002 拆牌罚分", "tag-t2", "gt-t2"],
@@ -488,7 +507,13 @@ function render(){
         fa.href = vscodeLink(fl.abspath, 1);
         fa.className = 'file-link';
         fa.textContent = fl.rel + '（' + fl.functions.length + ' 个函数 · 点击在 VS Code 打开）';
-        fh.appendChild(fa); fb.appendChild(fh);
+        const cp = document.createElement('button');
+        cp.className = 'copy-btn';
+        cp.textContent = '复制路径';
+        cp.title = '复制绝对路径（兼容非 VS Code 编辑器）';
+        cp.style.cssText = 'margin-left:8px;font-size:11px;padding:1px 6px;cursor:pointer;border:1px solid #cbd5e1;border-radius:4px;background:#f8fafc;color:#334155;';
+        cp.onclick = (e)=>{ e.preventDefault(); copyPath(fl.abspath, cp); };
+        fh.appendChild(fa); fh.appendChild(cp); fb.appendChild(fh);
         fb.appendChild(buildGroups(fl.functions, BE_GROUP_ORDER, fl.abspath));
         beDetail.appendChild(fb);
     });
@@ -509,7 +534,13 @@ function render(){
         fa.href = vscodeLink(fl.abspath, 1);
         fa.className = 'file-link';
         fa.textContent = fl.rel + '（' + fl.functions.length + ' 个函数 · 点击在 VS Code 打开）';
-        fh.appendChild(fa); fb.appendChild(fh);
+        const cp = document.createElement('button');
+        cp.className = 'copy-btn';
+        cp.textContent = '复制路径';
+        cp.title = '复制绝对路径（兼容非 VS Code 编辑器）';
+        cp.style.cssText = 'margin-left:8px;font-size:11px;padding:1px 6px;cursor:pointer;border:1px solid #cbd5e1;border-radius:4px;background:#f8fafc;color:#334155;';
+        cp.onclick = (e)=>{ e.preventDefault(); copyPath(fl.abspath, cp); };
+        fh.appendChild(fa); fh.appendChild(cp); fb.appendChild(fh);
         fb.appendChild(buildGroups(fl.functions, FE_GROUP_ORDER, fl.abspath));
         feDetail.appendChild(fb);
     });

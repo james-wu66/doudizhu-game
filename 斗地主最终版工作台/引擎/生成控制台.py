@@ -50,6 +50,8 @@ def git_status():
 # ---------------------------------------------------------------------------
 # 2. 后端 ai_engine.py 函数清单（带 TASK 标签）
 # ---------------------------------------------------------------------------
+# 注意：新增 TASK（如 TASK-006）时，需在此手动补充 函数名 -> (标签, 样式类) 映射，
+# 否则新函数不会带 TASK 标签，会落入前端"其他"组（不会丢失，仅无归类）。
 TASK_MAP = {
     "estimate_hands": ("TASK-001 手数分析", "tag-t1"),
     "split_penalty": ("TASK-002 拆牌罚分", "tag-t2"),
@@ -259,9 +261,9 @@ def load_collab():
 # ---------------------------------------------------------------------------
 # 6. 工作台资产状态（有效性核查）
 # ---------------------------------------------------------------------------
-def asset_status():
+def asset_status(tests=None):
     wb = "斗地主最终版工作台"
-    return [
+    items = [
         {"path": f"{wb}/提示词/TASK-001-手数分析.docx", "status": "有效",
          "reason": "Word 版（与原始 .md 同源）；与后端 estimate_hands / hand_bonus 真实函数逐字吻合"},
         {"path": f"{wb}/提示词/TASK-002-拆牌罚分层级.docx", "status": "有效",
@@ -274,15 +276,34 @@ def asset_status():
         #   目录结构.md / 测试报告-TASK001 / 测试工具/* / 测试用例/功能测试/
         {"path": f"{wb}/团队/", "status": "有效",
          "reason": "三角色/多角色定义文档，作为协作参考仍有效（静态）"},
-        {"path": "tests/ (项目根)", "status": "已过时",
-         "reason": "覆盖 8/31 旧前端 engine.js 快照，未覆盖后端 ai_engine.py，且未提交 git"},
     ]
+    # tests 资产项：动态反映 jest 真实运行状态，不再写死"已过时"
+    jr = (tests or {}).get("jest_run") if tests else None
+    if jr and jr.get("ran"):
+        items.append({
+            "path": "tests/ (项目根)", "status": "有效",
+            "reason": "jest 真实运行通过：" + (jr.get("summary") or "已运行") +
+                      "；覆盖旧前端 engine.js 快照，建议后续补后端 ai_engine.py 测试",
+        })
+    elif jr:
+        items.append({
+            "path": "tests/ (项目根)", "status": "待运行",
+            "reason": "jest 本次未运行：" + (jr.get("error") or "未知原因") +
+                      "；覆盖旧前端 engine.js 快照，建议后续补后端 ai_engine.py 测试",
+        })
+    else:
+        items.append({
+            "path": "tests/ (项目根)", "status": "待运行",
+            "reason": "未获取到 jest 运行结果；覆盖旧前端 engine.js 快照，建议后续补后端 ai_engine.py 测试",
+        })
+    return items
 
 # ---------------------------------------------------------------------------
 # 主流程
 # ---------------------------------------------------------------------------
 def main():
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    tests_data = scan_tests()          # 真实运行 jest，供 assets 动态反映
     data = {
         "generated_at": now,
         "collab": load_collab(),
@@ -291,10 +312,10 @@ def main():
             "git": git_status(),
             "backend": scan_backend(),
             "frontend": scan_frontend(),
-            "tests": scan_tests(),
+            "tests": tests_data,
             "tree": [f"{os.path.basename(ROOT)}/"] + build_tree(ROOT),
         },
-        "assets": asset_status(),
+        "assets": asset_status(tests_data),
     }
 
     # 删除旧产物名，避免混淆
