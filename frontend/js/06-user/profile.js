@@ -3,6 +3,19 @@
 // 职责：用户信息与 AI 学习进度
 // 来源：game.js 第 1935-1997 + 2134-2234 行（模块化拆分，代码未做改动）
 // ============================================================
+
+// 登录态失效降级为游客时提示：否则战绩会静默丢失，用户完全无感知
+function showGuestFallbackTip(name) {
+  console.warn('[登录态失效] 账号 ' + name + ' 已降级为游客，本局战绩不会保存');
+  var tip = document.createElement('div');
+  tip.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;'
+    + 'background:#7f1d1d;color:#fecaca;padding:10px 18px;border-radius:8px;font-size:14px;'
+    + 'box-shadow:0 4px 16px rgba(0,0,0,.4);max-width:90vw;text-align:center';
+  tip.textContent = '登录状态已失效（' + name + '），本局战绩不会保存。请重新登录。';
+  document.body.appendChild(tip);
+  setTimeout(function () { if (tip.parentNode) tip.parentNode.removeChild(tip); }, 6000);
+}
+
 function loadAiProgress() {
   var el = document.getElementById('ai-learning-content');
   if (!el) return;
@@ -111,6 +124,7 @@ function updateUserInfoDisplay() {
         currentUser = {name: '游客', token: null};
         updateUserInfoDisplay();
         closeLoginModal();
+        showGuestFallbackTip(urlName);
         return;
       }
       // 向后端验证 token
@@ -133,6 +147,7 @@ function updateUserInfoDisplay() {
           currentUser = {name: '游客', token: null};
           updateUserInfoDisplay();
           closeLoginModal();
+          showGuestFallbackTip(urlName);
         }
       })
       .catch(function() {

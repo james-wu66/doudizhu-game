@@ -47,9 +47,12 @@ def login():
     if not user:
         conn.close()
         return jsonify({"error": "名字或密码不对"}), 400
-    token = secrets.token_hex(16)
-    c.execute("UPDATE users SET token = %s WHERE id = %s", (token, user["id"]))
-    conn.commit()
+    # 复用已有 token：避免同一账号在多设备登录时互相踢下线，
+    # 导致旧设备 token 失效后被降级为游客、战绩静默丢失
+    token = user["token"] or secrets.token_hex(16)
+    if not user["token"]:
+        c.execute("UPDATE users SET token = %s WHERE id = %s", (token, user["id"]))
+        conn.commit()
     conn.close()
     return jsonify({"success": True, "token": token, "name": name})
 

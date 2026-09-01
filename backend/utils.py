@@ -17,18 +17,22 @@ except ImportError:
     pymysql = None
     DictCursor = None
 
-# === 数据库配置 ===
-os.environ["DB_HOST"] = "sh-cynosdbmysql-grp-dujxvcs6.sql.tencentcdb.com"
-os.environ["DB_PORT"] = "21142"
-os.environ["DB_USER"] = "doudizhu_game"
-os.environ["DB_PASSWORD"] = "wzm13002104610."
-os.environ["DB_NAME"] = "james-wu-d2gcojd404e6b8137"
+# === 数据库配置（全部从环境变量读取，禁止硬编码凭据）===
+# 本地开发可在 backend/config_local.py 中覆盖（该文件已在 .gitignore 中）
+try:
+    from config_local import (  # type: ignore
+        DB_HOST as _LOCAL_HOST, DB_PORT as _LOCAL_PORT, DB_USER as _LOCAL_USER,
+        DB_PASSWORD as _LOCAL_PASSWORD, DB_NAME as _LOCAL_NAME,
+    )
+except ImportError:
+    _LOCAL_HOST = _LOCAL_USER = _LOCAL_PASSWORD = _LOCAL_NAME = None
+    _LOCAL_PORT = None
 
-DB_HOST = os.environ["DB_HOST"]
-DB_PORT = int(os.environ["DB_PORT"])
-DB_USER = os.environ.get("DB_USER") or "doudizhu_game"
-DB_PASSWORD = os.environ.get("DB_PASSWORD") or "wzm13002104610."
-DB_NAME = os.environ.get("DB_NAME") or "james-wu-d2gcojd404e6b8137"
+DB_HOST = os.environ.get("DB_HOST") or _LOCAL_HOST or ""
+DB_PORT = int(os.environ.get("DB_PORT") or _LOCAL_PORT or 3306)
+DB_USER = os.environ.get("DB_USER") or _LOCAL_USER or "doudizhu_game"
+DB_PASSWORD = os.environ.get("DB_PASSWORD") or _LOCAL_PASSWORD or ""
+DB_NAME = os.environ.get("DB_NAME") or _LOCAL_NAME or "james-wu-d2gcojd404e6b8137"
 USE_MYSQL = bool(DB_HOST) and pymysql is not None
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "database", "doudizhu.db")
 
