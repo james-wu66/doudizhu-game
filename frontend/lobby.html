@@ -455,7 +455,7 @@ async function loadLeaderboard() {
             const rankClass = item.rank <= 3 ? ' r' + item.rank : '';
             return '<tr class="' + (isMe ? 'me' : '') + ' clickable" data-name="' + escapeAttr(item.name) + '" style="cursor:pointer">' +
                 '<td class="rank' + rankClass + '">' + item.rank + '</td>' +
-                '<td><img src="' + API + '/users/' + encodeURIComponent(item.name) + '/avatar" style="width:24px;height:24px;border-radius:50%;vertical-align:middle;margin-right:8px" onerror="this.style.display=\'none\'">' + escapeHtml(item.name) + (isMe ? ' ⭐' : '') + '</td>' +
+                '<td><img src="' + API + '/users/' + encodeURIComponent(item.name) + '/avatar?t=' + Date.now() + '" style="width:24px;height:24px;border-radius:50%;vertical-align:middle;margin-right:8px" onerror="this.style.display=\'none\'">' + escapeHtml(item.name) + (isMe ? ' ⭐' : '') + '</td>' +
                 '<td>' + item.total + '</td>' +
                 '<td>' + item.wins + '</td>' +
                 '<td>' + item.win_rate + '%</td>' +
@@ -710,7 +710,7 @@ function doUploadAvatar() {
 async function loadUserAvatar(name) {
     name = name || currentProfileName || currentUser;
     try {
-        const resp = await fetch(API + '/users/' + encodeURIComponent(name) + '/avatar');
+        const resp = await fetch(API + '/users/' + encodeURIComponent(name) + '/avatar?t=' + Date.now());
         if (resp.ok) {
             const blob = await resp.blob();
             if (blob.size > 0) {
