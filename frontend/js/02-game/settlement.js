@@ -105,7 +105,7 @@ function endGame(winner){
       const aiResults=[];
       [LEFT, RIGHT].forEach(w=>{
         const wWon=(G.landlord===w)===landlordWon;
-        aiResults.push({who: w===LEFT?'LEFT':'RIGHT', result: wWon?'win':'lose'});
+        aiResults.push({who: String(w), result: wWon?'win':'lose'});
       });
       fetch(API_BASE + '/api/ai/backfill', {
         method:'POST', headers:{'Content-Type':'application/json'},
