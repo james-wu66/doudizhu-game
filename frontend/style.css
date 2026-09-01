@@ -570,7 +570,6 @@ body{display:flex;justify-content:center;align-items:center;}
 
 /* === 电脑版出牌区牌型优化（2026-08-05）：仅宽屏>=1100px生效，与手牌一致的瘦长比例+自然重叠+字放大 === */
 @media (min-width:1100px){
-  #app{zoom:1.25;}
   #landlord-area{transform:translateX(-50%) scale(1.2)!important;}
   .played-cards{gap:0!important;}
   .played-cards .card,.played-cards .card-sm{
