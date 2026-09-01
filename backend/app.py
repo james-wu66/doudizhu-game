@@ -1128,7 +1128,7 @@ if __name__ == "__main__":
     print("=" * 40)
     print("  斗地主后端启动成功！")
     print(f"  数据库模式: {'MySQL' if USE_MYSQL else 'SQLite'}")
-    print("  http://localhost:5000")
+    print("  http://localhost:8080")
     print("=" * 40)
     import os as _os
     port = int(_os.environ.get("PORT", 8080))
