@@ -1348,10 +1348,15 @@ def candidate_score(gs, x, hand, who, mode, last):
                 score += 42
             if pattern['type'] not in ('BOMB', 'ROCKET'):
                 max_rank = max(c['rank'] for c in x['cards'])
-                if max_rank >= 13:
-                    score -= 30
-                if max_rank >= 15:
-                    score -= 20
+                if landlord_count <= 2:
+                    # 地主快走完：压队友的牌必须用大牌，确保地主接不走（防止地主接牌直接赢）
+                    if max_rank >= 13:
+                        score += 30
+                else:
+                    if max_rank >= 13:
+                        score -= 30
+                    if max_rank >= 15:
+                        score -= 20
         if len(after) == 0:
             score += 140
     else:
@@ -1580,8 +1585,8 @@ def ai_should_pass_counter(gs, hand, last, who, candidates):
         elif partner_count == 2 and last['type'] == 'SINGLE' and last['main'] <= 8:
             return True
 
-    # Lv2: landlord <=2 cards
-    if lp == gs.landlord and landlord_count <= 2:
+    # Lv2: 地主快走完(≤2张)必须压死，无论谁出的牌（防止地主接牌直接赢）
+    if role != 'landlord' and landlord_count <= 2:
         return False
 
     # Lv3: partner <=1 card
