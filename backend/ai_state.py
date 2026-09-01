@@ -227,18 +227,22 @@ class GameState:
     
     def get_threat_count(self, who):
         """
-        返回威胁张数（即玩家手牌中大于当前最大牌的数量）。
-        
-        注意：这里简化处理，返回手牌数量。实际威胁张数需要根据当前最大牌计算。
-        
+        返回威胁张数。
+        语义与前端 aiThreatCount 一致：
+          - 农民：返回地主的剩余张数
+          - 地主：返回自己手牌数（后端拿不到两个农民完整张数，保持现状）
         Args:
             who: 玩家编号
-            
         Returns:
             int: 威胁张数
         """
-        # 简化实现：返回手牌数量
-        # 实际威胁张数需要根据当前最大牌和手牌计算
+        if who != self.landlord:
+            # 农民：威胁来自地主，返回地主张数
+            if self.landlord_count_override >= 0:
+                return self.landlord_count_override
+            if self.landlord >= 0:
+                return len(self.hands[self.landlord])
+            return 0
         return len(self.hands[who])
     
     def is_leading(self):

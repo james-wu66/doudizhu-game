@@ -1239,7 +1239,10 @@ def candidate_score(gs, x, hand, who, mode, last):
         score -= 30  # 整副炸弹不当四带二主牌（清空手牌除外）
 
     # === Core 2: structure value (route_value + split penalty) ===
-    score += route_value(gs, hand, x, who)
+    # route_value 只在主动出牌 lead 模式计算；跟牌 counter 跳过（否则"出大牌剩余结构好"
+    # 会误导 AI 甩大牌压小牌，跟牌应优先出最小能压的牌）
+    if mode != 'counter':
+        score += route_value(gs, hand, x, who)
     _sp = split_penalty(x['cards'], freq)
     score -= _sp * 1.25
     if _sp > 0:
@@ -1255,18 +1258,20 @@ def candidate_score(gs, x, hand, who, mode, last):
         score += _learn_adjust('SPLIT', pen_band + ':' + hand_band)
     score -= kicker_waste(x['cards'], pattern, mode == 'counter')
 
-    # === Core 3: hand count delta ===
-    hands_before = estimate_hands(hand)
-    hands_after = estimate_hands(after)
-    delta = hands_before - hands_after
-    if delta >= 2:
-        score += 15
-    elif delta == 1:
-        score += 8
-    elif delta == 0:
-        pass
-    else:
-        score -= 12
+    # === Core 3: hand count delta（仅主动出牌 lead 模式计算；跟牌 counter 跳过，
+    #      避免"甩大牌减手数"误导 AI 浪费控制牌） ===
+    if mode != 'counter':
+        hands_before = estimate_hands(hand)
+        hands_after = estimate_hands(after)
+        delta = hands_before - hands_after
+        if delta >= 2:
+            score += 15
+        elif delta == 1:
+            score += 8
+        elif delta == 0:
+            pass
+        else:
+            score -= 12
 
     # === Core 5: tracker integration ===
     if mode != 'counter' or not last:
@@ -1589,9 +1594,10 @@ def ai_should_pass_counter(gs, hand, last, who, candidates):
             partner_count > 4 and not can_finish_all):
         return False
 
-    # Lv3.5: 队友出牌且地主牌还多
+    # Lv3.5: 队友出牌且地主牌还多（排除 Lv3.4 已处理的上家接力场景，避免规则冲突）
     if partner_play and not can_finish_all and landlord_count > 5:
-        return True
+        if not (role == 'farmerPrev' and last['main'] <= 8 and partner_count > 4):
+            return True
 
     # Lv3.6: 队友快出完且地主未到危险线
     if partner_play and not can_finish_all and partner_count <= 4 and landlord_count > 3:
@@ -1848,6 +1854,9 @@ def ai_find_counter(gs, hand, last, who, strategy):
     
     # 2. 获取所有能压过的候选
     cands = [x for x in ai_candidates(hand) if ai_can_beat(x, last)]
+    
+    # 2.1 炸弹时机约束：不被 bomb_allowed 允许的炸弹/王炸剔除（防止"能炸就炸"）
+    cands = [x for x in cands if not (x['pattern']['type'] in ('BOMB', 'ROCKET') and not bomb_allowed(gs, who, last))]
     
     # 3. 如果没有候选 → 记录 PASS → 返回 None
     if not cands:
