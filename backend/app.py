@@ -440,6 +440,12 @@ def serve_style_css():
 def serve_game_js():
     return send_from_directory("../frontend", "game.js")
 
+@app.route("/js/<path:filename>")
+def serve_js(filename):
+    from urllib.parse import unquote
+    filename = unquote(filename)
+    return send_from_directory("../frontend/js", filename)
+
 @app.route("/manifest.json")
 def serve_manifest():
     return send_from_directory("../frontend", "manifest.json")
@@ -983,11 +989,15 @@ def get_avatar(name):
     conn.close()
 
     if not user or not user["avatar_url"]:
-        return "", 404
+        # 无头像记录 → 返回默认头像 SVG，避免 404 刷屏
+        default_svg = b'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="38" r="18" fill="#374151"/><ellipse cx="50" cy="80" rx="28" ry="22" fill="#374151"/></svg>'
+        return default_svg, 200, {"Content-Type": "image/svg+xml"}
 
     filepath = os.path.join(UPLOAD_FOLDER, user["avatar_url"])
     if not os.path.exists(filepath):
-        return "", 404
+        # 头像文件丢失 → 同样返回默认头像
+        default_svg = b'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="38" r="18" fill="#374151"/><ellipse cx="50" cy="80" rx="28" ry="22" fill="#374151"/></svg>'
+        return default_svg, 200, {"Content-Type": "image/svg+xml"}
 
     return send_from_directory(UPLOAD_FOLDER, user["avatar_url"])
 
