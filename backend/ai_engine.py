@@ -781,34 +781,91 @@ def _greedy_split(cards, order, split_bomb):
 
 def estimate_hands(cards):
     """
-    手数分析：估算一手牌要打几手才能出完。
-    6种顺序全排列各跑一遍贪心，残局（<=5张）额外拆炸弹变体，共12种。
+    手数分析（精确还原旧版JS estimateHands）。
+    估算一手牌要打几手才能出完：贪心保留结构（王炸→炸弹→三根/飞机→连对→顺子→对子→单牌）
     """
     if not cards or not len(cards):
         return 0
 
-    # 6种顺序：[三张, 连对, 顺子] 的全排列
-    orders = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]]
-    is_endgame = len(cards) <= 5
-    best = float('inf')
+    freq = count_ranks(cards)
+    hands = 0
 
-    for no in range(6):
-        # 不拆炸弹
-        r1 = _greedy_split(cards, orders[no], False)
-        if r1 < best:
-            best = r1
-        # 残局：拆炸弹
-        if is_endgame:
-            r2 = _greedy_split(cards, orders[no], True)
-            if r2 < best:
-                best = r2
+    # 王炸
+    if freq.get(16, 0) and freq.get(17, 0):
+        hands += 1
+        freq[16] = 0
+        freq[17] = 0
 
-    return best
+    # 炸弹
+    bomb_ranks = [r for r in list(freq.keys()) if freq[r] == 4]
+    for r in bomb_ranks:
+        hands += 1
+        freq[r] = 0
+
+    # 三张/飞机
+    triples = sorted([r for r in freq if freq[r] >= 3 and r <= 14])
+    triple_groups = 0
+    t = 0
+    while t < len(triples):
+        j = t
+        while j + 1 < len(triples) and triples[j + 1] == triples[j] + 1:
+            j += 1
+        triple_groups += 1
+        for k in range(t, j + 1):
+            freq[triples[k]] -= 3
+        t = j + 1
+    hands += triple_groups
+
+    # 连对
+    pairs = sorted([r for r in freq if freq[r] >= 2 and r <= 14])
+    p = 0
+    while p < len(pairs):
+        j = p
+        while j + 1 < len(pairs) and pairs[j + 1] == pairs[j] + 1:
+            j += 1
+        if j - p + 1 >= 3:
+            hands += 1
+            for k in range(p, j + 1):
+                freq[pairs[k]] -= 2
+        p = j + 1
+
+    # 顺子
+    singles = sorted([r for r in freq if freq[r] > 0 and r <= 14])
+    s = 0
+    while s < len(singles):
+        j = s
+        while j + 1 < len(singles) and singles[j + 1] == singles[j] + 1:
+            j += 1
+        if j - s + 1 >= 5:
+            hands += 1
+            for k in range(s, j + 1):
+                freq[singles[k]] -= 1
+        s = j + 1
+
+    # 统计剩余单牌和对子
+    single_count = 0
+    pair_count = 0
+    for r in freq:
+        n = freq[r]
+        pair_count += n // 2
+        single_count += n % 2
+
+    # 三带/飞机带翅膀：每手三根可带走1个散单或1个对子（不增加手数）
+    carry = triple_groups
+    carry_singles = min(single_count, carry)
+    single_count -= carry_singles
+    carry -= carry_singles
+    carry_pairs = min(pair_count, carry)
+    pair_count -= carry_pairs
+    carry -= carry_pairs
+    hands += single_count + pair_count
+
+    return hands
 
 
 def split_penalty(cards, freq):
     """
-    拆牌罚分（层级动态罚分系统）。
+    拆牌罚分（精确还原旧版JS aiSplitPenalty）。
     cards: 本次出的牌
     freq: 当前手牌的点数统计 {rank: count}
     返回罚分（整数）
@@ -819,46 +876,19 @@ def split_penalty(cards, freq):
         r = c['rank']
         used[r] = used.get(r, 0) + 1
 
-    # 剩余牌频率
-    rem_freq = dict(freq)
-    for r in used:
-        rem_freq[r] = max(0, rem_freq.get(r, 0) - used[r])
-
-    hand_len = sum(freq.values())
-    stage_factor = 0.8 if hand_len > 15 else (1.3 if hand_len < 8 else 1)
-    # 注意：JS 原版用 G.current===G.landlord 判断角色，此处简化为默认值
-    # 调用者如需精确角色罚分，可在上层传入
-    role_factor = 1.0
-
     p = 0
     for r, n_used in used.items():
         n = freq.get(r, 0)
-        base_penalty = 0
         if n >= 4 and n_used < 4:
-            base_penalty = 30
-        elif (r == 16 or r == 17) and n > n_used:
-            base_penalty = 25
-        elif n == 3 and n_used < 3:
-            base_penalty = 10
-        elif n == 2 and n_used < 2:
-            base_penalty = 6
+            p += 30
+        if (r == 16 or r == 17) and n > n_used:
+            p += 25
+        if n == 3 and n_used < 3:
+            p += 10
+        if n == 2 and n_used < 2:
+            p += 6
 
-        if base_penalty > 0:
-            point_factor = 1
-            if r == 15:
-                point_factor = 1.5
-            elif r == 14:
-                point_factor = 1.3
-            elif r == 13:
-                point_factor = 1.1
-            elif r == 12 or r == 11:
-                point_factor = 1
-            else:
-                point_factor = 0.9
-            structure_factor = detect_structure_loss(rem_freq)
-            p += base_penalty * point_factor * structure_factor * stage_factor * role_factor
-
-    return round(p)
+    return p
 
 
 def detect_structure_loss(rem_freq):
@@ -1087,10 +1117,9 @@ def route_value(gs, hand, candidate, who):
 
     value += max((len(x['cards']) for x in next_cands), default=0) * 4
 
-    # 手数分析
+    # 手数分析（旧版JS: (5-Math.min(5,hands))*5）
     hands = estimate_hands(after)
-    hand_bonus = [0, 35, 28, 18, 10, 4, 0]
-    value += hand_bonus[min(hands, 6)]
+    value += (5 - min(5, hands)) * 5
 
     # 队友偏好加成
     partner = gs.get_partner(who)
@@ -1282,31 +1311,6 @@ def candidate_score(gs, x, hand, who, mode, last):
         if big['A'] == 0 and pattern['type'] == 'SINGLE' and pattern['main'] == 13:
             score += 5
 
-    # === Core 6: 对手牌型匹配度 ===
-    if mode != 'counter' or not last:
-        opponent = gs.landlord if role != 'landlord' else partner
-        if opponent >= 0:
-            opp_hand = gs.hands[opponent] if opponent < len(gs.hands) else []
-            opp_score_result = evaluate_hand(opp_hand)
-            opp_score = opp_score_result['score']
-            main_rank = pattern['main']
-            if pattern['type'] == 'SINGLE':
-                opp_has_bigger = estimate_count_in(gs, opponent, main_rank + 1) > 0.3
-                if opp_has_bigger:
-                    score -= 8
-                elif main_rank >= 13:
-                    score += 10
-            elif pattern['type'] == 'PAIR':
-                opp_has_pair_bigger = estimate_pair_in(gs, opponent, main_rank + 1) > 0.4
-                if opp_has_pair_bigger:
-                    score -= 8
-                elif main_rank >= 13:
-                    score += 10
-            if opp_score > 30:
-                score -= 5
-            elif opp_score < 15:
-                score += 5
-
     # === Counter mode ===
     if mode == 'counter':
         score += big_value(gs, x, hand, who, last, mode)
@@ -1335,13 +1339,6 @@ def candidate_score(gs, x, hand, who, mode, last):
                 score += 60
             if pattern['type'] == 'SINGLE' and pattern['main'] <= 10:
                 score += 8
-            # 顶地主小牌时用中等牌(8~J)抬价，逼地主用更大牌(参考文档"守门员顶牌")；
-            # 出太小的牌(≤6)让地主轻松用小牌过，减分
-            if role == 'farmerPrev' and pattern['type'] == 'SINGLE' and landlord_count > 8:
-                if 8 <= pattern['main'] <= 11:
-                    score += 15
-                elif pattern['main'] <= 6:
-                    score -= 12
         if partner_play:
             if partner_count <= 2:
                 score -= 70
@@ -1355,15 +1352,10 @@ def candidate_score(gs, x, hand, who, mode, last):
                 score += 42
             if pattern['type'] not in ('BOMB', 'ROCKET'):
                 max_rank = max(c['rank'] for c in x['cards'])
-                if landlord_count <= 2:
-                    # 地主快走完：压队友的牌必须用大牌，确保地主接不走（防止地主接牌直接赢）
-                    if max_rank >= 13:
-                        score += 30
-                else:
-                    if max_rank >= 13:
-                        score -= 30
-                    if max_rank >= 15:
-                        score -= 20
+                if max_rank >= 13:
+                    score -= 30
+                if max_rank >= 15:
+                    score -= 20
         if len(after) == 0:
             score += 140
     else:
@@ -1449,12 +1441,10 @@ def candidate_score(gs, x, hand, who, mode, last):
                         score += 30
         elif (role != 'landlord' and 3 <= partner_count <= 5 and partner_count < len(hand)):
             # 队友牌还多(3~5张)：温和倾向出小牌送（队友≤2张时走严格送牌，不在此）
-            if pattern['type'] == 'SINGLE' and pattern['main'] <= 7:
+            if pattern['type'] == 'SINGLE' and pattern['main'] <= 6:
                 score += 34
             if pattern['type'] == 'PAIR' and pattern['main'] <= 8:
                 score += 20
-            if pattern['type'] == 'TRIPLE' and pattern['main'] <= 6:
-                score += 15
         if role != 'landlord' and landlord_count <= 5 and pattern['type'] in ('BOMB', 'ROCKET'):
             score += 24
         if role == 'landlord' and pattern['type'] != 'SINGLE':
@@ -1595,8 +1585,8 @@ def ai_should_pass_counter(gs, hand, last, who, candidates):
         elif partner_count == 2 and last['type'] == 'SINGLE' and last['main'] <= 8:
             return True
 
-    # Lv2: 地主快走完(≤2张)必须压死，无论谁出的牌（防止地主接牌直接赢）
-    if role != 'landlord' and landlord_count <= 2:
+    # Lv2: 地主快走完(≤2张)必须压死——仅当地主出牌时（与旧版JS一致，队友出牌不触发，保护配合）
+    if lp == gs.landlord and role != 'landlord' and landlord_count <= 2:
         return False
 
     # Lv3: partner <=1 card
@@ -1617,13 +1607,6 @@ def ai_should_pass_counter(gs, hand, last, who, candidates):
     # Lv3.6: 队友快出完且地主未到危险线
     if partner_play and not can_finish_all and partner_count <= 4 and landlord_count > 3:
         return True
-
-    # Lv3.7: 地主出小牌且地主牌多 → 农民积极顶（守门员卡小牌，不让地主轻松过小牌）
-    if (lp == gs.landlord and landlord_count > 8 and
-            last['type'] in ('SINGLE', 'PAIR') and last['main'] <= 8):
-        has_normal = any(x['pattern']['type'] not in ('BOMB', 'ROCKET') for x in candidates)
-        if has_normal:
-            return False
 
     # Lv4: farmerNext and landlord <=8
     if lp == gs.landlord and role == 'farmerNext' and landlord_count <= 8:
@@ -1708,15 +1691,6 @@ def ai_should_pass_counter(gs, hand, last, who, candidates):
                 if cheaper_in_partner:
                     return True
 
-    # Lv8.5: 对手牌力推算
-    if lp == gs.landlord and role != 'landlord':
-        landlord_hand = gs.hands[gs.landlord] if gs.landlord >= 0 else []
-        landlord_score = evaluate_hand(landlord_hand)['score']
-        if landlord_score > 30:
-            return True
-        elif landlord_score < 15:
-            return False
-
     # Special: both partner and landlord close to finish
     if partner_play and partner_count <= 3 and landlord_count <= 3:
         return False
@@ -1736,25 +1710,6 @@ def ai_should_pass_counter(gs, hand, last, who, candidates):
                           for x in candidates)
             if has_mid:
                 return False
-
-    # Lv9: 学习修正
-    pass_bias = _learn_pass_bias(role, landlord_count)
-    if pass_bias < -8:
-        return True
-    if pass_bias > 8:
-        return False
-
-    # 手数变化倾向
-    if candidates:
-        hands_before = estimate_hands(hand)
-        min_delta = float('inf')
-        for x in candidates:
-            after2 = [c for c in hand if not any(y['id'] == c['id'] for y in x['cards'])]
-            delta2 = hands_before - estimate_hands(after2)
-            if delta2 < min_delta:
-                min_delta = delta2
-        if min_delta < 0:
-            return True
 
     # Default: play normally
     return False
@@ -1891,29 +1846,13 @@ def ai_find_counter(gs, hand, last, who, strategy):
         return None
     
     # 5. 优先找同类型同长度的最小能压的牌（过滤 sameType）
-    # 恢复旧版(8-18)逻辑：同类型能压的牌只保留最小的一张去评分（跟牌出最小能压的牌，保留控制牌）
     same_type = [x for x in cands if x['pattern']['type'] == last['type'] and x['pattern']['len'] == last['len']]
-    
+
     # 6. 调 ai_pick_scored 从候选中选最优
     if same_type:
-        role_here = gs.get_role(who)
-        landlord_count_here = gs.get_landlord_count()
-        last_player_here = _last_player_for_ai(gs)
-        is_prev_block = (role_here == 'farmerPrev' and last_player_here == gs.landlord and
-                         last['type'] == 'SINGLE' and last['main'] <= 8 and landlord_count_here > 8)
-        if is_prev_block:
-            # 上家顶地主小牌、地主牌多：用中等牌(8~J)抬价，逼地主用更大牌(参考文档"守门员顶牌")
-            mid_cands = [x for x in same_type if 8 <= x['pattern']['main'] <= 11]
-            if mid_cands:
-                min_mid = min(x['pattern']['main'] for x in mid_cands)
-                candidates = [x for x in mid_cands if x['pattern']['main'] == min_mid]
-            else:
-                min_main = min(x['pattern']['main'] for x in same_type)
-                candidates = [x for x in same_type if x['pattern']['main'] == min_main]
-        else:
-            # 同类型存在：只保留最小能压的一张（旧版核心逻辑，避免甩大牌）
-            min_main = min(x['pattern']['main'] for x in same_type)
-            candidates = [x for x in same_type if x['pattern']['main'] == min_main]
+        # 同类型存在：只保留最小能压的一张（旧版核心逻辑，避免甩大牌）
+        min_main = min(x['pattern']['main'] for x in same_type)
+        candidates = [x for x in same_type if x['pattern']['main'] == min_main]
         scored = []
         for x in candidates:
             score = candidate_score(gs, x, hand, who, 'counter', last)
