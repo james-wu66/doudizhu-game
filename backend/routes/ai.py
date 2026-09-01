@@ -36,16 +36,19 @@ def _parse_hand(hand_raw):
     return [{"id": c.get("id", i), "rank": c.get("r", c.get("rank", 0)), "suit": c.get("s", c.get("suit", 0))} for i, c in enumerate(hand_raw)]
 
 
-def _build_game_state(hand, who, landlord, last, landlord_count, teammate_count):
+def _build_game_state(hand, who, landlord, last, landlord_count, teammate_count,
+                      last_player=-1, pass_count=0, played_hands=None):
     """构建 GameState 对象"""
     gs = GameState()
     gs.hands = [hand if i == who else [] for i in range(3)]
     gs.current = who
     gs.landlord = landlord
-    gs.lastPlay = {"cards": [], "pattern": last, "player": -1} if last else None
-    gs.passCount = 0
+    gs.lastPlay = {"cards": [], "pattern": last, "player": last_player} if last else None
+    gs.passCount = pass_count
     gs.landlord_count_override = landlord_count
     gs.teammate_count_override = teammate_count
+    if played_hands:
+        gs.playedHands = played_hands
     return gs
 
 
@@ -61,7 +64,13 @@ def ai_decide():
     landlord = data.get("landlord", -1)
     landlord_count = data.get("landlord_count", 99)
     teammate_count = data.get("teammate_count", 99)
-    gs = _build_game_state(hand, who, landlord, last, landlord_count, teammate_count)
+    last_player = data.get("last_player", -1)
+    pass_count = data.get("pass_count", 0)
+    played_hands = data.get("played_hands", None)
+    if played_hands:
+        played_hands = [[{"rank": c["r"], "suit": c["s"]} for c in arr] for arr in played_hands]
+    gs = _build_game_state(hand, who, landlord, last, landlord_count, teammate_count,
+                           last_player, pass_count, played_hands)
     round_id = data.get("round_id", "")
     step = data.get("step", 0)
     try:
@@ -88,7 +97,13 @@ def ai_hint():
     landlord = data.get("landlord", -1)
     landlord_count = data.get("landlord_count", 99)
     teammate_count = data.get("teammate_count", 99)
-    gs = _build_game_state(hand, who, landlord, last, landlord_count, teammate_count)
+    last_player = data.get("last_player", -1)
+    pass_count = data.get("pass_count", 0)
+    played_hands = data.get("played_hands", None)
+    if played_hands:
+        played_hands = [[{"rank": c["r"], "suit": c["s"]} for c in arr] for arr in played_hands]
+    gs = _build_game_state(hand, who, landlord, last, landlord_count, teammate_count,
+                           last_player, pass_count, played_hands)
     try:
         cands = ai_candidates(hand)
         if last:

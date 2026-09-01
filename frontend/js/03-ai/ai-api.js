@@ -31,7 +31,10 @@ async function aiDecideViaAPI(hand, last, who, role, strategy, roundId, step) {
         step: step || 0,
         landlord: G.landlord,
         landlord_count: aiLandlordCount(),
-        teammate_count: (function(){const p=aiPartner(who); return p>=0?(G.hands[p]||[]).length:99;})()
+        teammate_count: (function(){const p=aiPartner(who); return p>=0?(G.hands[p]||[]).length:99;})(),
+        last_player: G.lastPlay ? G.lastPlay.player : -1,
+        pass_count: G.passCount || 0,
+        played_hands: (G.playedHands || [[], [], []]).map(arr => arr.map(c => ({r: c.rank, s: c.suit})))
       })
     });
     clearTimeout(timer);
