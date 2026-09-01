@@ -80,7 +80,10 @@ def get_db():
             return conn
         except Exception as e:
             _mysql_retry_after = time.time() + 300
-            print(f"[数据库] MySQL 连接失败({e})，5 分钟内自动走 SQLite，之后自动重试")
+            print(f"[数据库] MySQL 连接失败({type(e).__name__}: {e})，5 分钟内自动走 SQLite，之后自动重试", flush=True)
+    else:
+        if USE_MYSQL:
+            print(f"[数据库] MySQL 处于冷却期，剩余 {int(_mysql_retry_after - time.time())}s，本次走 SQLite", flush=True)
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return _SQLiteConn(conn)

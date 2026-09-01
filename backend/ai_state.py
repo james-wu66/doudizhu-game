@@ -225,7 +225,21 @@ class GameState:
         if self.landlord == -1:
             return 0
         return len(self.hands[self.landlord])
-    
+
+    def get_teammate_count(self, who):
+        """
+        返回队友剩余张数。
+        优先使用前端传入的真实值（teammate_count_override），
+        仅当 override 为 -1 时才从 hands 计算（后端只持有当前玩家手牌，
+        故队友位置恒为空，必须依赖前端传入，否则恒为 0 导致送牌逻辑失效）。
+        """
+        if self.teammate_count_override >= 0:
+            return self.teammate_count_override
+        partner = self.get_partner(who)
+        if partner >= 0 and partner < len(self.hands):
+            return len(self.hands[partner])
+        return 99
+
     def get_threat_count(self, who):
         """
         返回威胁张数。

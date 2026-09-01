@@ -31,7 +31,16 @@ async function aiDecideViaAPI(hand, last, who, role, strategy, roundId, step) {
         step: step || 0,
         landlord: G.landlord,
         landlord_count: aiLandlordCount(),
-        teammate_count: (function(){const p=aiPartner(who); return p>=0?(G.hands[p]||[]).length:99;})(),
+        teammate_count: (function(){
+          if (who === G.landlord) {
+            // 地主视角：传两个农民中较小的张数（威胁下限），供后端 threat 判断
+            const farmers = [0, 1, 2].filter(p => p !== G.landlord);
+            const counts = farmers.map(p => (G.hands[p] || []).length);
+            return Math.min.apply(null, counts);
+          }
+          const p = aiPartner(who);
+          return p >= 0 ? (G.hands[p] || []).length : 99;
+        })(),
         last_player: G.lastPlay ? G.lastPlay.player : -1,
         pass_count: G.passCount || 0,
         played_hands: (G.playedHands || [[], [], []]).map(arr => arr.map(c => ({r: c.rank, s: c.suit})))

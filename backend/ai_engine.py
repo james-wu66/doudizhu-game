@@ -408,8 +408,8 @@ def estimate_count_in(gs, player, rank):
                 other_farmer = q
                 break
 
-        land_count = len(gs.hands[gs.landlord]) if gs.landlord >= 0 else 0
-        farm_count = len(gs.hands[other_farmer]) if other_farmer >= 0 else 0
+        land_count = gs.get_landlord_count()
+        farm_count = gs.get_teammate_count(player)
         both = land_count + farm_count
         if both <= 0:
             return 0
@@ -468,8 +468,8 @@ def estimate_pair_in(gs, player, rank):
                 other_farmer = q
                 break
 
-        land_count = len(gs.hands[gs.landlord]) if gs.landlord >= 0 else 0
-        farm_count = len(gs.hands[other_farmer]) if other_farmer >= 0 else 0
+        land_count = gs.get_landlord_count()
+        farm_count = gs.get_teammate_count(player)
         both = land_count + farm_count
         if both <= 0:
             return 0
@@ -512,8 +512,8 @@ def estimate_triple_in(gs, player, rank):
                 other_farmer = q
                 break
 
-        land_count = len(gs.hands[gs.landlord]) if gs.landlord >= 0 else 0
-        farm_count = len(gs.hands[other_farmer]) if other_farmer >= 0 else 0
+        land_count = gs.get_landlord_count()
+        farm_count = gs.get_teammate_count(player)
         both = land_count + farm_count
         if both <= 0:
             return 0
@@ -556,8 +556,8 @@ def estimate_bomb_in(gs, player, rank):
                 other_farmer = q
                 break
 
-        land_count = len(gs.hands[gs.landlord]) if gs.landlord >= 0 else 0
-        farm_count = len(gs.hands[other_farmer]) if other_farmer >= 0 else 0
+        land_count = gs.get_landlord_count()
+        farm_count = gs.get_teammate_count(player)
         both = land_count + farm_count
         if both <= 0:
             return 0
@@ -916,7 +916,7 @@ def big_value(gs, x, hand, who, last, mode):
     after = [c for c in hand if not any(y['id'] == c['id'] for y in x['cards'])]
     landlord_count = gs.get_landlord_count()
     partner = gs.get_partner(who)
-    partner_count = len(gs.hands[partner]) if partner >= 0 else 99
+    partner_count = gs.get_teammate_count(who) if partner >= 0 else 99
     last_player = _last_player_for_ai(gs)
 
     if not after:
@@ -938,7 +938,7 @@ def big_value(gs, x, hand, who, last, mode):
 
     # counter 模式：地主角色
     if mode == 'counter' and role == 'landlord':
-        threat = min(len(gs.hands[LEFT]), len(gs.hands[RIGHT]))
+        threat = gs.get_teammate_count(gs.current)
         if threat <= 3:
             return 120
         if last and last['type'] == 'BOMB':
@@ -1106,7 +1106,7 @@ def candidate_score(gs, x, hand, who, mode, last):
     shape = hand_shape(after)
     landlord_count = gs.get_landlord_count()
     partner = gs.get_partner(who)
-    partner_count = len(gs.hands[partner]) if partner >= 0 else 99
+    partner_count = gs.get_teammate_count(who) if partner >= 0 else 99
     last_player = _last_player_for_ai(gs)
     freq = count_ranks(hand)
     big = big_cards_status(gs)
@@ -1320,7 +1320,7 @@ def candidate_score(gs, x, hand, who, mode, last):
             if len(hand) <= 5 and len(after) > 0:
                 score += len(x['cards']) * 8
             if len(hand) == 2 and pattern['type'] == 'PAIR':
-                min_farm = min(len(gs.hands[LEFT]), len(gs.hands[RIGHT]))
+                min_farm = gs.get_teammate_count(gs.current)
                 if min_farm <= 2:
                     score += 25
         # 基本排序
@@ -1395,7 +1395,7 @@ def ai_should_pass_counter(gs, hand, last, who, candidates):
     partner = gs.get_partner(who)
     lp = _last_player_for_ai(gs)
     landlord_count = gs.get_landlord_count()
-    partner_count = len(gs.hands[partner]) if partner >= 0 else 99
+    partner_count = gs.get_teammate_count(who) if partner >= 0 else 99
 
     other_farmer = -1
     if role != 'landlord':
@@ -1414,7 +1414,7 @@ def ai_should_pass_counter(gs, hand, last, who, candidates):
                   if x['pattern']['type'] not in ('BOMB', 'ROCKET') and
                   x['pattern']['main'] <= 14 and
                   split_penalty(x['cards'], freq) < 25]
-        threat = min(len(gs.hands[LEFT]), len(gs.hands[RIGHT]))
+        threat = gs.get_teammate_count(gs.current)
         if not normal and threat > 3:
             return True
         return False
@@ -1528,7 +1528,7 @@ def ai_should_pass_counter(gs, hand, last, who, candidates):
         cheap = any(x['pattern']['type'] not in ('BOMB', 'ROCKET') and x['pattern']['main'] < 14
                     for x in candidates)
         if not cheap:
-            partner_h = len(gs.hands[partner]) if partner >= 0 else 0
+            partner_h = gs.get_teammate_count(who) if partner >= 0 else 0
             landlord_h = landlord_count
             if partner_h >= landlord_h:
                 cheaper_in_partner = False

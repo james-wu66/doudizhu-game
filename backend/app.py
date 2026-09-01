@@ -114,6 +114,20 @@ def init_db():
                      "CREATE INDEX idx_ai_learning_stat ON ai_learning(action_type, bucket)"]:
             try: c.execute(idx)
             except: pass
+        # CloudBase 会为数据表自动注入 _openid 字段（NOT NULL 且无默认值），
+        # 使所有 INSERT 报 1364 "Field '_openid' doesn't have a default value"，
+        # 导致注册失败、战绩保存失败。建表后检测并补齐默认值。
+        for tbl in ("users", "game_records"):
+            try:
+                c.execute("""SELECT COLUMN_DEFAULT FROM information_schema.COLUMNS
+                             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s
+                               AND COLUMN_NAME = '_openid'""", (tbl,))
+                row = c.fetchone()
+                if row is not None and row["COLUMN_DEFAULT"] is None:
+                    c.execute(f"ALTER TABLE {tbl} MODIFY COLUMN _openid VARCHAR(256) NOT NULL DEFAULT ''")
+                    print(f"[数据库] 已补齐 {tbl}._openid 默认值（否则 INSERT 会报 1364）")
+            except Exception:
+                pass
         conn.close()
         print("[数据库] MySQL 表初始化完成")
     else:

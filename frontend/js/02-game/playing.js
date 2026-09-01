@@ -140,7 +140,15 @@ async function playerHint(){
         last:lastPat?{type:lastPat.type,main:lastPat.main,len:lastPat.len}:null,
         who:PLAYER,landlord:G.landlord,
         landlord_count:aiLandlordCount(),
-        teammate_count:(function(){const p=aiPartner(PLAYER);return p>=0?(G.hands[p]||[]).length:99;})()
+        teammate_count:(function(){
+          if(PLAYER===G.landlord){
+            const farmers=[0,1,2].filter(p=>p!==G.landlord);
+            const counts=farmers.map(p=>(G.hands[p]||[]).length);
+            return Math.min.apply(null,counts);
+          }
+          const p=aiPartner(PLAYER);
+          return p>=0?(G.hands[p]||[]).length:99;
+        })()
       })
     });
     clearTimeout(timer);
