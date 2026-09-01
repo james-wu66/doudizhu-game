@@ -2126,10 +2126,47 @@ function playerPass(){
   doPass(PLAYER);
 }
 
-function playerHint(){
+async function playerHint(){
   if(G.phase!=='playing'||G.current!==PLAYER)return;
   const isLeading=!G.lastPlay||G.lastPlay.player===PLAYER;
   const lastPat=isLeading?null:G.lastPlay.pattern;
+
+  // 优先调后端API获取提示
+  try{
+    const ctrl=new AbortController();
+    const timer=setTimeout(()=>ctrl.abort(),3000);
+    const res=await fetch(AI_API+'/hint',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      signal:ctrl.signal,
+      body:JSON.stringify({
+        hand:G.hands[PLAYER].map(c=>({id:c.id,r:c.rank,s:c.suit})),
+        last:lastPat?{type:lastPat.type,main:lastPat.main,len:lastPat.len}:null,
+        who:PLAYER,landlord:G.landlord,
+        landlord_count:aiLandlordCount(),
+        teammate_count:(function(){const p=aiPartner(PLAYER);return p>=0?(G.hands[p]||[]).length:99;})()
+      })
+    });
+    clearTimeout(timer);
+    const data=await res.json();
+    if(data.ok&&data.plays&&data.plays.length>0){
+      // 将后端返回的牌转换为前端card对象
+      const plays=data.plays.map(p=>p.cards.map(a=>{
+        const match=G.hands[PLAYER].find(c=>c.rank===a.r&&c.suit===a.s);
+        return match||{id:-1,rank:a.r,suit:a.s};
+      }));
+      if(G.hintPlays.length===0||JSON.stringify(G.hintPlays)!==JSON.stringify(plays)){
+        G.hintPlays=plays;G.hintIdx=0;
+      }
+      G.selectedIds.clear();
+      G.hintPlays[G.hintIdx].forEach(c=>G.selectedIds.add(c.id));
+      renderPlayerHand();
+      G.hintIdx=(G.hintIdx+1)%G.hintPlays.length;
+      return;
+    }
+  }catch(e){}
+
+  // 降级：本地计算
   if(G.hintPlays.length===0){
     G.hintPlays=findAllBeatingPlays(G.hands[PLAYER],lastPat);G.hintIdx=0;
   }
@@ -2302,141 +2339,23 @@ function aiCountRanks(cards){
   const f={};cards.forEach(c=>{f[c.rank]=(f[c.rank]||0)+1;});return f;
 }
 
-// ===== 记牌器三件套（M2/L2：真正接入决策链） =====
-function aiRemainingMap(){
-  const rem={};
   for(let r=3;r<=17;r++)rem[r]=(r>=16)?1:4;
   (G.hands[G.current]||[]).forEach(c=>{if(rem[c.rank]>0)rem[c.rank]--;});
   const played=G.playedHands||[[],[],[]];
   [0,1,2].forEach(p=>(played[p]||[]).forEach(c=>{if(rem[c.rank]>0)rem[c.rank]--;}));
   return rem;
 }
-function aiBigCardsStatus(){
-  const rem=aiRemainingMap();
   return {two:rem[15],A:rem[14],smallJoker:rem[16],bigJoker:rem[17]};
 }
-function aiPossibleBombThreat(){
-  const rem=aiRemainingMap(),freq=aiCountRanks(G.hands[G.current]);
   let threats=0;
   for(let r=3;r<=15;r++){ if(rem[r]>=2&&freq[r]>=2)threats++; }
   return threats;
 }
 
-// ===== 升级点五：概率记牌推算系统（多因子加权推算 + 牌型组合概率） =====
-// 推算玩家 p（地主或队友）手里点数 r 的期望张数：
-// 多因子加权：基础比例(0.4) + 出牌数量(0.3) + 出牌时机(0.2) + 牌型关联(0.1)
-function aiEstimateCountIn(p,r){
-  try{
-    const rem=aiRemainingMap(),n=rem[r]||0;
-    if(n<=0)return 0;
-    const otherFarmer=[PLAYER,LEFT,RIGHT].find(q=>q!==G.landlord&&q!==G.current);
-    const landCount=(G.hands[G.landlord]||[]).length;
-    const farmCount=otherFarmer>=0?(G.hands[otherFarmer]||[]).length:0;
-    const both=landCount+farmCount;
-    if(both<=0)return 0;
-    const own=(p===G.landlord)?landCount:farmCount;
-    const baseRatio=n*own/both;
-    const played=G.playedHands||[[],[],[]];
-    const playedCount=[0,0,0];
-    for(let q=0;q<3;q++){playedCount[q]=(played[q]||[]).filter(c=>c.rank===r).length;}
-    const totalPlayed=playedCount[0]+playedCount[1]+playedCount[2]+0.1;
-    const playFactor=1-playedCount[p]/totalPlayed;
-    const step=LEARN.step||0;
-    let timingFactor=1;
-    if(step<=5)timingFactor=0.8;else if(step<=15)timingFactor=0.9;else timingFactor=0.95;
-    let comboFactor=1;
-    const landlordPlayed=(played[G.landlord]||[]);
-    const farmerPlayed=otherFarmer>=0?(played[otherFarmer]||[]):[];
-    const landTripleCount=landlordPlayed.filter(c=>c.rank===r).length>=3?0.7:1;
-    const farmTripleCount=farmerPlayed.filter(c=>c.rank===r).length>=3?0.7:1;
-    comboFactor=(p===G.landlord)?landTripleCount:farmTripleCount;
-    const est=n*(baseRatio*0.4+playFactor*0.3+timingFactor*0.2+comboFactor*0.1);
-    return Math.max(0,Math.min(4,est));
-  }catch(e){return 0;}
 }
-function aiProbablyHas(p,r,threshold){return aiEstimateCountIn(p,r)>=(threshold||0.5);}
-
-// ===== 牌型概率推算函数 =====
-function aiEstimatePairIn(p,r){
-  try{
-    const rem=aiRemainingMap(),n=rem[r]||0;
-    if(n<2)return 0;
-    const otherFarmer=[PLAYER,LEFT,RIGHT].find(q=>q!==G.landlord&&q!==G.current);
-    const landCount=(G.hands[G.landlord]||[]).length;
-    const farmCount=otherFarmer>=0?(G.hands[otherFarmer]||[]).length:0;
-    const both=landCount+farmCount;
-    if(both<=0)return 0;
-    const own=(p===G.landlord)?landCount:farmCount;
-    const ownFreq=aiCountRanks(G.hands[p]||[]);
-    const ownCount=ownFreq[r]||0;
-    if(ownCount>=2)return 1;
-    const baseRatio=n/2*own/both;
-    const played=G.playedHands||[[],[],[]];
-    const playedCount=[0,0,0];
-    for(let q=0;q<3;q++){playedCount[q]=(played[q]||[]).filter(c=>c.rank===r).length;}
-    const totalPlayed=playedCount[0]+playedCount[1]+playedCount[2]+0.1;
-    const playFactor=1-playedCount[p]/totalPlayed;
-    const est=Math.min(1,baseRatio*0.4+playFactor*0.3+0.3);
-    return Math.max(0,est);
-  }catch(e){return 0;}
 }
-function aiEstimateTripleIn(p,r){
-  try{
-    const rem=aiRemainingMap(),n=rem[r]||0;
-    if(n<3)return 0;
-    const otherFarmer=[PLAYER,LEFT,RIGHT].find(q=>q!==G.landlord&&q!==G.current);
-    const landCount=(G.hands[G.landlord]||[]).length;
-    const farmCount=otherFarmer>=0?(G.hands[otherFarmer]||[]).length:0;
-    const both=landCount+farmCount;
-    if(both<=0)return 0;
-    const own=(p===G.landlord)?landCount:farmCount;
-    const ownFreq=aiCountRanks(G.hands[p]||[]);
-    const ownCount=ownFreq[r]||0;
-    if(ownCount>=3)return 1;
-    const baseRatio=n/3*own/both;
-    const played=G.playedHands||[[],[],[]];
-    const playedCount=[0,0,0];
-    for(let q=0;q<3;q++){playedCount[q]=(played[q]||[]).filter(c=>c.rank===r).length;}
-    const totalPlayed=playedCount[0]+playedCount[1]+playedCount[2]+0.1;
-    const playFactor=1-playedCount[p]/totalPlayed;
-    const est=Math.min(1,baseRatio*0.4+playFactor*0.3+0.3);
-    return Math.max(0,est);
-  }catch(e){return 0;}
 }
-function aiEstimateBombIn(p,r){
-  try{
-    const rem=aiRemainingMap(),n=rem[r]||0;
-    if(n<4)return 0;
-    const otherFarmer=[PLAYER,LEFT,RIGHT].find(q=>q!==G.landlord&&q!==G.current);
-    const landCount=(G.hands[G.landlord]||[]).length;
-    const farmCount=otherFarmer>=0?(G.hands[otherFarmer]||[]).length:0;
-    const both=landCount+farmCount;
-    if(both<=0)return 0;
-    const own=(p===G.landlord)?landCount:farmCount;
-    const ownFreq=aiCountRanks(G.hands[p]||[]);
-    const ownCount=ownFreq[r]||0;
-    if(ownCount>=4)return 1;
-    const baseRatio=n/4*own/both;
-    const played=G.playedHands||[[],[],[]];
-    const playedCount=[0,0,0];
-    for(let q=0;q<3;q++){playedCount[q]=(played[q]||[]).filter(c=>c.rank===r).length;}
-    const totalPlayed=playedCount[0]+playedCount[1]+playedCount[2]+0.1;
-    const playFactor=1-playedCount[p]/totalPlayed;
-    const bombTendency=(r>=15)?1.2:0.8;
-    const est=Math.min(1,(baseRatio*0.4+playFactor*0.3+0.3)*bombTendency);
-    return Math.max(0,est);
-  }catch(e){return 0;}
 }
-function aiEstimateStraightIn(p,start,length){
-  try{
-    let minProb=1;
-    for(let i=0;i<length;i++){
-      const prob=aiEstimateCountIn(p,start+i);
-      if(prob<0.3)return 0;
-      minProb=Math.min(minProb,prob);
-    }
-    return minProb;
-  }catch(e){return 0;}
 }
 
 // ===== 牌力评估（修复 7/8/9/10 零分 + 张数修正 + 结构分细化） =====
@@ -2488,34 +2407,6 @@ function learnLoad(){
     })
     .catch(() => { LEARN.loaded = true; }); // 加载失败不阻塞游戏，修正分为 0
 }
-function learnQuery(actionType, bucket){
-  if(!LEARN.loaded) return null;
-  return LEARN.buckets[actionType + '|' + bucket] || null;
-}
-function learnAdjust(actionType, bucket){
-  // 修正分 = (桶胜率 - 基准胜率) * 200，钳制 ±20，再乘渐进系数 min(1, total/100)
-  const b = learnQuery(actionType, bucket);
-  if(!b || b.total < 30) return 0;
-  const baseWr = (LEARN.base[actionType] || {}).win_rate;
-  if(baseWr === undefined) return 0;
-  const raw = (b.win_rate - baseWr) * 200;
-  const clamped = Math.max(-20, Math.min(20, raw));
-  return clamped * Math.min(1, b.total / 100);
-}
-function learnPassBias(role, landlordCount){
-  // PASS 专用：让牌 vs 压牌 双桶对照。正=更愿压（return false），负=更愿让（return true）
-  const band = landlordCount <= 3 ? 'lt3' : (landlordCount <= 8 ? 'lt8' : 'gt8');
-  const beat = learnQuery('PASS', 'beat:' + role + ':' + band);
-  const pass = learnQuery('PASS', 'pass:' + role + ':' + band);
-  if(!beat && !pass) return 0;
-  const baseWr = (LEARN.base['PASS'] || {}).win_rate;
-  let bias = 0;
-  if(beat && pass) bias = (beat.win_rate - pass.win_rate) * 200;
-  else if(beat) bias = (beat.win_rate - (baseWr === undefined ? 0.5 : baseWr)) * 200;
-  else if(pass) bias = -((pass.win_rate - (baseWr === undefined ? 0.5 : baseWr)) * 200);
-  const clamped = Math.max(-20, Math.min(20, bias));
-  const minTotal = Math.min(beat ? beat.total : 999, pass ? pass.total : 999);
-  return clamped * Math.min(1, minTotal / 100);
 }
 function aiRecordStep(step, handState, action, actionType, bucket, who){
   if(!LEARN.roundId) return;
@@ -2614,9 +2505,6 @@ function aiFindSameType(hand,last){
 function aiBombs(hand){return aiCandidates(hand).filter(x=>x.pattern.type==='BOMB'||x.pattern.type==='ROCKET').sort((a,b)=>a.pattern.main-b.pattern.main);}
 
 // ===== 以下函数已迁移到后端 API，保留空实现防引用报错 =====
-function aiSplitPenalty(cards,freq){return 0;}
-function aiDetectStructureLoss(remFreq){return 1;}
-function aiKickerWaste(cards,pattern,isCounter){return 0;}
 function aiRouteValue(hand,candidate,who){return 0;}
 function aiBombValue(x,hand,who,last,mode){return 0;}
 function aiControlTradeoff(x,hand,who,last,mode){return 0;}
@@ -3204,7 +3092,7 @@ function handleLogin(e) {
       return;
     }
     currentUser = {name: data.name, token: data.token};
-    // 勾选"记住密码"→ 保存账号密码到 localStorage；未勾选 → 不长期保存
+    // 勾选"记住密码"→ 保存账号和 token 到 localStorage；未勾选 → 不长期保存
     // 但 token 始终存 sessionStorage，保证本次会话内不因 token 丢失闪退回登录页
     const rememberEl = document.getElementById('remember-login');
     const remember = !rememberEl || rememberEl.checked;
@@ -3374,9 +3262,7 @@ function updateUserInfoDisplay() {
         const u = JSON.parse(saved);
         if (u && u.name) {
           const nameInput = document.getElementById('input-name');
-          const pwdInput = document.getElementById('input-password');
           if (nameInput) nameInput.value = u.name;
-          if (pwdInput && u.password) pwdInput.value = u.password;
         }
       } catch(e){}
     }

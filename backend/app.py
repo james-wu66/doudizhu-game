@@ -1035,6 +1035,41 @@ def ai_decide():
         return jsonify({"ok": False, "error": str(e)})
 
 
+@app.route("/api/ai/hint", methods=["POST"])
+def ai_hint():
+    """AI提示接口：传入手牌和上家牌型，返回推荐出牌"""
+    data = request.json or {}
+    hand_raw = data.get("hand", [])
+    hand = [{"id": c.get("id", i), "rank": c.get("r", c.get("rank", 0)), "suit": c.get("s", c.get("suit", 0))} for i, c in enumerate(hand_raw)]
+    last = data.get("last")
+    if last and not isinstance(last, dict):
+        last = None
+    who = data.get("who", PLAYER)
+    landlord = data.get("landlord", -1)
+    landlord_count = data.get("landlord_count", 99)
+    teammate_count = data.get("teammate_count", 99)
+    gs = GameState()
+    gs.hands = [hand if i == who else [] for i in range(3)]
+    gs.current = who
+    gs.landlord = landlord
+    gs.lastPlay = {"cards": [], "pattern": last, "player": -1} if last else None
+    gs.passCount = 0
+    gs.landlord_count_override = landlord_count
+    gs.teammate_count_override = teammate_count
+    try:
+        # 获取所有能出的候选
+        from ai_engine import ai_candidates, ai_can_beat
+        cands = ai_candidates(hand)
+        if last:
+            cands = [c for c in cands if ai_can_beat(c, last)]
+        if not cands:
+            return jsonify({"ok": True, "plays": [], "passed": True})
+        plays = [{"cards": [{"r": c["rank"], "s": c["suit"]} for c in cand["cards"]], "pattern": cand["pattern"]} for cand in cands]
+        return jsonify({"ok": True, "plays": plays, "passed": False})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+
 @app.route("/api/ai/bid", methods=["POST"])
 def ai_bid():
     """AI 叫地主决策接口"""
