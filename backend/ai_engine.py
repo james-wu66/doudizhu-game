@@ -1335,6 +1335,13 @@ def candidate_score(gs, x, hand, who, mode, last):
                 score += 60
             if pattern['type'] == 'SINGLE' and pattern['main'] <= 10:
                 score += 8
+            # 顶地主小牌时用中等牌(8~J)抬价，逼地主用更大牌(参考文档"守门员顶牌")；
+            # 出太小的牌(≤6)让地主轻松用小牌过，减分
+            if role == 'farmerPrev' and pattern['type'] == 'SINGLE' and landlord_count > 8:
+                if 8 <= pattern['main'] <= 11:
+                    score += 15
+                elif pattern['main'] <= 6:
+                    score -= 12
         if partner_play:
             if partner_count <= 2:
                 score -= 70
@@ -1441,10 +1448,13 @@ def candidate_score(gs, x, hand, who, mode, last):
                     elif pattern['type'] == 'PAIR':
                         score += 30
         elif (role != 'landlord' and 3 <= partner_count <= 5 and partner_count < len(hand)):
-            if pattern['type'] == 'SINGLE' and pattern['main'] <= 6:
+            # 队友牌还多(3~5张)：温和倾向出小牌送（队友≤2张时走严格送牌，不在此）
+            if pattern['type'] == 'SINGLE' and pattern['main'] <= 7:
                 score += 34
             if pattern['type'] == 'PAIR' and pattern['main'] <= 8:
                 score += 20
+            if pattern['type'] == 'TRIPLE' and pattern['main'] <= 6:
+                score += 15
         if role != 'landlord' and landlord_count <= 5 and pattern['type'] in ('BOMB', 'ROCKET'):
             score += 24
         if role == 'landlord' and pattern['type'] != 'SINGLE':
@@ -1607,6 +1617,13 @@ def ai_should_pass_counter(gs, hand, last, who, candidates):
     # Lv3.6: 队友快出完且地主未到危险线
     if partner_play and not can_finish_all and partner_count <= 4 and landlord_count > 3:
         return True
+
+    # Lv3.7: 地主出小牌且地主牌多 → 农民积极顶（守门员卡小牌，不让地主轻松过小牌）
+    if (lp == gs.landlord and landlord_count > 8 and
+            last['type'] in ('SINGLE', 'PAIR') and last['main'] <= 8):
+        has_normal = any(x['pattern']['type'] not in ('BOMB', 'ROCKET') for x in candidates)
+        if has_normal:
+            return False
 
     # Lv4: farmerNext and landlord <=8
     if lp == gs.landlord and role == 'farmerNext' and landlord_count <= 8:
@@ -1879,9 +1896,24 @@ def ai_find_counter(gs, hand, last, who, strategy):
     
     # 6. 调 ai_pick_scored 从候选中选最优
     if same_type:
-        # 同类型存在：只保留最小能压的一张（旧版核心逻辑，避免甩大牌）
-        min_main = min(x['pattern']['main'] for x in same_type)
-        candidates = [x for x in same_type if x['pattern']['main'] == min_main]
+        role_here = gs.get_role(who)
+        landlord_count_here = gs.get_landlord_count()
+        last_player_here = _last_player_for_ai(gs)
+        is_prev_block = (role_here == 'farmerPrev' and last_player_here == gs.landlord and
+                         last['type'] == 'SINGLE' and last['main'] <= 8 and landlord_count_here > 8)
+        if is_prev_block:
+            # 上家顶地主小牌、地主牌多：用中等牌(8~J)抬价，逼地主用更大牌(参考文档"守门员顶牌")
+            mid_cands = [x for x in same_type if 8 <= x['pattern']['main'] <= 11]
+            if mid_cands:
+                min_mid = min(x['pattern']['main'] for x in mid_cands)
+                candidates = [x for x in mid_cands if x['pattern']['main'] == min_mid]
+            else:
+                min_main = min(x['pattern']['main'] for x in same_type)
+                candidates = [x for x in same_type if x['pattern']['main'] == min_main]
+        else:
+            # 同类型存在：只保留最小能压的一张（旧版核心逻辑，避免甩大牌）
+            min_main = min(x['pattern']['main'] for x in same_type)
+            candidates = [x for x in same_type if x['pattern']['main'] == min_main]
         scored = []
         for x in candidates:
             score = candidate_score(gs, x, hand, who, 'counter', last)
