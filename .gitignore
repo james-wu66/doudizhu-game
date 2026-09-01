@@ -2,5 +2,6 @@ __pycache__/
 *.pyc
 backend/database/
 .env
-
 backend/config_local.py
+tests/node_modules/
+doudizhu-game/
