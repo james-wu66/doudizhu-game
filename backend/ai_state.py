@@ -176,16 +176,17 @@ class GameState:
     def get_role(self, who):
         """
         返回指定玩家角色。
-        
+        与前端 aiRole/aiNext 一致：
+          farmerNext = 地主的下家 = (landlord + 2) % 3（逆时针 0→2→1→0，地主出牌后下一个出牌者）
+          farmerPrev = 地主的上家 = (landlord + 1) % 3（地主的前一个出牌者）
         Args:
             who: 玩家编号
-            
         Returns:
             str: 角色字符串
         """
         if who == self.landlord:
             return 'landlord'
-        if (self.landlord + 1) % 3 == who:
+        if (self.landlord + 2) % 3 == who:
             return 'farmerNext'
         else:
             return 'farmerPrev'
@@ -203,12 +204,12 @@ class GameState:
         if who == self.landlord:
             return -1  # 地主没有队友
         # 农民的队友是另一个农民
-        if (self.landlord + 1) % 3 == who:
-            # who 是地主的下家，队友是地主的上家
-            return (self.landlord + 2) % 3
-        else:
-            # who 是地主的上家，队友是地主的下家
+        if (self.landlord + 2) % 3 == who:
+            # who 是地主的下家(farmerNext)，队友是地主的上家(farmerPrev)
             return (self.landlord + 1) % 3
+        else:
+            # who 是地主的上家(farmerPrev)，队友是地主的下家(farmerNext)
+            return (self.landlord + 2) % 3
     
     def get_landlord_count(self):
         """
