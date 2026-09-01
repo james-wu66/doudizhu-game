@@ -110,6 +110,15 @@ def ai_hint():
             cands = [c for c in cands if ai_can_beat(c, last)]
         if not cands:
             return jsonify({"ok": True, "plays": [], "passed": True})
+        # 提示排序：优先"最小能压的牌"（正常人思路）
+        # 1. 非炸弹/王炸优先于炸弹（炸弹是稀缺资源，不优先提示）
+        # 2. 同类型同长度按 main 从小到大（能压就行，出最小）
+        _type_prio = {'SINGLE':0,'PAIR':1,'TRIPLE':2,'TRIPLE_ONE':3,'TRIPLE_TWO':4,
+                      'STRAIGHT':5,'STRAIGHT_PAIR':6,'AIRPLANE':7,'AIRPLANE_SINGLE':8,
+                      'AIRPLANE_PAIR':9,'FOUR_TWO':10,'BOMB':11,'ROCKET':12}
+        cands.sort(key=lambda c: (_type_prio.get(c['pattern']['type'], 99),
+                                  c['pattern']['main'],
+                                  c['pattern'].get('len', 0)))
         plays = [{"cards": [{"r": c["rank"], "s": c["suit"]} for c in cand["cards"]], "pattern": cand["pattern"]} for cand in cands]
         return jsonify({"ok": True, "plays": plays, "passed": False})
     except Exception as e:

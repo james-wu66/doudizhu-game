@@ -1874,18 +1874,21 @@ def ai_find_counter(gs, hand, last, who, strategy):
         return None
     
     # 5. 优先找同类型同长度的最小能压的牌（过滤 sameType）
+    # 恢复旧版(8-18)逻辑：同类型能压的牌只保留最小的一张去评分（跟牌出最小能压的牌，保留控制牌）
     same_type = [x for x in cands if x['pattern']['type'] == last['type'] and x['pattern']['len'] == last['len']]
     
     # 6. 调 ai_pick_scored 从候选中选最优
     if same_type:
-        # 评分每个候选
+        # 同类型存在：只保留最小能压的一张（旧版核心逻辑，避免甩大牌）
+        min_main = min(x['pattern']['main'] for x in same_type)
+        candidates = [x for x in same_type if x['pattern']['main'] == min_main]
         scored = []
-        for x in same_type:
+        for x in candidates:
             score = candidate_score(gs, x, hand, who, 'counter', last)
             scored.append({'x': x, 'score': score})
         best_cards = ai_pick_scored(gs, scored, who)
     else:
-        # 没有同类型同长度，用所有候选
+        # 没有同类型同长度，用所有候选（炸弹/跨类型兜底，经 bomb_allowed 过滤）
         scored = []
         for x in cands:
             score = candidate_score(gs, x, hand, who, 'counter', last)
