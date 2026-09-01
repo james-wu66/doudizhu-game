@@ -2339,25 +2339,6 @@ function aiCountRanks(cards){
   const f={};cards.forEach(c=>{f[c.rank]=(f[c.rank]||0)+1;});return f;
 }
 
-  for(let r=3;r<=17;r++)rem[r]=(r>=16)?1:4;
-  (G.hands[G.current]||[]).forEach(c=>{if(rem[c.rank]>0)rem[c.rank]--;});
-  const played=G.playedHands||[[],[],[]];
-  [0,1,2].forEach(p=>(played[p]||[]).forEach(c=>{if(rem[c.rank]>0)rem[c.rank]--;}));
-  return rem;
-}
-  return {two:rem[15],A:rem[14],smallJoker:rem[16],bigJoker:rem[17]};
-}
-  let threats=0;
-  for(let r=3;r<=15;r++){ if(rem[r]>=2&&freq[r]>=2)threats++; }
-  return threats;
-}
-
-}
-}
-}
-}
-}
-
 // ===== 牌力评估（修复 7/8/9/10 零分 + 张数修正 + 结构分细化） =====
 function evaluateHand(cards){
   const freq=aiCountRanks(cards);
@@ -2406,7 +2387,6 @@ function learnLoad(){
       LEARN.loaded = true;
     })
     .catch(() => { LEARN.loaded = true; }); // 加载失败不阻塞游戏，修正分为 0
-}
 }
 function aiRecordStep(step, handState, action, actionType, bucket, who){
   if(!LEARN.roundId) return;
