@@ -2,8 +2,8 @@
 """
 斗地主工作台 · 真实数据扫描生成器
 =================================
-扫描真实项目（git 状态 / 后端 ai_engine.py 函数 / 前端 game.js 函数 /
-tests 真实状态），生成 项目状态.json 与 控制台.html。
+扫描真实项目（git 状态 / 后端 app.py + ai_engine.py 函数 / 前端 index.html + game.js 函数 /
+tests 真实状态），生成 状态.json 与 控制台.html。
 
 所有数据来自真实扫描，控制台页面无任何写死常量。
 运行：python 引擎/生成控制台.py   （或双击 刷新工作台.bat）
@@ -82,10 +82,12 @@ TASK_MAP = {
     "ai_record_step": ("学习/记录", "tag-tool"),
 }
 
-def scan_backend():
-    path = os.path.join(ROOT, "backend", "ai_engine.py")
+def _scan_py_file(relpath):
+    """扫描单个 Python 文件，返回 {rel, abspath, functions, line_count}"""
+    path = os.path.join(ROOT, relpath)
+    rel = "../" + relpath
     if not os.path.exists(path):
-        return {"file": "../backend/ai_engine.py", "functions": [], "line_count": 0}
+        return {"rel": rel, "abspath": path.replace("\\", "/"), "functions": [], "line_count": 0}
     with open(path, encoding="utf-8", errors="ignore") as f:
         lines = f.readlines()
     fns = []
@@ -96,21 +98,18 @@ def scan_backend():
             name = m.group(1)
             tag, cls = TASK_MAP.get(name, (None, ""))
             fns.append({"name": name, "line": i, "task": tag, "tagcls": cls})
-    abspath = path.replace("\\", "/")
-    return {"file": "../backend/ai_engine.py", "abspath": abspath, "functions": fns, "line_count": len(lines)}
+    return {"rel": rel, "abspath": path.replace("\\", "/"), "functions": fns, "line_count": len(lines)}
 
-# ---------------------------------------------------------------------------
-# 3. 前端 game.js 函数清单（标注空壳）
-# ---------------------------------------------------------------------------
-def scan_frontend():
-    path = os.path.join(ROOT, "frontend", "game.js")
+def _scan_js_file(relpath):
+    """扫描单个 JS/HTML 文件中的 function 声明（标注已迁移后端的空壳）"""
+    path = os.path.join(ROOT, relpath)
+    rel = "../" + relpath
     if not os.path.exists(path):
-        return {"file": "../frontend/game.js", "functions": []}
+        return {"rel": rel, "abspath": path.replace("\\", "/"), "functions": [], "line_count": 0}
     with open(path, encoding="utf-8", errors="ignore") as f:
         content = f.read()
     lines = content.splitlines()
     pat = re.compile(r"^\s*function\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(")
-    # 找"已迁移"注释块之后的空壳函数（return 0 / return false）
     shell_names = set()
     mig_idx = content.find("已迁移到后端")
     if mig_idx >= 0:
@@ -128,8 +127,23 @@ def scan_frontend():
                 fns.append({"name": name, "line": i, "role": "AI/交互", "tagcls": "tag-ui"})
             else:
                 fns.append({"name": name, "line": i, "role": "UI/交互", "tagcls": "tag-ui"})
-    abspath = path.replace("\\", "/")
-    return {"file": "../frontend/game.js", "abspath": abspath, "functions": fns}
+    return {"rel": rel, "abspath": path.replace("\\", "/"), "functions": fns, "line_count": len(lines)}
+
+def scan_backend():
+    """后端：扫描 app.py（Flask 入口）+ ai_engine.py（AI 决策引擎），按文件分组"""
+    files = [_scan_py_file("backend/app.py"), _scan_py_file("backend/ai_engine.py")]
+    flat = []
+    for fl in files:
+        flat.extend(fl["functions"])
+    return {"files": files, "functions": flat}
+
+def scan_frontend():
+    """前端：扫描 index.html（UI 主体）+ game.js（交互/回放），按文件分组"""
+    files = [_scan_js_file("frontend/index.html"), _scan_js_file("frontend/game.js")]
+    flat = []
+    for fl in files:
+        flat.extend(fl["functions"])
+    return {"files": files, "functions": flat}
 
 # ---------------------------------------------------------------------------
 # 4. tests 真实状态（尝试真实运行 jest）

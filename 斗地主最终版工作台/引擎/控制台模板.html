@@ -171,6 +171,11 @@
         .pill .nm { font-family: 'Consolas', monospace; color: var(--blue); }
         .pill .ln { color: #9aa3b2; font-size: 10.5px; }
 
+        .file-block { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: #fafbfc; }
+        .file-head { margin-bottom: 10px; }
+        .file-link { font-family: 'Consolas', monospace; font-size: 13px; font-weight: 600; color: var(--brand); text-decoration: none; }
+        .file-link:hover { text-decoration: underline; }
+
         .gt-t1 { background: #e7f0fb; color: var(--blue); }
         .gt-t2 { background: #f3e8fb; color: #9c36b5; }
         .gt-t5 { background: #e6f7ee; color: var(--green); }
@@ -291,17 +296,15 @@
     <!-- 详情：后端 -->
     <div class="detail" id="detail-backend">
         <h2><span class="bar"></span>后端开发者 · 真实函数清单</h2>
-        <div class="kv"><span class="k">源码文件</span><span class="v"><a id="be-file" href="#" style="color:var(--blue)">backend/ai_engine.py</a>（点击在 VS Code 中打开）</span></div>
-        <div class="kv"><span class="k">函数总数</span><span class="v" id="be-count">—</span></div>
-        <div class="groups" id="be-groups" style="margin-top:14px;"></div>
+        <div class="kv"><span class="k">源文件数</span><span class="v" id="be-count">—</span></div>
+        <div class="groups" id="be-detail" style="margin-top:14px;"></div>
     </div>
 
     <!-- 详情：前端 -->
     <div class="detail" id="detail-frontend">
         <h2><span class="bar"></span>前端开发者 · 真实函数清单</h2>
-        <div class="kv"><span class="k">源码文件</span><span class="v"><a id="fe-file" href="#" style="color:var(--blue)">frontend/game.js</a>（点击在 VS Code 中打开）</span></div>
-        <div class="kv"><span class="k">函数总数</span><span class="v" id="fe-count">—</span></div>
-        <div class="groups" id="fe-groups" style="margin-top:14px;"></div>
+        <div class="kv"><span class="k">源文件数</span><span class="v" id="fe-count">—</span></div>
+        <div class="groups" id="fe-detail" style="margin-top:14px;"></div>
         <div class="note bad" id="fe-shell-note" style="display:none;"></div>
     </div>
 
@@ -335,6 +338,16 @@ const WORKBENCH_DATA = /*__WORKBENCH_DATA__*/ null;
 
 function el(id){ return document.getElementById(id); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+// 生成 VS Code 深度链接：Windows 盘符冒号必须写成 %3A，否则 VS Code 把 C 当主机名导致定位失败
+// 顺序关键：先 encodeURI（编码空格/中文，冒号 : 保留），再替换盘符冒号，避免 % 被二次编码成 %253A
+function vscodeLink(absPath, line){
+    if(!absPath) return '#';
+    let p = absPath.replace(/\\/g, '/');
+    p = encodeURI(p);                          // 先编码空格/中文（冒号保留为 :）
+    p = p.replace(/^([A-Za-z]):/, '$1%3A');    // 再编码盘符冒号 C: -> C%3A
+    return 'vscode://file/' + p + ':' + line + ':1';
+}
 
 const BE_GROUP_ORDER = [
     ["TASK-001 手数分析", "tag-t1", "gt-t1"],
@@ -380,7 +393,7 @@ function buildGroups(fns, order, file){
         list.forEach(f=>{
             const a = document.createElement('a');
             a.className = 'pill';
-            a.href = 'vscode://file/' + encodeURI(file) + ':' + f.line + ':1';
+            a.href = vscodeLink(file, f.line);
             a.title = '在 VS Code 中打开 ' + f.name + '（第 ' + f.line + ' 行）';
             a.innerHTML = `<span class="nm">${esc(f.name)}</span><span class="ln">L${f.line}</span>`;
             row.appendChild(a);
@@ -459,23 +472,47 @@ function render(){
         });
     }
 
-    // 后端
-    const beTasks = p.backend.functions.filter(f=>f.task).length;
-    el('rs-backend').textContent = p.backend.functions.length + ' 个';
-    el('rc-backend-n').textContent = p.backend.functions.length + ' 个函数';
-    el('rc-backend-s').textContent = beTasks + ' 个带 TASK 标签（手数/拆牌/记牌）';
-    el('be-file').href = 'vscode://file/' + encodeURI(p.backend.abspath) + ':1:1';
-    el('be-count').textContent = p.backend.functions.length + ' 个（按任务分组见下）';
-    el('be-groups').appendChild(buildGroups(p.backend.functions, BE_GROUP_ORDER, p.backend.abspath));
+    // 后端（按源文件分组，每组可点跳 VS Code 对应行）
+    const beFlat = p.backend.functions;
+    const beTasks = beFlat.filter(f=>f.task).length;
+    el('rs-backend').textContent = beFlat.length + ' 个';
+    el('rc-backend-n').textContent = beFlat.length + ' 个函数';
+    el('rc-backend-s').textContent = p.backend.files.length + ' 个源文件 · ' + beTasks + ' 个带 TASK 标签';
+    el('be-count').textContent = p.backend.files.length + ' 个源文件（点击文件名在 VS Code 打开）';
+    const beDetail = el('be-detail');
+    beDetail.innerHTML = '';
+    p.backend.files.forEach(fl=>{
+        const fb = document.createElement('div'); fb.className = 'file-block';
+        const fh = document.createElement('div'); fh.className = 'file-head';
+        const fa = document.createElement('a');
+        fa.href = vscodeLink(fl.abspath, 1);
+        fa.className = 'file-link';
+        fa.textContent = fl.rel + '（' + fl.functions.length + ' 个函数 · 点击在 VS Code 打开）';
+        fh.appendChild(fa); fb.appendChild(fh);
+        fb.appendChild(buildGroups(fl.functions, BE_GROUP_ORDER, fl.abspath));
+        beDetail.appendChild(fb);
+    });
 
-    // 前端
-    const shellCount = p.frontend.functions.filter(f=>f.role && f.role.indexOf('空壳')>=0).length;
-    el('rs-frontend').textContent = p.frontend.functions.length + ' 个';
-    el('rc-frontend-n').textContent = p.frontend.functions.length + ' 个函数';
-    el('rc-frontend-s').textContent = shellCount + ' 个已迁后端（空壳）';
-    el('fe-file').href = 'vscode://file/' + encodeURI(p.frontend.abspath) + ':1:1';
-    el('fe-count').textContent = p.frontend.functions.length + ' 个（按角色分组见下）';
-    el('fe-groups').appendChild(buildGroups(p.frontend.functions, FE_GROUP_ORDER, p.frontend.abspath));
+    // 前端（按源文件分组）
+    const feFlat = p.frontend.functions;
+    const shellCount = feFlat.filter(f=>f.role && f.role.indexOf('空壳')>=0).length;
+    el('rs-frontend').textContent = feFlat.length + ' 个';
+    el('rc-frontend-n').textContent = feFlat.length + ' 个函数';
+    el('rc-frontend-s').textContent = p.frontend.files.length + ' 个源文件';
+    el('fe-count').textContent = p.frontend.files.length + ' 个源文件（点击文件名在 VS Code 打开）';
+    const feDetail = el('fe-detail');
+    feDetail.innerHTML = '';
+    p.frontend.files.forEach(fl=>{
+        const fb = document.createElement('div'); fb.className = 'file-block';
+        const fh = document.createElement('div'); fh.className = 'file-head';
+        const fa = document.createElement('a');
+        fa.href = vscodeLink(fl.abspath, 1);
+        fa.className = 'file-link';
+        fa.textContent = fl.rel + '（' + fl.functions.length + ' 个函数 · 点击在 VS Code 打开）';
+        fh.appendChild(fa); fb.appendChild(fh);
+        fb.appendChild(buildGroups(fl.functions, FE_GROUP_ORDER, fl.abspath));
+        feDetail.appendChild(fb);
+    });
     if(shellCount>0){
         const sn = el('fe-shell-note');
         sn.style.display = 'block';
