@@ -1117,9 +1117,11 @@ def control_tradeoff(gs, x, hand, who, last, mode):
     freq = count_ranks(hand)
 
     if (role == 'landlord' or lp != gs.landlord or
-            last['type'] != 'SINGLE' or
-            (last['main'] != 13 and last['main'] != 14)):
+            last['main'] < 13):
         return 0
+
+    # 非单张类型（对子、三条等）反击力度 ×1.2
+    type_factor = 1.2 if last['type'] != 'SINGLE' else 1.0
 
     landlord_count = gs.get_landlord_count()
     has_pair_two = freq.get(15, 0) >= 2
@@ -1131,16 +1133,16 @@ def control_tradeoff(gs, x, hand, who, last, mode):
     main = x['pattern']['main']
     if main == 15:
         if landlord_count <= 5:
-            return -18
+            return int(-18 * type_factor)
         elif landlord_count <= 8:
-            return -8
+            return int(-8 * type_factor)
         else:
             return 0
     if main == 16 or main == 17:
         if landlord_count > 8:
-            return -20
+            return int(-20 * type_factor)
         elif landlord_count <= 3:
-            return 8
+            return int(8 * type_factor)
         else:
             return 0
     return 0
@@ -1741,7 +1743,7 @@ def ai_pick_scored(gs, scored, who):
     if not scored:
         return None
     scored.sort(key=lambda v: (-v['score'], -len(v['x']['cards'])))
-    top_n = scored[:5]
+    top_n = scored[:10]
     rem = remaining_map(gs)
     current_hand = gs.hands[gs.current]
 
@@ -1803,22 +1805,25 @@ def ai_pick_scored(gs, scored, who):
 
 def ai_observe_play(gs):
     """
-    观测已出牌型（简化版，只更新 played_types）。
-    遍历每个玩家的已出牌，记录出现过的牌型。
+    观测已出牌型：记录每个玩家出过的牌的详细信息。
+    played_types[p] 存储字典列表，每个字典包含：
+      rank: 实际点数
+      category: JOKER/TWO/FACE/NUMBER
     """
     played = gs.playedHands if gs.playedHands else [[], [], []]
     for p in range(3):
         ai_mem.played_types[p] = []
         for c in (played[p] if played[p] else []):
-            # 简化：只记录点数类型
-            if c['rank'] >= 16:
-                ai_mem.played_types[p].append('JOKER')
-            elif c['rank'] == 15:
-                ai_mem.played_types[p].append('TWO')
-            elif c['rank'] >= 13:
-                ai_mem.played_types[p].append('FACE')
+            rank = c['rank']
+            if rank >= 16:
+                cat = 'JOKER'
+            elif rank == 15:
+                cat = 'TWO'
+            elif rank >= 13:
+                cat = 'FACE'
             else:
-                ai_mem.played_types[p].append('NUMBER')
+                cat = 'NUMBER'
+            ai_mem.played_types[p].append({'rank': rank, 'category': cat})
 
 
 def ai_record_step(gs, action_type, who):
