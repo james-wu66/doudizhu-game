@@ -88,8 +88,8 @@ def delete_account():
     if user["password_hash"] != hash_password(password):
         conn.close()
         return jsonify({"error": "密码错误"}), 400
-    c.execute("DELETE FROM game_records WHERE user_name = %s", (name,))
     c.execute("DELETE FROM ai_learning WHERE game_id IN (SELECT id FROM game_records WHERE user_name = %s)", (name,))
+    c.execute("DELETE FROM game_records WHERE user_name = %s", (name,))
     c.execute("DELETE FROM users WHERE id = %s", (user["id"],))
     conn.commit()
     conn.close()
