@@ -44,8 +44,7 @@ setTimeout(resizeResponsiveLayout,1200);
   }, true);
 })();
 
-// 注册 Service Worker（PWA 离线缓存，仅 https/file 环境生效）
-if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('./sw.js').catch(()=>{});});}
+// Service Worker 已移除：sw.js 文件从未存在，注册始终静默失败（如需 PWA 离线需先补 sw.js）
 
 
 
