@@ -74,7 +74,8 @@ def get_db():
                 password=DB_PASSWORD, database=DB_NAME,
                 charset="utf8mb4", cursorclass=DictCursor,
                 connect_timeout=20, read_timeout=60, write_timeout=60,
-                autocommit=True
+                autocommit=True,
+                init_command="SET time_zone='+08:00'"
             )
             _mysql_retry_after = 0.0
             return conn

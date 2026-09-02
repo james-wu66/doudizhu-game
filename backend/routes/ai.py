@@ -11,20 +11,42 @@ from ai_engine import ai_play as ai_play_engine, ai_candidates, ai_can_beat, eva
 ai_bp = Blueprint("ai", __name__)
 
 
+def _ai_learning_insert(conn, fields):
+    """写入 ai_learning。
+    CloudBase 为该表注入的 _openid 列是 NOT NULL 且无默认值，INSERT 不带该列会报 1364；
+    而本地 SQLite 表没有该列，带上反而会报错。故优先带 _openid，失败则回退为不带。"""
+    try:
+        cols = ",".join(fields.keys()) + ",_openid"
+        ph = ",".join(["%s"] * (len(fields) + 1))
+        conn.cursor().execute(
+            "INSERT INTO ai_learning (%s) VALUES (%s)" % (cols, ph),
+            list(fields.values()) + [""])
+    except Exception:
+        cols = ",".join(fields.keys())
+        ph = ",".join(["%s"] * len(fields))
+        conn.cursor().execute(
+            "INSERT INTO ai_learning (%s) VALUES (%s)" % (cols, ph),
+            list(fields.values()))
+
+
 def _record_ai_step(round_id, step, hand_state, action, pattern, who):
     """记录 AI 学习数据到数据库（静默，失败不影响游戏）"""
     try:
         conn = get_db()
-        c = conn.cursor()
         action_type = "NORMAL"
         if pattern and pattern.get("type") in ("BOMB", "ROCKET"):
             action_type = "BOMB"
-        c.execute("""
-            INSERT INTO ai_learning (round_id, step_number, hand_state, action_taken, action_type, result, score_change, who, bucket)
-            VALUES (%s, %s, %s, %s, %s, '', 0, %s, '')
-        """, (round_id, step, json.dumps(hand_state, ensure_ascii=False),
-              json.dumps([{"r": card["rank"], "s": card["suit"]} for card in (action or [])], ensure_ascii=False),
-              action_type, str(who)))
+        _ai_learning_insert(conn, {
+            "round_id": round_id,
+            "step_number": step,
+            "hand_state": json.dumps(hand_state, ensure_ascii=False),
+            "action_taken": json.dumps([{"r": card["rank"], "s": card["suit"]} for card in (action or [])], ensure_ascii=False),
+            "action_type": action_type,
+            "result": "",
+            "score_change": 0,
+            "who": str(who),
+            "bucket": "",
+        })
         conn.commit()
         conn.close()
     except Exception:
@@ -169,15 +191,18 @@ def ai_bid():
 def record_ai_step():
     data = request.json
     conn = get_db()
-    c = conn.cursor()
-    c.execute("""
-        INSERT INTO ai_learning (game_id, step_number, hand_state, action_taken, action_type, who, bucket, result, score_change, round_id)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    """, (data.get("game_id"), data.get("step"),
-          json.dumps(data.get("hand_state", []), ensure_ascii=False),
-          json.dumps(data.get("action", {}), ensure_ascii=False),
-          data.get("action_type", ""), data.get("who", ""), data.get("bucket", ""),
-          data.get("result", ""), data.get("score_change", 0), data.get("round_id", "")))
+    _ai_learning_insert(conn, {
+        "game_id": data.get("game_id"),
+        "step_number": data.get("step"),
+        "hand_state": json.dumps(data.get("hand_state", []), ensure_ascii=False),
+        "action_taken": json.dumps(data.get("action", {}), ensure_ascii=False),
+        "action_type": data.get("action_type", ""),
+        "who": data.get("who", ""),
+        "bucket": data.get("bucket", ""),
+        "result": data.get("result", ""),
+        "score_change": data.get("score_change", 0),
+        "round_id": data.get("round_id", ""),
+    })
     conn.commit()
     conn.close()
     return jsonify({"success": True})

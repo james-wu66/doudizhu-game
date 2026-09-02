@@ -14,10 +14,15 @@ async function aiDecideBid(hand, isCallPhase) {
 }
 
 const AI_API = window.location.origin + '/api/ai';
+// 记录后端是否"明确决定让牌"。用于区分「让牌」与「接口失败」：
+// 后端让牌时返回 {ok:true, action:null, passed:true}，若不区分就会被当成失败，
+// 转而用兜底逻辑出一张"最小能压的牌"，导致 AI 永远不会 pass。
+let aiApiPassed = false;
 
 async function aiDecideViaAPI(hand, last, who, role, strategy, roundId, step) {
+  aiApiPassed = false;
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 3000);
+  const timer = setTimeout(() => ctrl.abort(), 8000);
   try {
     const res = await fetch(AI_API + '/decide', {
       method: 'POST',
@@ -47,13 +52,31 @@ async function aiDecideViaAPI(hand, last, who, role, strategy, roundId, step) {
       })
     });
     clearTimeout(timer);
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      console.warn('AI API HTTP ' + res.status + ' ' + String(txt).slice(0, 200));
+      return null;
+    }
     const data = await res.json();
-    if (data.ok && data.action) {
+    if (!data.ok) {
+      console.warn('AI API error: ' + (data.error || 'ok=false'));
+      return null;
+    }
+    if (data.passed) {
+      // 后端明确决定让牌：合法决策，必须保留
+      aiApiPassed = true;
+      console.log('AI API ok (passed)');
+      return null;
+    }
+    if (data.action) {
+      console.log('AI API ok');
       return apiCardsToHand(data.action, hand);
     }
     return null;
   } catch(e) {
     clearTimeout(timer);
+    if (e && e.name === 'AbortError') console.warn('AI API timeout (8s)');
+    else console.warn('AI API error: ' + (e && e.message ? e.message : e));
     return null; // 超时/网络错误 → 用 fallback
   }
 }
@@ -118,6 +141,9 @@ async function aiPlay(hand, lastPattern) {
     LEARN.step++;
     return apiResult;
   }
+
+  // 后端已明确决定让牌 → 直接让牌，绝不能用兜底逻辑强行出一张最小牌
+  if (aiApiPassed) return null;
 
   // 降级：后端挂了用简化 fallback
   console.warn('AI API failed, using fallback');

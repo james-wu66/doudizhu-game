@@ -1712,6 +1712,30 @@ def ai_find_counter(gs, hand, last, who, strategy):
         # 同类型存在：只保留最小能压的一张（旧版核心逻辑，避免甩大牌）
         min_main = min(x['pattern']['main'] for x in same_type)
         candidates = [x for x in same_type if x['pattern']['main'] == min_main]
+
+        # 农民用单牌顶地主：任何情况下都优先"不拆对/不拆三条"（该点数在手里只有1张）。
+        # 非紧急（地主剩>2张）：优先中牌(8~11)去顶，避免拿最小牌乱顶或拆牌；
+        #   没有中牌时，退而用不拆牌的单张里最小的；都没有才允许拆（取最小能压）。
+        # 紧急（地主剩≤2张）：必须压死，优先不拆牌的单张并取最大的（有9出9，不拆555）；
+        #   只有所有能压的牌都必须拆时，才拆，且取最大的压死地主。
+        if (last['type'] == 'SINGLE' and gs.get_role(who) != 'landlord'
+                and _last_player_for_ai(gs) == gs.landlord):
+            freq = count_ranks(hand)
+            free = [x for x in same_type if freq.get(x['pattern']['main'], 0) <= 1]
+            if gs.get_landlord_count() > 2:
+                mid = [x for x in free if 8 <= x['pattern']['main'] <= 11]
+                if mid:
+                    mid_main = min(x['pattern']['main'] for x in mid)
+                    candidates = [x for x in mid if x['pattern']['main'] == mid_main]
+                elif free:
+                    free_main = min(x['pattern']['main'] for x in free)
+                    candidates = [x for x in free if x['pattern']['main'] == free_main]
+            elif free:
+                top_main = max(x['pattern']['main'] for x in free)
+                candidates = [x for x in free if x['pattern']['main'] == top_main]
+            else:
+                top_main = max(x['pattern']['main'] for x in same_type)
+                candidates = [x for x in same_type if x['pattern']['main'] == top_main]
         scored = []
         for x in candidates:
             score = candidate_score(gs, x, hand, who, 'counter', last)
