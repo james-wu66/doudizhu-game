@@ -20,6 +20,16 @@ class AIMemory:
     played_types = [[], [], []]
     _learn = {'base': {}, 'buckets': {}}
 
+    @classmethod
+    def reset(cls, round_token=''):
+        """开局重置：ai_mem 是全局单例（多用户共享），新一局必须清空过牌计数等状态"""
+        cls.round_token = round_token or ''
+        cls.patterns = [{}, {}, {}]
+        cls.pass_streak = [0, 0, 0]
+        cls.pass_total = [0, 0, 0]
+        cls.last_play_key = ''
+        cls.played_types = [[], [], []]
+
 ai_mem = AIMemory()
 
 # 学习数据（简化，替代前端 LEARN 全局变量）
@@ -1713,8 +1723,8 @@ def ai_pick_scored(gs, scored, who):
             best2 = s2[0]
             if not best2:
                 continue
-            safe2 = all((rem.get(int(r), 0) <= 0 or
-                         not any(str(c['rank']) == r for c in best2['x']['cards']))
+            safe2 = all((rem.get(r, 0) <= 0 or
+                         not any(c['rank'] == r for c in best2['x']['cards']))
                         for r in rem)
             after2 = [c for c in after if not any(y['id'] == c['id'] for y in best2['x']['cards'])]
             if not after2:
@@ -1881,7 +1891,9 @@ def ai_find_counter(gs, hand, last, who, strategy):
             elif len(best_cards) != len(hand):
                 ai_record_step(gs, 'SPLIT', who)
             else:
-                ai_record_step(gs, 'PASS', who)
+                # 正常跟牌（不拆牌、非炸弹）：出了牌就不能记成 PASS，
+                # 否则 pass_streak 会被错误累加，污染后续让牌/接力判断
+                ai_record_step(gs, 'NORMAL', who)
     
     # 8. 返回选出的牌
     return best_cards

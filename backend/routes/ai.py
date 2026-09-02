@@ -6,7 +6,7 @@ import json
 from flask import Blueprint, request, jsonify
 from utils import get_db
 from ai_state import GameState, PLAYER, LEFT, RIGHT
-from ai_engine import ai_play as ai_play_engine, ai_candidates, ai_can_beat, evaluate_hand
+from ai_engine import ai_play as ai_play_engine, ai_candidates, ai_can_beat, evaluate_hand, ai_mem
 
 ai_bp = Blueprint("ai", __name__)
 
@@ -95,6 +95,9 @@ def ai_decide():
                            last_player, pass_count, played_hands)
     round_id = data.get("round_id", "")
     step = data.get("step", 0)
+    if round_id and round_id != ai_mem.round_token:
+        # 新的一局：重置全局 AI 记忆（过牌计数等），避免跨局/跨用户串状态
+        ai_mem.reset(round_id)
     try:
         result = ai_play_engine(gs, hand, last)
         if result is None:

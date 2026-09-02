@@ -33,6 +33,8 @@ async function doPlayTurn(){
 }
 
 async function doPlayCards(who,cards,pattern){
+  // 先记录是否压上家，再覆盖 G.lastPlay（否则判断恒为 false，“压你”语音永远不会触发）
+  const _isPress=!!(G.lastPlay&&G.lastPlay.player!==who);
   const ids=new Set(cards.map(c=>c.id));
   G.hands[who]=G.hands[who].filter(c=>!ids.has(c.id));
   G.playedHands[who].push(...cards);
@@ -53,7 +55,6 @@ async function doPlayCards(who,cards,pattern){
   
   // === 出牌音效 ===
   try{
-    const _isPress=G.lastPlay&&G.lastPlay.player!==who;
     if(pattern.type==='BOMB'){
       playGameSound('voice_炸弹');setTimeout(()=>playGameSound('炸弹_大'),300);
       bombEffect();showMsg((who===PLAYER?'你':PLAYER_NAMES[who])+' 出了 '+pn+'！倍数x'+(G.bidMult*G.bombMult),2500);
