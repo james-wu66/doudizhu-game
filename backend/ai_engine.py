@@ -1083,6 +1083,65 @@ def _learn_pass_bias(role, landlord_count):
     return clamped * min(1, min_total / 100)
 
 
+# 学习数据缓存（60 秒刷新一次，避免每步出牌都查库拖慢）
+_learn_loaded_at = 0.0
+_LEARN_CACHE_SECONDS = 60
+
+
+def load_learn_from_db():
+    """
+    从数据库加载学习胜率到 _learn['base'] 和 _learn['buckets']。
+    供 _learn_query/_learn_adjust 使用。带 60 秒内存缓存；数据库连接失败静默跳过。
+    返回 True 表示加载成功/已有缓存，False 表示失败（不影响出牌）。
+    """
+    global _learn_loaded_at
+    import time
+    now = time.time()
+    # 缓存未过期则直接跳过（数据已在内存）
+    if _learn_loaded_at and (now - _learn_loaded_at) < _LEARN_CACHE_SECONDS:
+        return True
+    try:
+        from utils import get_db
+        conn = get_db()
+        c = conn.cursor()
+        # 基准胜率：按 action_type 分组（排除 NORMAL 纯出牌类型）
+        c.execute("""
+            SELECT action_type,
+                   SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) * 1.0 / COUNT(*) AS win_rate,
+                   COUNT(*) AS total
+            FROM ai_learning
+            WHERE result IN ('win','lose') AND action_type != '' AND action_type != 'NORMAL'
+            GROUP BY action_type
+        """)
+        base = {}
+        for r in c.fetchall():
+            base[r['action_type']] = {'win_rate': round(r['win_rate'], 4), 'total': r['total']}
+        # 桶级胜率：按 action_type + bucket 分组，只保留条数 >= 30 的桶
+        c.execute("""
+            SELECT action_type, bucket,
+                   SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) * 1.0 / COUNT(*) AS win_rate,
+                   COUNT(*) AS total
+            FROM ai_learning
+            WHERE result IN ('win','lose') AND action_type != '' AND bucket != ''
+            GROUP BY action_type, bucket HAVING COUNT(*) >= 30
+        """)
+        buckets = {}
+        for r in c.fetchall():
+            key = r['action_type'] + '|' + r['bucket']
+            buckets[key] = {'win_rate': round(r['win_rate'], 4), 'total': r['total']}
+        conn.close()
+        _learn['base'] = base
+        _learn['buckets'] = buckets
+        _learn['loaded'] = True
+        _learn_loaded_at = now
+        return True
+    except Exception as e:
+        # 数据库失败静默跳过，不影响出牌
+        print(f"[AI学习] 加载失败，本次跳过: {type(e).__name__}: {e}", flush=True)
+        _learn_loaded_at = now  # 冷却，避免每步都重试
+        return False
+
+
 def _ai_next(who):
     """返回下一个出牌玩家（JS 中 aiNext(who) = (who+2)%3）"""
     return (who + 2) % 3
@@ -1448,19 +1507,41 @@ def ai_should_pass_counter(gs, hand, last, who, candidates):
     if lp == gs.landlord and role != 'landlord' and landlord_count <= 2:
         return False
 
+    # === 缺陷A/F修复：农民单张只剩大牌(2/王)顶地主单张 → 让牌 ===
+    # 本工程 rank: 3~14=3~A, 15=2, 16=小王, 17=大王。
+    # 农民(非地主)面对地主出的单张(main<=15,即2及以下，不含王对王)，若不拆对/三条时能压的单张
+    # 全是2/王(main>=15)，则出大牌顶地主的大牌/小牌太浪费，应让牌(把2/王留到关键时刻)。
+    # 必须放在 Lv4(位置压牌)之前，否则被抢先 return。Lv2 已处理"地主剩<=2必须压"。
+    if (role != 'landlord' and lp == gs.landlord and last['type'] == 'SINGLE'
+            and last['main'] <= 15 and landlord_count > 2):
+        # 只考虑"不拆牌的单张"（该点数在手里只有1张），拆对/三条得来的单张不算
+        free_singles = [x for x in candidates
+                        if x['pattern']['type'] == 'SINGLE'
+                        and x['pattern']['type'] not in ('BOMB', 'ROCKET')
+                        and freq.get(x['pattern']['main'], 0) <= 1]
+        # 手里是否有成对/三条等结构（拆了可惜）——若全散单张则不该让牌
+        has_structure = any(cnt >= 2 for cnt in freq.values())
+        # 不拆牌时能压的单张都是大牌(2/王, main>=15) + 有结构值得保护 → 让牌
+        if free_singles and has_structure and all(x['pattern']['main'] >= 15 for x in free_singles):
+            return True
+
     # Lv3: partner <=1 card
     if partner_play and partner_count <= 1:
         return True
 
-    # Lv3.4: 上家接力
+    # Lv3.4: 上家接力（仅在队友出"小单张/小对子"这类能互相顺牌的型时接力，帮队友控牌）
+    # 修复：只对 SINGLE/PAIR 小牌接力；若队友出的是顺子/连对/飞机等多张结构牌，不该压队友
+    #（那是"农民压队友/抢领出"，会互相消耗）。接力仅当队友手牌还多、地主牌多时才做。
     if (partner_play and role == 'farmerPrev' and
+            last['type'] in ('SINGLE', 'PAIR') and
             last['main'] <= 8 and landlord_count > 5 and
             partner_count > 4 and not can_finish_all):
         return False
 
     # Lv3.5: 队友出牌且地主牌还多（排除 Lv3.4 已处理的上家接力场景，避免规则冲突）
     if partner_play and not can_finish_all and landlord_count > 5:
-        if not (role == 'farmerPrev' and last['main'] <= 8 and partner_count > 4):
+        if not (role == 'farmerPrev' and last['type'] in ('SINGLE', 'PAIR') and
+                last['main'] <= 8 and partner_count > 4):
             return True
 
     # Lv3.6: 队友快出完且地主未到危险线
@@ -1468,7 +1549,24 @@ def ai_should_pass_counter(gs, hand, last, who, candidates):
         return True
 
     # Lv4: farmerNext and landlord <=8
-    if lp == gs.landlord and role == 'farmerNext' and landlord_count <= 8:
+    # farmerNext(下家)配合策略(动态看张数, 不写死):
+    #   - 地主快走完(≤2, 已由Lv2处理)必须压
+    #   - 地主出小牌单张, 下家有"能顺的小散单张"(main较小, 清自己小牌) → 出牌(顺小牌)
+    #   - 下家只有大牌/成对、没小散单张可顺, 且地主非急(>3), 队友(上家)牌还多 → 让牌, 把顶牌留给上家
+    #   - 地主出大牌(K/2) → 下家压(保护, Lv4.5)
+    if lp == gs.landlord and role == 'farmerNext' and landlord_count <= 8 and landlord_count > 2:
+        # 下家面对地主单张: 是否只有大牌可压(没小散单张可顺)
+        if last['type'] == 'SINGLE' and last['main'] <= 10:
+            # 下家手里不拆牌能压的最小单张
+            cheap_free = [x for x in candidates
+                          if x['pattern']['type'] == 'SINGLE'
+                          and x['pattern']['type'] not in ('BOMB', 'ROCKET')
+                          and freq.get(x['pattern']['main'], 0) <= 1
+                          and x['pattern']['main'] <= 10]
+            # 只有大牌(>10, 即J以上/2/王)能压、没小牌可顺 → 若队友(上家)还在且地主不急, 让牌给上家顶
+            only_big = (not cheap_free) and any(x['pattern']['main'] > 10 for x in candidates)
+            if only_big and partner_count >= 4 and landlord_count > 3:
+                return True
         return False
 
     # Lv4.5: farmerNext raise price when landlord plays big cards
@@ -1556,6 +1654,15 @@ def ai_should_pass_counter(gs, hand, last, who, candidates):
 
     # 下家面对地主出的牌
     if role == 'farmerNext' and lp == gs.landlord and landlord_count > 5 and other_farmer >= 0:
+        # 若能用"同类型、点数更大"的牌型干净压过地主，则不应让牌（是合理压牌，非浪费大牌）
+        clean_beat = any(
+            x['pattern']['type'] == last['type'] and
+            x['pattern']['type'] not in ('BOMB', 'ROCKET') and
+            x['pattern']['main'] > last['main'] and
+            x['pattern'].get('len') == last.get('len')
+            for x in candidates)
+        if clean_beat:
+            return False
         cheap = any(x['pattern']['type'] not in ('BOMB', 'ROCKET') and x['pattern']['main'] < 10
                     for x in candidates)
         if not cheap:
@@ -1713,16 +1820,27 @@ def ai_find_counter(gs, hand, last, who, strategy):
         min_main = min(x['pattern']['main'] for x in same_type)
         candidates = [x for x in same_type if x['pattern']['main'] == min_main]
 
-        # 农民用单牌顶地主：任何情况下都优先"不拆对/不拆三条"（该点数在手里只有1张）。
-        # 非紧急（地主剩>2张）：优先中牌(8~11)去顶，避免拿最小牌乱顶或拆牌；
-        #   没有中牌时，退而用不拆牌的单张里最小的；都没有才允许拆（取最小能压）。
-        # 紧急（地主剩≤2张）：必须压死，优先不拆牌的单张并取最大的（有9出9，不拆555）；
-        #   只有所有能压的牌都必须拆时，才拆，且取最大的压死地主。
+        # 农民跟地主单张：按角色区别对待（配合策略，动态看张数，不写死）。
+        # 上家 farmerPrev：负责顶牌，用中牌(8~11)压地主，制造压力。
+        # 下家 farmerNext：负责"顺自己的小散单张"(出最小能压的)，清掉自己的小牌；
+        #   若自己没有可顺的小散单张(全是成对/大牌)，是否出牌/让牌由 ai_should_pass_counter 依据张数决定，
+        #   此处仍出最小能压的(避免甩大牌)。
+        # 紧急(地主剩≤2)：无论上下家都必须压死，取不拆牌单张里最大的(有9出9,不拆555)。
         if (last['type'] == 'SINGLE' and gs.get_role(who) != 'landlord'
                 and _last_player_for_ai(gs) == gs.landlord):
+            my_role = gs.get_role(who)
             freq = count_ranks(hand)
             free = [x for x in same_type if freq.get(x['pattern']['main'], 0) <= 1]
-            if gs.get_landlord_count() > 2:
+            if gs.get_landlord_count() <= 2:
+                # 紧急：必须压死，用不拆牌单张里最大的
+                if free:
+                    top_main = max(x['pattern']['main'] for x in free)
+                    candidates = [x for x in free if x['pattern']['main'] == top_main]
+                else:
+                    top_main = max(x['pattern']['main'] for x in same_type)
+                    candidates = [x for x in same_type if x['pattern']['main'] == top_main]
+            elif my_role == 'farmerPrev':
+                # 上家顶牌：优先中牌8~11，其次最小不拆牌单张，最后才允许拆
                 mid = [x for x in free if 8 <= x['pattern']['main'] <= 11]
                 if mid:
                     mid_main = min(x['pattern']['main'] for x in mid)
@@ -1730,12 +1848,17 @@ def ai_find_counter(gs, hand, last, who, strategy):
                 elif free:
                     free_main = min(x['pattern']['main'] for x in free)
                     candidates = [x for x in free if x['pattern']['main'] == free_main]
-            elif free:
-                top_main = max(x['pattern']['main'] for x in free)
-                candidates = [x for x in free if x['pattern']['main'] == top_main]
+                else:
+                    min_main = min(x['pattern']['main'] for x in same_type)
+                    candidates = [x for x in same_type if x['pattern']['main'] == min_main]
             else:
-                top_main = max(x['pattern']['main'] for x in same_type)
-                candidates = [x for x in same_type if x['pattern']['main'] == top_main]
+                # 下家(farmerNext)：顺自己最小的散单张(清小牌)，不拆对/三条
+                if free:
+                    free_main = min(x['pattern']['main'] for x in free)
+                    candidates = [x for x in free if x['pattern']['main'] == free_main]
+                else:
+                    min_main = min(x['pattern']['main'] for x in same_type)
+                    candidates = [x for x in same_type if x['pattern']['main'] == min_main]
         scored = []
         for x in candidates:
             score = candidate_score(gs, x, hand, who, 'counter', last)
@@ -1808,6 +1931,9 @@ def ai_play(gs, hand, last_pattern):
     统一出牌入口。
     返回 dict{'action': list[card], 'pattern': dict} or None。
     """
+    # 0. 加载 AI 学习数据（60秒缓存，失败静默，不影响出牌）
+    load_learn_from_db()
+
     # 1. 确定当前玩家角色、队友、地主张数
     who = gs.current
     role = gs.get_role(who)
