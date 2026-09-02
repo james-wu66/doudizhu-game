@@ -1517,13 +1517,16 @@ def ai_should_pass_counter(gs, hand, last, who, candidates):
     if lp == gs.landlord and role != 'landlord' and landlord_count <= 2:
         return False
 
-    # === 缺陷A/F修复：农民单张只剩大牌(2/王)顶地主单张 → 让牌 ===
+    # === 缺陷A/F修复：农民拿2/王顶地主"小"单张 → 让牌 ===
     # 本工程 rank: 3~14=3~A, 15=2, 16=小王, 17=大王。
-    # 农民(非地主)面对地主出的单张(main<=15,即2及以下，不含王对王)，若不拆对/三条时能压的单张
-    # 全是2/王(main>=15)，则出大牌顶地主的大牌/小牌太浪费，应让牌(把2/王留到关键时刻)。
-    # 必须放在 Lv4(位置压牌)之前，否则被抢先 return。Lv2 已处理"地主剩<=2必须压"。
+    # 农民(非地主)面对地主出的小单张(<=10)时，若不拆对/三条能压的单张
+    # 全是2/王(main>=15)，拿大牌顶小牌太浪费，应让牌(把2/王留到关键时刻)。
+    # 注意: candidates 已被 ai_can_beat 预过滤,只含"能压上家"的牌,所以阈值必须限定
+    # 地主出小牌。此前写成 <=15: 地主出 A/2 时能压的单张天然全是 2/王,条件恒真,
+    # 农民永远不顶地主的 A/2 → 地主大单张畅通(44cae70 引入的回归)。
+    # 地主出大牌(K/A/2)时交给 Lv4.5 抬价压制。Lv2 已处理"地主剩<=2必须压"。
     if (role != 'landlord' and lp == gs.landlord and last['type'] == 'SINGLE'
-            and last['main'] <= 15 and landlord_count > 2):
+            and last['main'] <= 10 and landlord_count > 2):
         # 只考虑"不拆牌的单张"（该点数在手里只有1张），拆对/三条得来的单张不算
         free_singles = [x for x in candidates
                         if x['pattern']['type'] == 'SINGLE'
@@ -1540,7 +1543,7 @@ def ai_should_pass_counter(gs, hand, last, who, candidates):
         return True
 
     # Lv3.4: 上家接力（仅在队友出"小单张/小对子"这类能互相顺牌的型时接力，帮队友控牌）
-    # 修复：只对 SINGLE/PAIR 小牌接力；若队友出的是顺子/连对/飞机等多张结构牌，不该压队友
+    # 只对 SINGLE/PAIR 小牌接力；若队友出的是顺子/连对/飞机等多张结构牌，不该压队友
     #（那是"农民压队友/抢领出"，会互相消耗）。接力仅当队友手牌还多、地主牌多时才做。
     if (partner_play and role == 'farmerPrev' and
             last['type'] in ('SINGLE', 'PAIR') and
@@ -1549,7 +1552,9 @@ def ai_should_pass_counter(gs, hand, last, who, candidates):
         return False
 
     # Lv3.5: 队友出牌且地主牌还多（排除 Lv3.4 已处理的上家接力场景，避免规则冲突）
-    if partner_play and not can_finish_all and landlord_count > 5:
+    # 但地主已过牌(gs.passCount>0)时，队友领出的任何牌都是白送的进手，不该强制让牌
+    #（座位序 0→2→1：farmerNext 面对队友出牌时地主必然已过；44cae70 在此一律让牌是回归）
+    if partner_play and not can_finish_all and landlord_count > 5 and gs.passCount <= 0:
         if not (role == 'farmerPrev' and last['type'] in ('SINGLE', 'PAIR') and
                 last['main'] <= 8 and partner_count > 4):
             return True
@@ -1574,7 +1579,14 @@ def ai_should_pass_counter(gs, hand, last, who, candidates):
                           and freq.get(x['pattern']['main'], 0) <= 1
                           and x['pattern']['main'] <= 10]
             # 只有大牌(>10, 即J以上/2/王)能压、没小牌可顺 → 若队友(上家)还在且地主不急, 让牌给上家顶
-            only_big = (not cheap_free) and any(x['pattern']['main'] > 10 for x in candidates)
+            # 44cae70 的 any(main>10) 过宽:手里有 K/A 顶地主小单张也被迫让牌(回归),
+            # 把 only_big 收窄为"免费单张里连 J/K/Q/A 都没有,全是 2/王"才让
+            free_singles = [x for x in candidates
+                            if x['pattern']['type'] == 'SINGLE'
+                            and x['pattern']['type'] not in ('BOMB', 'ROCKET')
+                            and freq.get(x['pattern']['main'], 0) <= 1]
+            only_big = (not cheap_free and free_singles and
+                        all(x['pattern']['main'] >= 15 for x in free_singles))
             if only_big and partner_count >= 4 and landlord_count > 3:
                 return True
         return False
