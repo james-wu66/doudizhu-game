@@ -285,7 +285,7 @@ def ai_hint():
     try:
         cands = ai_candidates(hand)
         if last:
-            cands = [c for c in cands if ai_can_beat(c, last)]
+            cands = [c for c in cands if ai_can_beat(c["pattern"], last)]
         if not cands:
             return jsonify({"ok": True, "plays": [], "passed": True})
         # 候选排序：非炸弹优先于炸弹（炸弹稀缺，不优先提示），同类型按点数升序
@@ -302,11 +302,22 @@ def ai_hint():
         except Exception:
             best = None
         if best is not None:
-            best_key = sorted((c["rank"], c["suit"]) for c in best["action"])
-            for i, cand in enumerate(cands):
-                if sorted((c["rank"], c["suit"]) for c in cand["cards"]) == best_key:
-                    cands.insert(0, cands.pop(i))
-                    break
+            best_cards = best.get("cards") or best.get("action") or []
+            best_pat = best.get("pattern")
+            if best_cards:
+                best_key = sorted((c["rank"], c["suit"]) for c in best_cards)
+                found = False
+                for i, cand in enumerate(cands):
+                    if sorted((c["rank"], c["suit"]) for c in cand["cards"]) == best_key:
+                        cands.insert(0, cands.pop(i))
+                        found = True
+                        break
+                if not found and best_cards:
+                    ok = best_pat is not None and best_pat.get("type")
+                    if ok and last:
+                        ok = ai_can_beat(best_pat, last)
+                    if ok:
+                        cands.insert(0, {"cards": best_cards, "pattern": best_pat})
         plays = [{"cards": [{"r": c["rank"], "s": c["suit"]} for c in cand["cards"]], "pattern": cand["pattern"]} for cand in cands]
         return jsonify({"ok": True, "plays": plays, "passed": False})
     except Exception as e:

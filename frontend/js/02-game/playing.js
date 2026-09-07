@@ -67,12 +67,10 @@ async function doPlayCards(who,cards,pattern){
       if(r===16)playGameSound('voice_小王');
       else if(r===17)playGameSound('voice_大王');
       else playGameSound('voice_'+(nm[r]||''));
-      if(_isPress)playGameSound('voice_压你');
     }else if(pattern.type==='PAIR'){
       const r=cards[0].rank;
       const nm={3:'三',4:'四',5:'五',6:'六',7:'七',8:'八',9:'九',10:'十',11:'J',12:'Q',13:'K',14:'尖',15:'二'};
       playGameSound('voice_对'+(nm[r]||''));
-      if(_isPress)playGameSound('voice_压你');
     }else if(pattern.type==='STRAIGHT'){
       if(_isPress)playGameSound('voice_压你');else playGameSound('voice_顺子');
     }else if(pattern.type==='STRAIGHT_PAIR'){
@@ -83,6 +81,10 @@ async function doPlayCards(who,cards,pattern){
       if(_isPress)playGameSound('voice_压你');else playGameSound('voice_三带一');
     }else if(pattern.type==='TRIPLE_TWO'){
       if(_isPress)playGameSound('voice_压你');else playGameSound('voice_三带二');
+    }else if(pattern.type==='FOUR_TWO'){
+      if(_isPress)playGameSound('voice_压你');
+    }else if(pattern.type==='AIRPLANE'||pattern.type==='AIRPLANE_SINGLE'||pattern.type==='AIRPLANE_PAIR'){
+      if(_isPress)playGameSound('voice_压你');else playGameSound('voice_飞机');
     }else{
       if(_isPress)playGameSound('voice_压你');
     }

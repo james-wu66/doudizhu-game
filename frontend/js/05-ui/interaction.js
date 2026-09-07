@@ -61,6 +61,51 @@ handEl.addEventListener('touchend',e=>{
   G.hintPlays=[];
 });
 
+// ==================== MOUSE DRAG-TO-SELECT (desktop) ====================
+handEl.addEventListener('mousedown',e=>{
+  if(G.phase!=='playing')return;
+  const cardEl=e.target.closest('.card');
+  if(!cardEl)return;
+  e.preventDefault();
+  swipeActive=true;
+  swipeSelectedIds.clear();
+  swipeDeselectedIds.clear();
+  const id=parseInt(cardEl.dataset.id);
+  if(G.selectedIds.has(id)){swipeDeselectedIds.add(id);}
+  else{swipeSelectedIds.add(id);}
+  if(swipeSelectedIds.has(id))G.selectedIds.add(id);
+  if(swipeDeselectedIds.has(id))G.selectedIds.delete(id);
+  refreshSelectionVisuals();
+  document.body.style.userSelect='none';
+});
+
+document.addEventListener('mousemove',e=>{
+  if(!swipeActive)return;
+  e.preventDefault();
+  const cardEl=getCardAtX(e.clientX);
+  if(!cardEl)return;
+  const id=parseInt(cardEl.dataset.id);
+  if(!swipeSelectedIds.has(id)&&!swipeDeselectedIds.has(id)){
+    if(swipeSelectedIds.size>0){
+      swipeSelectedIds.add(id);
+      G.selectedIds.add(id);
+    }else{
+      swipeDeselectedIds.add(id);
+      G.selectedIds.delete(id);
+    }
+    refreshSelectionVisuals();
+  }
+});
+
+document.addEventListener('mouseup',e=>{
+  if(!swipeActive)return;
+  swipeActive=false;
+  document.body.style.userSelect='';
+  suppressNextClick=true;
+  setTimeout(()=>{suppressNextClick=false;},350);
+  G.hintPlays=[];
+});
+
 // Mouse click to toggle single card
 handEl.addEventListener('click',e=>{
   const cardEl=e.target.closest('.card');
