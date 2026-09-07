@@ -19,10 +19,10 @@ const AI_API = window.location.origin + '/api/ai';
 // 转而用兜底逻辑出一张"最小能压的牌"，导致 AI 永远不会 pass。
 let aiApiPassed = false;
 
-async function aiDecideViaAPI(hand, last, who, role, strategy, roundId, step) {
+async function aiDecideViaAPI(hand, last, who, role, roundId, step) {
   aiApiPassed = false;
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 8000);
+  const timer = setTimeout(() => ctrl.abort(), 15000);
   try {
     const res = await fetch(AI_API + '/decide', {
       method: 'POST',
@@ -31,7 +31,7 @@ async function aiDecideViaAPI(hand, last, who, role, strategy, roundId, step) {
       body: JSON.stringify({
         hand: hand.map(c => ({ id: c.id, r: c.rank, s: c.suit })),
         last: last ? { type: last.type, main: last.main, len: last.len } : null,
-        who, role, strategy,
+        who, role,
         round_id: roundId || '',
         step: step || 0,
         landlord: G.landlord,
@@ -103,17 +103,32 @@ async function aiBidViaAPI(hand, isCallPhase) {
 
 // 简化 fallback：出最小能压的牌（不依赖复杂评分，不出错即可）
 function fallbackSimple(hand, last) {
-  const cands = aiCandidates(hand).filter(x => last ? aiCanBeat(x, last) : true);
+  let cands = aiCandidates(hand).filter(x => last ? aiCanBeat(x, last) : true);
   if (!cands.length) return null;
   if (!last) return cands[0].cards; // 主动出最小
+  // TASK-I-7（20260906 James Wu 拍板）：断线兜底同守后端"炸弹=最后底牌"纪律——
+  // 有普通牌能压时剔除 BOMB/ROCKET（与 bomb_discipline_filter 同口径的极简版）。
+  const normals = cands.filter(x => x.pattern.type !== 'BOMB' && x.pattern.type !== 'ROCKET');
+  if (normals.length) cands = normals;
+  // 跟牌时：优先出同类型牌（如对手出对子就出对子），再选最小的
+  const sameType = cands.filter(x => x.pattern.type === last.type);
+  if (sameType.length) {
+    const sorted = sameType.sort((a,b) => (a.pattern.main||0) - (b.pattern.main||0));
+    return sorted[0].cards;
+  }
+  // 没有同类型牌：出最小的能压的牌
   const sorted = cands.sort((a,b) => (a.pattern.main||0) - (b.pattern.main||0));
   return sorted[0].cards;
 }
 
 function fallbackBidSimple(hand) {
   const eh = evaluateHand(hand);
-  let threshold = 58;
+  let threshold = 36;  // 与后端 bid.py CALL_THRESHOLD=36 对齐（20260906 TASK-I-4 修正:原42且注释谎称40）
+  // 有火箭/炸弹降低门槛
+  if (eh.rocket) threshold -= 10;
   if (eh.bombs >= 1) threshold -= 8;
+  // 散牌太多抬高门槛
+  if (eh.singles >= 6) threshold += 8;
   return eh.score >= threshold ? 1 : 0;
 }
 
@@ -129,14 +144,10 @@ function apiCardsToHand(apiCards, hand) {
 
 // ===== 出牌入口（改为后端 API 调用 + 简化 fallback） =====
 async function aiPlay(hand, lastPattern) {
-  const who = G.current, role = aiRole(who), teammate = aiPartner(who);
-  const teammateCount = teammate >= 0 ? (G.hands[teammate] || []).length : 99;
-  const landlordCount = aiLandlordCount();
-  const _ehScore = evaluateHand(hand).score;
-  const strategy = hand.length <= 5 ? 'aggressive' : (_ehScore > 60 && hand.length <= 8 ? 'aggressive' : (role !== 'landlord' && teammateCount <= 4 ? 'support' : (_ehScore < 35 && hand.length > 8 ? 'defensive' : (landlordCount <= 4 ? (role === 'landlord' ? 'aggressive' : 'defensive') : (_ehScore < 40 && hand.length > 10 ? 'defensive' : 'balanced')))));
+  const who = G.current, role = aiRole(who);
 
   // 尝试后端 API
-  const apiResult = await aiDecideViaAPI(hand, lastPattern, who, role, strategy, LEARN.roundId, LEARN.step);
+  const apiResult = await aiDecideViaAPI(hand, lastPattern, who, role, LEARN.roundId, LEARN.step);
   if (apiResult) {
     LEARN.step++;
     return apiResult;

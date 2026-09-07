@@ -5,3 +5,23 @@ backend/database/
 backend/config_local.py
 tests/node_modules/
 doudizhu-game/
+
+# === 任务1 仓库治理：内部资料与本地数据不进仓库 ===
+# 工作台（交接文档、提示词、策略笔记、备份快照）
+斗地主最终版工作台/
+# 测试与验收工具（质量门、断言、基线）
+tests/
+# 本地开发记录
+项目完整记录.md
+# 含环境信息/凭据的脚本与配置
+一键部署.bat
+一键推送.bat
+cloudbaserc.json
+*.code-workspace
+# 用户上传的头像（真实用户数据，不入版本库）
+backend/avatars/
+# 日志与临时文件
+*.log
+nul
+.hermes-tmp.*
+verify_replay.js
