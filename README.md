@@ -1,13 +1,52 @@
-# 斗地主终极版（会会斗地主）
+<p align="center">
+  <img src="assets/screenshots/game-bidding.png" width="90%" alt="斗地主对战界面预览">
+</p>
+
+<h1 align="center">斗地主终极版（会会斗地主）</h1>
+
+<p align="center">
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.10+-blue?logo=python&logoColor=white">
+  <img alt="Flask" src="https://img.shields.io/badge/Flask-3.x-green?logo=flask&logoColor=white">
+  <img alt="JavaScript" src="https://img.shields.io/badge/JavaScript-ES6+-yellow?logo=javascript&logoColor=white">
+  <img alt="Docker" src="https://img.shields.io/badge/Docker-blue?logo=docker&logoColor=white">
+  <img alt="License" src="https://img.shields.io/badge/License-MIT-yellowgreen">
+</p>
 
 一个**全栈网页版斗地主游戏**：原生 JS 前端 + Flask 后端 + Python 启发式 AI 引擎，支持账号系统、战绩回放、排行榜与基于真实对局数据的 AI 学习闭环，Docker 容器化部署在腾讯云 CloudBase。
 
-- 在线演示：https://doudizhu-game-294184-6-1420872702.sh.run.tcloudbase.com
-- 技术栈：JavaScript (ES6+) / Python 3 / Flask / MySQL (TDSQL-C) / SQLite / Docker / GitHub Actions / 腾讯云 CloudBase
+- 🔗 在线演示：https://doudizhu-game-294184-6-1420872702.sh.run.tcloudbase.com
+
+---
+
+## 目录
+
+- [项目起源](#项目起源)
+- [界面预览](#界面预览)
+- [功能特性](#功能特性)
+- [技术栈](#技术栈)
+- [架构](#架构)
+- [项目结构](#项目结构)
+- [本地运行](#本地运行)
+- [部署](#部署)
+- [质量保障](#质量保障)
+- [路线图](#路线图)
+- [License](#license)
+
+---
 
 ## 项目起源
 
 家里长辈退休后想玩斗地主，但市面上的 App 广告多、需要充值、操作复杂。于是做了一个**免费、无广告、打开网页就能玩**的版本，给长辈用手机号注册即可开局。后来逐步迭代出多策略 AI 对战、用户系统、战绩回放，直至云端部署与 AI 学习闭环。
+
+## 界面预览
+
+登录、大厅与对战的三个核心界面：
+
+对战、登录与大厅三个核心界面（顶部的对战图为叫牌阶段，进入出牌后 AI 会依据下方「AI 策略六要点」决策，配合角色分工与学习闭环持续进化）：
+
+| 登录界面 | 大厅（战绩 / 排行榜） |
+|---|---|
+| <img src="assets/screenshots/login.png" width="100%" alt="登录界面"> | <img src="assets/screenshots/lobby.png" width="100%" alt="大厅界面"> |
 
 ## 功能特性
 
@@ -97,7 +136,8 @@ MySQL（TDSQL-C，环境变量注入凭据）/ SQLite（本地自动降级）
 │       ├── 06-user/        # 登录注册、战绩、排行榜
 │       ├── 07-audio/       # 音效控制
 │       └── 99-init/        # 启动装配
-├── audio/                  # 背景音乐与出牌语音（45 个文件）
+├── audio/                  # 背景音乐与出牌语音
+├── assets/screenshots/     # README 界面预览截图
 ├── .github/workflows/deploy.yml  # push main → 自动构建部署到 CloudBase
 ├── Dockerfile              # python:3.11-slim + Flask
 ├── requirements.txt        # flask / flask-cors / gunicorn / Pillow / pymysql
@@ -137,13 +177,15 @@ git push origin main
 - 红线探针：浪费压队友 / 炸弹压队友 / 乱炸 三项恒为 0 的纪律断言
 - 真人实测：策略迭代以真实对局回放对账定案
 
-## 开发说明
-
-本项目由一人独立开发并持续迭代：需求拆解、架构设计、编码、测试、云端部署全流程完成，采用 AI 辅助开发模式（人主导设计与验收，AI 协助编码与调试）。
-
 ## 路线图
 
 - [ ] 用户密码 bcrypt 化（当前 SHA-256）
 - [ ] 统一鉴权中间件与 API 测试覆盖
 - [ ] 学习数据真人/模拟分账
 - [ ] 社交功能：好友、他人主页与最近对局回放
+
+---
+
+## License
+
+[MIT License](LICENSE) © 2026 James Wu
