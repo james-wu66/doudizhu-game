@@ -66,6 +66,8 @@ _DEFAULTS = {
     "cs_core5_single_two": 10, "cs_core5_single_K_noA": 5,
     # 大牌节流 v2（lead 主动出牌点数分级罚分 + 残局豁免阈值）——与 strategy.py _DEFAULTS 保持同步
     "ls_pen_joker": -70, "ls_pen_two": -45, "ls_pen_a": -22, "ls_endgame_th": 6,
+    # 结构大牌早甩罚（进手张守恒，20260907 复盘8局实锤；与 strategy.py / config.json 同步）
+    "ls_struct_entry_pen": -60,
     "ls_land_small_bonus": 24,
     # TASK-C 农民 lead 三改（与 strategy.py _DEFAULTS 保持同步）
     "ls_single_bias_mult": 0.4, "ls_gate_exempt_hands": 3, "ls_gate_exempt_big": 3,
@@ -323,6 +325,21 @@ def _struct_lead_ok(gs, hand, who, x, last, mode, config):
     return False
 
 
+def _ls_consec_window(freq_after, min_cnt, min_len):
+    """进手张守恒回手判定：剩余手牌里是否存在长度>=min_len 的连续点数窗口，
+    窗内每个 rank 的张数都 >= min_cnt（min_cnt=2 查第二条对子链，=1 查第二条顺子）。
+    顺子/连对点数范围 3..14（A 封顶，2 与王不参与）。"""
+    for start in range(3, 15 - min_len + 2):
+        ok = True
+        for r in range(start, start + min_len):
+            if freq_after.get(r, 0) < min_cnt:
+                ok = False
+                break
+        if ok:
+            return True
+    return False
+
+
 def candidate_score(gs, x, hand, who, mode, last, last_pattern=None, config=None):
     """
     核心评分函数，给每个候选出牌打分。
@@ -529,6 +546,41 @@ def candidate_score(gs, x, hand, who, mode, last, last_pattern=None, config=None
                 score += P['ls_pen_two']     # 主动甩2
             elif pattern['main'] == 14:
                 score += P['ls_pen_a']       # 主动甩A
+        # 结构大牌早甩罚·进手张守恒（20260907 复盘8局实锤：连对/顺子/三带/飞机/四带二
+        # 这类大牌结构整副甩出后，手里无同型回手也无大单/炸弹夺权，剩一堆小牌被吃节奏。
+        # 旧节流 v2 只管 SINGLE/PAIR，本块补结构牌；残局(>ls_endgame_th)与危险区(对手
+        # <=ct_danger_cnt)双豁免沿用 BUG#3 口径；命中罚分的候选打 ls_struct_pen 标记，
+        # Q5 手数相对账对该候选失效（罚奖不叠加）。阈值口径见 提示词_第1步_进手张守恒。
+        _t_ls = pattern['type']
+        _ls_struct_hit = (
+            (_t_ls == 'STRAIGHT_PAIR' and pattern['main'] >= 12) or
+            (_t_ls == 'STRAIGHT' and pattern['main'] >= 11) or
+            (_t_ls in ('TRIPLE_ONE', 'TRIPLE_TWO') and pattern['main'] >= 12) or
+            (_t_ls.startswith('AIRPLANE') and pattern['main'] >= 12) or
+            (_t_ls == 'FOUR_TWO' and pattern['main'] >= 14))
+        if (_ls_struct_hit and len(after) > 0 and
+                len(hand) > P['ls_endgame_th'] and
+                gs.get_threat_count(who) > P['ct_danger_cnt']):
+            _fa = count_ranks(after)
+            _small_left = sum(v for r, v in _fa.items() if r <= 9)
+            if _small_left >= 4:
+                # 回手判定（分型，任一成立=有进手张，不罚）——口径严格按施工单点2：
+                #  炸弹/王炸对所有结构型都算回手；
+                #  连对：只认"第二条连对/更大的对子链"(>=2 段连续对)，单张大王不算(赢不回对子牌权)；
+                #  顺子：只认"第二条顺子"(>=5 张连续单)；
+                #  三带/飞机/四带二：认 rank>=A 的单或对。
+                _has_entry = (any(v >= 4 for v in _fa.values()) or
+                              (_fa.get(16, 0) >= 1 and _fa.get(17, 0) >= 1))
+                if not _has_entry:
+                    if _t_ls == 'STRAIGHT_PAIR':
+                        _has_entry = _ls_consec_window(_fa, 2, 2)
+                    elif _t_ls == 'STRAIGHT':
+                        _has_entry = _ls_consec_window(_fa, 1, 5)
+                    else:  # TRIPLE_ONE/TWO、AIRPLANE*、FOUR_TWO
+                        _has_entry = any(_fa.get(r, 0) >= 1 for r in (14, 15, 16, 17))
+                if not _has_entry:
+                    score += P['ls_struct_entry_pen']
+                    x['ls_struct_pen'] = 1
         # 带牌更优
         if pattern['type'] == 'TRIPLE_ONE':
             score += P['lp_triple_one_bonus']
@@ -591,8 +643,12 @@ def candidate_score(gs, x, hand, who, mode, last, last_pattern=None, config=None
         if _seize_lead:
             if pattern['type'] in ('STRAIGHT', 'STRAIGHT_PAIR', 'AIRPLANE',
                                    'AIRPLANE_SINGLE', 'AIRPLANE_PAIR'):
-                score += len(x['cards']) * P['lp_lead_dump_bonus']
-                score += _learn_adjust('LEADSEIZE', str(role) + ":struct")
+                # 进手张守恒（20260907）：命中"结构大牌早甩罚"的候选同样不吃
+                # 节奏甩牌加分（每张60）——施工单原则"该罚的场景两头不加分"，
+                # 否则 -60 罚分被 +360 甩牌奖励直接淹没（复盘8局实锤根因）。
+                if not x.get('ls_struct_pen'):
+                    score += len(x['cards']) * P['lp_lead_dump_bonus']
+                    score += _learn_adjust('LEADSEIZE', str(role) + ":struct")
             elif _sp == 0 and pattern['type'] not in ('BOMB', 'ROCKET'):
                 score += _learn_adjust('LEADSEIZE', str(role) + ":clean")
         # 回收能力
@@ -979,11 +1035,13 @@ def score_candidates(candidates, gs, who, last_pattern, config):
         score += learn_bonus
 
         # Q5 相对账（基准步数在循环外已算，此处只算本候选步数差）
+        # 进手张守恒（20260907）：命中"结构大牌早甩罚"的候选，Q5 免罚失效——
+        # 最省步数恰恰是甩整副结构牌，若继续豁免等于反向奖励甩牌（罚奖不叠加）。
         if _q5_min is not None:
             try:
                 _after_q5 = [c for c in hand if not any(y['id'] == c['id'] for y in cards)]
                 _steps_q5 = estimate_hands(_after_q5) + 1
-                if _steps_q5 > _q5_min:
+                if _steps_q5 > _q5_min and not cand.get('ls_struct_pen'):
                     score -= (_steps_q5 - _q5_min) * _stq.P['q5_hands_pen']
                     cand['q5_steps'] = _steps_q5
             except Exception:

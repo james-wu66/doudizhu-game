@@ -87,10 +87,10 @@ function endGame(winner){
   const landlordWon=winner===G.landlord;
   const playerWon=landlordWon===(G.landlord===PLAYER);
   if(playerWon){
-    titleEl.textContent='🎉 你赢了！';titleEl.style.color='#f0c040';
+    titleEl.textContent='你赢了！';titleEl.style.color='#f0c040';
     playGameSound('voice_你赢了');
   }else{
-    titleEl.textContent='😢 你输了';titleEl.style.color='#e74c3c';
+    titleEl.textContent='你输了';titleEl.style.color='#e74c3c';
     playGameSound('voice_你输了');
   }
   textEl.textContent=PLAYER_NAMES[winner]+' 出完了所有牌';
@@ -116,7 +116,7 @@ function endGame(winner){
   multEl.textContent='';
 
   if(currentRound>=TOTAL_ROUNDS){
-    scoresEl.innerHTML=showRoundScoreBreakdown()+'<h3 style="color:#f0c040;margin:12px 0 8px">🏆 10局累计总排名</h3>'+showFinalRanking();
+    scoresEl.innerHTML=showRoundScoreBreakdown()+'<h3 style="color:#f0c040;margin:12px 0 8px">10局累计总排名</h3>'+showFinalRanking();
     restartBtn.textContent='开始新一轮';
     restartBtn.disabled=false;
     document.getElementById('result-modal').classList.add('show');
@@ -131,14 +131,14 @@ function endGame(winner){
 
 // ==================== 局分结算渲染 ====================
 function showRoundScoreBreakdown(){
-  if(!G||!G.roundScores)return '<div style="color:#94a3b8;font-size:13px;padding:8px">本局得分暂无</div>';
+  if(!G||!G.roundScores)return '<div style="color:#9eacbd;font-size:13px;padding:8px">本局得分暂无</div>';
   let html='<div style="margin:8px 0">';
   for(let i=0;i<3;i++){
     const s=G.roundScores[i]||0;
-    const color=s>=0?'#4ade80':'#f87171';
+    const color=s>=0?'#4caf50':'#f44336';
     const sign=s>=0?'+':'';
     html+='<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px">'
-      +'<span style="color:#e2e8f0">'+PLAYER_NAMES[i]+'</span>'
+      +'<span style="color:#dce8f7">'+PLAYER_NAMES[i]+'</span>'
       +'<span style="color:'+color+';font-weight:700">'+sign+s+'</span></div>';
   }
   html+='</div>';
@@ -150,10 +150,10 @@ function showFinalRanking(){
     .sort((a,b)=>b.score-a.score);
   let html='<div style="margin:8px 0">';
   order.forEach((p,idx)=>{
-    const medal=['🥇','🥈','🥉'][idx]||(idx+1)+'. ';
-    const color=p.score>=0?'#4ade80':'#f87171';
+    const medal=['冠军','亚军','季军'][idx]||('第'+(idx+1)+'名');
+    const color=p.score>=0?'#4caf50':'#f44336';
     html+='<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px">'
-      +'<span style="color:#e2e8f0">'+medal+' '+p.name+'</span>'
+      +'<span style="color:#dce8f7">'+medal+' '+p.name+'</span>'
       +'<span style="color:'+color+';font-weight:700">'+(p.score>=0?'+':'')+p.score+'</span></div>';
   });
   html+='</div>';

@@ -8,10 +8,10 @@ function togglePwd(inputId, btn) {
   if (!input) return;
   if (input.type === 'password') {
     input.type = 'text';
-    btn.textContent = '🔒';
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><rect x="5" y="10.6" width="14" height="9.4" rx="2"/><path d="M8 10.6V7.2a4 4 0 0 1 8 0v3.4"/></svg>';
   } else {
     input.type = 'password';
-    btn.textContent = '👁️';
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M2.2 12S5.8 5.8 12 5.8 21.8 12 21.8 12 18.2 18.2 12 18.2 2.2 12 2.2 12Z"/><circle cx="12" cy="12" r="2.7"/></svg>';
   }
 }
 
@@ -114,7 +114,7 @@ function logoutUser() {
 function deleteAccount() {
   if (!currentUser || !currentUser.name) { alert('请先登录'); return; }
   if (currentUser.name === '游客') { alert('游客无法注销'); return; }
-  if (!confirm('⚠️ 注销账号将永久删除你的所有数据（战绩、存档等），且无法恢复！\n\n确定要注销吗？')) return;
+  if (!confirm('注意：注销账号将永久删除你的所有数据（战绩、存档等），且无法恢复！\n\n确定要注销吗？')) return;
   if (!confirm('最后一次确认：真的要注销账号「' + currentUser.name + '」吗？')) return;
   var pwd = prompt('请输入密码以确认注销');
   if (!pwd) return;

@@ -16,12 +16,12 @@
 <div id="app">
 <div id="game-table">
   <div id="watermark">吴</div>
-  <button id="bgm-toggle" title="背景音乐" onclick="toggleBgmMute()">🔊</button>
-  <button id="settings-btn" title="设置" onclick="openSettings()">⚙️</button>
+  <button id="bgm-toggle" title="背景音乐" onclick="toggleBgmMute()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M11 5 6.5 8.5H3v7h3.5L11 19V5Z"/><path d="M15.5 8.7a4.6 4.6 0 0 1 0 6.6"/><path d="M18.3 6.2a8.4 8.4 0 0 1 0 11.6"/></svg></button>
+  <button id="settings-btn" title="设置" onclick="openSettings()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><circle cx="12" cy="12" r="3.3"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8"/></svg></button>
   <div id="round-display">第1局 / 共10局</div>
   <div id="landlord-area"></div>
   <div id="opp-left" class="opponent">
-    <div class="opp-avatar">👴</div>
+    <div class="opp-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="#f0c040" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:58%;height:58%"><circle cx="12" cy="8.1" r="3.6"/><path d="M4.6 20c1.4-3.7 4-5.5 7.4-5.5s6 1.8 7.4 5.5"/></svg></div>
     <div class="opp-info">
       <div class="opp-label" id="opp-left-label"><span>电脑A</span><span class="multiplier" id="opp-left-mult"></span></div>
       <div id="opp-left-scores"></div>
@@ -30,7 +30,7 @@
     </div>
   </div>
   <div id="opp-right" class="opponent">
-    <div class="opp-avatar">👩</div>
+    <div class="opp-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="#f0c040" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:58%;height:58%"><circle cx="12" cy="8.1" r="3.6"/><path d="M4.6 20c1.4-3.7 4-5.5 7.4-5.5s6 1.8 7.4 5.5"/></svg></div>
     <div class="opp-info">
       <div class="opp-label" id="opp-right-label"><span>电脑B</span><span class="multiplier" id="opp-right-mult"></span></div>
       <div id="opp-right-scores"></div>
@@ -98,68 +98,68 @@
 <!-- Settings Modal -->
 <div id="settings-modal">
   <div id="settings-box">
-    <h2>⚙️ 设置</h2>
+    <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><circle cx="12" cy="12" r="3.3"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8"/></svg> 设置</h2>
     
     <div class="settings-section">
-      <h3>🔊 音效设置</h3>
+      <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M11 5 6.5 8.5H3v7h3.5L11 19V5Z"/><path d="M15.5 8.7a4.6 4.6 0 0 1 0 6.6"/><path d="M18.3 6.2a8.4 8.4 0 0 1 0 11.6"/></svg> 音效设置</h3>
       <div class="settings-item" style="flex-direction:column;align-items:stretch;gap:6px;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <label>背景音乐</label>
-          <span id="bgm-volume-val" style="color:#94a3b8;font-size:13px;">80%</span>
+          <span id="bgm-volume-val" style="color:#9eacbd;font-size:13px;">80%</span>
         </div>
-        <input type="range" id="bgm-volume" min="0" max="100" value="80" style="width:100%;accent-color:#60a5fa;" oninput="setBgmVolume(this.value)">
+        <input type="range" id="bgm-volume" min="0" max="100" value="80" style="width:100%;accent-color:#f0c040;" oninput="setBgmVolume(this.value)">
       </div>
       <div class="settings-item" style="flex-direction:column;align-items:stretch;gap:6px;margin-top:12px;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <label>出牌音效</label>
-          <span id="sfx-volume-val" style="color:#94a3b8;font-size:13px;">100%</span>
+          <span id="sfx-volume-val" style="color:#9eacbd;font-size:13px;">100%</span>
         </div>
-        <input type="range" id="sfx-volume" min="0" max="100" value="100" style="width:100%;accent-color:#60a5fa;" oninput="setSfxVolume(this.value)">
+        <input type="range" id="sfx-volume" min="0" max="100" value="100" style="width:100%;accent-color:#f0c040;" oninput="setSfxVolume(this.value)">
       </div>
     </div>
     
     <div class="settings-section">
-      <h3>👤 账户信息</h3>
+      <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><circle cx="12" cy="8.1" r="3.6"/><path d="M4.6 20c1.4-3.7 4-5.5 7.4-5.5s6 1.8 7.4 5.5"/></svg> 账户信息</h3>
       <div class="user-info-panel" id="user-info-panel">
-        <div class="avatar" id="user-avatar">👤</div>
+        <div class="avatar" id="user-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="#f0c040" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:55%;height:55%;vertical-align:-0.14em"><circle cx="12" cy="8.1" r="3.6"/><path d="M4.6 20c1.4-3.7 4-5.5 7.4-5.5s6 1.8 7.4 5.5"/></svg></div>
         <div class="uname" id="user-name-display">游客</div>
         <div class="ustatus" id="user-status">未登录</div>
       </div>
     </div>
     
     <div class="settings-section" id="stats-section">
-      <h3>📊 战绩统计</h3>
+      <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M3.5 20.5h17"/><path d="M7 20.5V12M12 20.5V6.5M17 20.5v-5"/></svg> 战绩统计</h3>
       <div id="stats-panel" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:8px 0;">
         <div style="text-align:center;background:rgba(255,255,255,0.05);border-radius:10px;padding:12px;">
-          <div style="font-size:24px;font-weight:800;color:#60a5fa;" id="stat-total">0</div>
-          <div style="font-size:12px;color:#94a3b8;">总场次</div>
+          <div style="font-size:24px;font-weight:800;color:#dce8f7;" id="stat-total">0</div>
+          <div style="font-size:12px;color:#9eacbd;">总场次</div>
         </div>
         <div style="text-align:center;background:rgba(255,255,255,0.05);border-radius:10px;padding:12px;">
-          <div style="font-size:24px;font-weight:800;color:#4ade80;" id="stat-wins">0</div>
-          <div style="font-size:12px;color:#94a3b8;">胜利</div>
+          <div style="font-size:24px;font-weight:800;color:#4caf50;" id="stat-wins">0</div>
+          <div style="font-size:12px;color:#9eacbd;">胜利</div>
         </div>
         <div style="text-align:center;background:rgba(255,255,255,0.05);border-radius:10px;padding:12px;">
-          <div style="font-size:24px;font-weight:800;color:#fbbf24;" id="stat-rate">0%</div>
-          <div style="font-size:12px;color:#94a3b8;">胜率</div>
+          <div style="font-size:24px;font-weight:800;color:#f0c040;" id="stat-rate">0%</div>
+          <div style="font-size:12px;color:#9eacbd;">胜率</div>
         </div>
         <div style="text-align:center;background:rgba(255,255,255,0.05);border-radius:10px;padding:12px;">
-          <div style="font-size:24px;font-weight:800;color:#f87171;" id="stat-streak">0</div>
-          <div style="font-size:12px;color:#94a3b8;">连胜</div>
+          <div style="font-size:24px;font-weight:800;color:#f44336;" id="stat-streak">0</div>
+          <div style="font-size:12px;color:#9eacbd;">连胜</div>
         </div>
       </div>
-      <div id="stats-login-hint" style="display:none;text-align:center;color:#94a3b8;font-size:13px;padding:10px;">登录后可查看战绩</div>
+      <div id="stats-login-hint" style="display:none;text-align:center;color:#9eacbd;font-size:13px;padding:10px;">登录后可查看战绩</div>
     </div>
     
     <div class="settings-section" id="leaderboard-section">
-      <h3>🏆 排行榜</h3>
+      <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M8 4h8v5a4 4 0 0 1-8 0V4Z"/><path d="M8 5.2H5.4A2.6 2.6 0 0 0 8.2 9M16 5.2h2.6A2.6 2.6 0 0 1 15.8 9"/><path d="M12 13v3.6"/><path d="M8.8 20h6.4"/><path d="M9.6 16.6h4.8"/></svg> 排行榜</h3>
       <div id="leaderboard-panel" style="max-height:200px;overflow-y:auto;">
-        <div id="lb-empty" style="text-align:center;color:#94a3b8;font-size:13px;padding:10px;">暂无数据</div>
+        <div id="lb-empty" style="text-align:center;color:#9eacbd;font-size:13px;padding:10px;">暂无数据</div>
         <table id="lb-table" style="width:100%;border-collapse:collapse;display:none;">
           <thead><tr style="border-bottom:1px solid rgba(255,255,255,0.1);">
-            <th style="text-align:left;padding:6px 8px;color:#94a3b8;font-size:12px;">排名</th>
-            <th style="text-align:left;padding:6px 8px;color:#94a3b8;font-size:12px;">玩家</th>
-            <th style="text-align:center;padding:6px 8px;color:#94a3b8;font-size:12px;">场次</th>
-            <th style="text-align:center;padding:6px 8px;color:#94a3b8;font-size:12px;">胜率</th>
+            <th style="text-align:left;padding:6px 8px;color:#9eacbd;font-size:12px;">排名</th>
+            <th style="text-align:left;padding:6px 8px;color:#9eacbd;font-size:12px;">玩家</th>
+            <th style="text-align:center;padding:6px 8px;color:#9eacbd;font-size:12px;">场次</th>
+            <th style="text-align:center;padding:6px 8px;color:#9eacbd;font-size:12px;">胜率</th>
           </tr></thead>
           <tbody id="lb-body"></tbody>
         </table>
@@ -167,7 +167,7 @@
     </div>
     
     <div class="settings-section">
-      <h3>📖 游戏规则</h3>
+      <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M12 6.6C10.4 5.1 8.4 4.6 6 4.6c-1 0-2 .1-3 .4v13.9c1-.3 2-.4 3-.4 2.4 0 4.4.5 6 2 1.6-1.5 3.6-2 6-2 1 0 2 .1 3 .4V5c-1-.3-2-.4-3-.4-2.4 0-4.4.5-6 2Z"/><path d="M12 6.6v14"/></svg> 游戏规则</h3>
       <div class="rules-content">
         <h4>基本规则</h4>
         <p>斗地主是一款三人扑克牌游戏，使用一副54张牌（含大小王）。</p>
@@ -203,21 +203,21 @@
     </div>
 
     <div class="settings-section" id="ai-learning-section">
-      <h3>🤖 AI 学习进度</h3>
+      <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.6" y="9.6" width="4.8" height="4.8"/><path d="M9 2.8V6M15 2.8V6M9 18v3.2M15 18v3.2M2.8 9H6M2.8 15H6M18 9h3.2M18 15h3.2"/></svg> AI 学习进度</h3>
       <div id="ai-learning-content" class="learn-summary">加载中...</div>
     </div>
 
     <button class="settings-btn settings-btn-secondary" onclick="closeSettings()">关闭设置</button>
-    <button class="settings-btn settings-btn-secondary" onclick="goToLobby()" style="margin-top:8px;">🏠 返回大厅</button>
+    <button class="settings-btn settings-btn-secondary" onclick="goToLobby()" style="margin-top:8px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M4 11.2 12 4.2l8 7"/><path d="M6.4 9.6V20h11.2V9.6"/></svg> 返回大厅</button>
     <button class="settings-btn settings-btn-danger" id="btn-logout" onclick="logoutUser()" style="display:none;">退出登录</button>
-    <button class="settings-btn settings-btn-danger" id="btn-delete-account" onclick="deleteAccount()" style="display:none;margin-top:4px;font-size:13px;opacity:0.8;">🗑️ 注销账号</button>
+    <button class="settings-btn settings-btn-danger" id="btn-delete-account" onclick="deleteAccount()" style="display:none;margin-top:4px;font-size:13px;opacity:0.8;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M4 7h16"/><path d="M9.4 7V4.6h5.2V7"/><path d="M6.4 7l1 13h9.2l1-13"/><path d="M10 10.8v5.6M14 10.8v5.6"/></svg> 注销账号</button>
   </div>
 </div>
 
 <!-- Login Modal -->
 <div id="login-modal">
   <div id="login-box">
-    <h2>🃏 斗地主</h2>
+    <h2><svg viewBox="0 0 24 24" fill="none" stroke="#f0c040" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1.1em;height:1.1em;vertical-align:-0.14em"><rect x="5.6" y="3.6" width="12.8" height="16.8" rx="2.2"/><path d="M12 8.8c-1.9 1.7-2.7 2.7-2.7 3.7a1.75 1.75 0 0 0 2.7 1.5 1.75 1.75 0 0 0 2.7-1.5c0-1-.8-2-2.7-3.7Z"/></svg> 斗地主</h2>
     <div class="login-tabs">
       <button class="login-tab active" id="tab-login" onclick="switchTab('login')">登录</button>
       <button class="login-tab" id="tab-register" onclick="switchTab('register')">注册</button>
@@ -226,11 +226,11 @@
       <input type="text" class="login-input" id="input-name" placeholder="请输入昵称" maxlength="12" autocomplete="off">
       <div class="password-wrapper">
         <input type="password" class="login-input" id="input-password" placeholder="请输入密码（至少4位）" maxlength="20" autocomplete="off">
-        <button type="button" class="toggle-pwd" onclick="togglePwd('input-password',this)">👁️</button>
+        <button type="button" class="toggle-pwd" onclick="togglePwd('input-password',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M2.2 12S5.8 5.8 12 5.8 21.8 12 21.8 12 18.2 18.2 12 18.2 2.2 12 2.2 12Z"/><circle cx="12" cy="12" r="2.7"/></svg></button>
       </div>
       <div class="password-wrapper" id="confirm-password-group" style="display:none">
         <input type="password" class="login-input" id="input-confirm-password" placeholder="请确认密码" maxlength="20" autocomplete="off">
-        <button type="button" class="toggle-pwd" onclick="togglePwd('input-confirm-password',this)">👁️</button>
+        <button type="button" class="toggle-pwd" onclick="togglePwd('input-confirm-password',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M2.2 12S5.8 5.8 12 5.8 21.8 12 21.8 12 18.2 18.2 12 18.2 2.2 12 2.2 12Z"/><circle cx="12" cy="12" r="2.7"/></svg></button>
       </div>
       <label class="login-remember">
         <input type="checkbox" id="remember-login" checked>

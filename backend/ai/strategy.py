@@ -69,6 +69,8 @@ _DEFAULTS = {
     "cs_core5_single_two": 10, "cs_core5_single_K_noA": 5,
     # 大牌节流 v2（lead 主动出牌点数分级罚分 + 残局豁免阈值）
     "ls_pen_joker": -70, "ls_pen_two": -45, "ls_pen_a": -22, "ls_endgame_th": 6,
+    # 结构大牌早甩罚（进手张守恒，20260907 复盘8局实锤；与 evaluation.py / config.json 同步）
+    "ls_struct_entry_pen": -60,
     "ls_land_small_bonus": 24,
     # TASK-C 农民 lead 三改（与 evaluation.py _DEFAULTS 保持同步）
     "ls_single_bias_mult": 0.4, "ls_gate_exempt_hands": 3, "ls_gate_exempt_big": 3,

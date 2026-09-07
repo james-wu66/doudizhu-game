@@ -141,6 +141,7 @@
     "ls_pen_two": -45,
     "ls_pen_a": -22,
     "ls_endgame_th": 6,
+    "ls_struct_entry_pen": -60,
     "ls_land_small_bonus": 24,
     "ls_single_bias_mult": 0.4,
     "ls_gate_exempt_hands": 3,

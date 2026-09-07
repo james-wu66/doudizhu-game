@@ -10,8 +10,8 @@
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { 
-    min-height:100vh; background:linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
-    font-family:'Microsoft YaHei', sans-serif; color:#e2e8f0;
+    min-height:100vh; background:radial-gradient(ellipse 90% 70% at 50% 0%, #163050 0%, #0e2240 45%, #050d1a 100%);background-attachment:fixed;
+    font-family:'Microsoft YaHei', sans-serif; color:#dce8f7;
 }
 
 .header {
@@ -20,13 +20,13 @@ body {
 }
 .header h1 { font-size:24px; font-weight:700; }
 .header .user-info { display:flex; align-items:center; gap:15px; }
-.header .user-info span { color:#94a3b8; font-size:14px; }
-.header .user-info .name { color:#60a5fa; font-weight:600; }
+.header .user-info span { color:#9eacbd; font-size:14px; }
+.header .user-info .name { color:#f0c040; font-weight:600; }
 .btn-logout {
     padding:8px 16px; border-radius:8px; border:1px solid rgba(255,255,255,0.1);
-    background:transparent; color:#94a3b8; font-size:13px; cursor:pointer;
+    background:transparent; color:#9eacbd; font-size:13px; cursor:pointer;
 }
-.btn-logout:hover { border-color:#ef4444; color:#ef4444; }
+.btn-logout:hover { border-color:#c0392b; color:#c0392b; }
 
 .main { max-width:1000px; margin:0 auto; padding:40px 20px; }
 
@@ -37,33 +37,33 @@ body {
     box-shadow:0 20px 40px rgba(0,0,0,0.3);
     margin-bottom:30px;
 }
-.stats-card h2 { font-size:18px; margin-bottom:25px; color:#94a3b8; font-weight:500; }
+.stats-card h2 { font-size:18px; margin-bottom:25px; color:#9eacbd; font-weight:500; }
 .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; }
 .stat-item { text-align:center; }
-.stat-item .num { font-size:36px; font-weight:800; color:#60a5fa; }
-.stat-item .num.green { color:#4ade80; }
-.stat-item .num.red { color:#f87171; }
-.stat-item .num.yellow { color:#fbbf24; }
-.stat-item .label { font-size:13px; color:#64748b; margin-top:5px; }
+.stat-item .num { font-size:36px; font-weight:800; color:#f0c040; }
+.stat-item .num.green { color:#4caf50; }
+.stat-item .num.red { color:#f44336; }
+.stat-item .num.yellow { color:#f0c040; }
+.stat-item .label { font-size:13px; color:#8a9ab0; margin-top:5px; }
 
 /* 按钮区 */
 .actions { display:flex; gap:20px; margin-bottom:30px; }
 .btn-play {
     flex:1; padding:20px; border-radius:16px; border:none;
-    background:linear-gradient(135deg, #2563eb, #3b82f6);
+    background:linear-gradient(135deg, #1a4a7a, #2e76c7);
     color:white; font-size:20px; font-weight:700; cursor:pointer;
     letter-spacing:4px; transition:all 0.3s;
-    box-shadow:0 8px 25px rgba(37,99,235,0.3);
+    box-shadow:0 8px 25px rgba(26,74,122,0.3);
 }
-.btn-play:hover { transform:translateY(-2px); box-shadow:0 12px 35px rgba(37,99,235,0.4); }
+.btn-play:hover { transform:translateY(-2px); box-shadow:0 12px 35px rgba(26,74,122,0.4); }
 .btn-play:active { transform:translateY(0); }
 
 .btn-secondary {
     padding:20px 30px; border-radius:16px; border:1px solid rgba(255,255,255,0.1);
-    background:rgba(30,41,59,0.6); color:#94a3b8; font-size:15px; cursor:pointer;
+    background:rgba(30,41,59,0.6); color:#9eacbd; font-size:15px; cursor:pointer;
     transition:all 0.3s;
 }
-.btn-secondary:hover { border-color:#60a5fa; color:#60a5fa; }
+.btn-secondary:hover { border-color:#f0c040; color:#f0c040; }
 
 /* 排行榜 */
 .leaderboard {
@@ -71,22 +71,22 @@ body {
     border:1px solid rgba(255,255,255,0.05);
     box-shadow:0 20px 40px rgba(0,0,0,0.3);
 }
-.leaderboard h2 { font-size:18px; margin-bottom:25px; color:#94a3b8; font-weight:500; }
+.leaderboard h2 { font-size:18px; margin-bottom:25px; color:#9eacbd; font-weight:500; }
 
 .lb-table { width:100%; border-collapse:collapse; }
-.lb-table th { text-align:left; padding:12px 16px; color:#64748b; font-size:13px; font-weight:500; border-bottom:1px solid rgba(255,255,255,0.05); }
+.lb-table th { text-align:left; padding:12px 16px; color:#8a9ab0; font-size:13px; font-weight:500; border-bottom:1px solid rgba(255,255,255,0.05); }
 .lb-table td { padding:12px 16px; font-size:14px; border-bottom:1px solid rgba(255,255,255,0.03); }
 .lb-table tr:hover td { background:rgba(255,255,255,0.02); }
-.lb-table .rank { color:#fbbf24; font-weight:700; font-size:16px; }
-.lb-table .rank.r1 { color:#fbbf24; }
-.lb-table .rank.r2 { color:#94a3b8; }
+.lb-table .rank { color:#f0c040; font-weight:700; font-size:16px; }
+.lb-table .rank.r1 { color:#f0c040; }
+.lb-table .rank.r2 { color:#9eacbd; }
 .lb-table .rank.r3 { color:#cd7f32; }
-.lb-table .me { background:rgba(96,165,250,0.05); }
-.lb-table .me td { color:#60a5fa; font-weight:600; }
-.lb-empty { text-align:center; color:#475569; padding:40px; font-size:14px; }
+.lb-table .me { background:rgba(240,192,64,0.05); }
+.lb-table .me td { color:#f0c040; font-weight:600; }
+.lb-empty { text-align:center; color:#6b7f96; padding:40px; font-size:14px; }
 
 /* 加载 */
-.loading-text { color:#475569; text-align:center; padding:20px; }
+.loading-text { color:#6b7f96; text-align:center; padding:20px; }
 
 /* === 个人信息中心弹窗 === */
 .profile-overlay {
@@ -104,7 +104,7 @@ body {
 }
 .profile-close {
     position:absolute; top:12px; right:16px; z-index:10;
-    background:none; border:none; color:#94a3b8; font-size:24px; cursor:pointer;
+    background:none; border:none; color:#9eacbd; font-size:24px; cursor:pointer;
 }
 .profile-close:hover { color:#fff; }
 .profile-tabs {
@@ -112,12 +112,12 @@ body {
     display:flex; flex-direction:column; gap:4px; flex-shrink:0;
 }
 .profile-tab {
-    padding:12px 0; text-align:center; color:#94a3b8; font-size:14px;
+    padding:12px 0; text-align:center; color:#9eacbd; font-size:14px;
     cursor:pointer; border:none; background:none; transition:all 0.2s;
     border-left:3px solid transparent;
 }
 .profile-tab.active {
-    color:#60a5fa; background:rgba(96,165,250,0.1); border-left-color:#60a5fa;
+    color:#f0c040; background:rgba(240,192,64,0.1); border-left-color:#f0c040;
 }
 .profile-content {
     flex:1; overflow-y:auto; padding:24px 28px;
@@ -128,23 +128,23 @@ body {
 /* 资料 tab */
 .profile-avatar {
     width:72px; height:72px; border-radius:50%; margin:0 auto 12px;
-    background:linear-gradient(135deg,#2563eb,#3b82f6);
+    background:linear-gradient(135deg,#1a4a7a,#2e76c7);
     display:flex; align-items:center; justify-content:center;
-    font-size:32px; color:#fff; font-weight:800; border:3px solid rgba(96,165,250,0.3);
+    font-size:32px; color:#fff; font-weight:800; border:3px solid rgba(240,192,64,0.3);
 }
-.profile-nick { text-align:center; font-size:18px; font-weight:700; color:#e2e8f0; margin-bottom:20px; }
+.profile-nick { text-align:center; font-size:18px; font-weight:700; color:#dce8f7; margin-bottom:20px; }
 .profile-stats3 { display:flex; justify-content:center; gap:40px; margin-top:16px; }
 .profile-stat3 { text-align:center; }
-.profile-stat3 .num { font-size:28px; font-weight:800; color:#60a5fa; }
-.profile-stat3 .lbl { font-size:12px; color:#64748b; margin-top:4px; }
+.profile-stat3 .num { font-size:28px; font-weight:800; color:#f0c040; }
+.profile-stat3 .lbl { font-size:12px; color:#8a9ab0; margin-top:4px; }
 
 /* 战绩 tab */
 .games-filter { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
 .games-filter button {
     padding:6px 14px; border-radius:20px; border:1px solid rgba(255,255,255,0.1);
-    background:transparent; color:#94a3b8; font-size:12px; cursor:pointer;
+    background:transparent; color:#9eacbd; font-size:12px; cursor:pointer;
 }
-.games-filter button.active { background:rgba(96,165,250,0.15); color:#60a5fa; border-color:#60a5fa; }
+.games-filter button.active { background:rgba(240,192,64,0.15); color:#f0c040; border-color:#f0c040; }
 .games-list { display:flex; flex-direction:column; gap:8px; }
 .game-row {
     display:flex; align-items:center; gap:12px; padding:10px 12px;
@@ -155,20 +155,20 @@ body {
     align-items:center; justify-content:center; font-size:11px;
     font-weight:700; color:#fff; flex-shrink:0;
 }
-.game-row .result-dot.win { background:#22c55e; }
-.game-row .result-dot.lose { background:#ef4444; }
+.game-row .result-dot.win { background:#2a8a6a; }
+.game-row .result-dot.lose { background:#c0392b; }
 .game-row .game-info { flex:1; }
-.game-row .game-mode { font-size:14px; color:#e2e8f0; font-weight:600; }
-.game-row .game-meta { font-size:11px; color:#64748b; margin-top:2px; }
+.game-row .game-mode { font-size:14px; color:#dce8f7; font-weight:600; }
+.game-row .game-meta { font-size:11px; color:#8a9ab0; margin-top:2px; }
 .game-row .game-score { font-size:15px; font-weight:700; min-width:50px; text-align:right; }
-.game-row .game-score.positive { color:#4ade80; }
-.game-row .game-score.negative { color:#f87171; }
+.game-row .game-score.positive { color:#4caf50; }
+.game-row .game-score.negative { color:#f44336; }
 .game-row .btn-replay {
     padding:4px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.1);
-    background:rgba(96,165,250,0.1); color:#60a5fa; font-size:11px; cursor:pointer;
+    background:rgba(240,192,64,0.1); color:#f0c040; font-size:11px; cursor:pointer;
 }
-.game-row .btn-replay:hover { background:rgba(96,165,250,0.2); }
-.games-privacy { margin-top:16px; font-size:12px; color:#475569; }
+.game-row .btn-replay:hover { background:rgba(240,192,64,0.2); }
+.games-privacy { margin-top:16px; font-size:12px; color:#6b7f96; }
 
 /* 回放弹窗 */
 .replay-overlay {
@@ -184,7 +184,7 @@ body {
     padding:24px; overflow-y:auto;
     box-shadow:0 20px 60px rgba(0,0,0,0.5);
 }
-.replay-title { font-size:18px; font-weight:700; color:#e2e8f0; margin-bottom:16px; text-align:center; }
+.replay-title { font-size:18px; font-weight:700; color:#dce8f7; margin-bottom:16px; text-align:center; }
 .replay-steps { display:flex; flex-direction:column; gap:6px; }
 .replay-step {
     display:flex; align-items:center; gap:10px; padding:8px 12px;
@@ -192,15 +192,15 @@ body {
     opacity:0; transition:opacity 0.3s;
 }
 .replay-step.show { opacity:1; }
-.replay-step .step-player { color:#60a5fa; font-weight:600; min-width:60px; }
-.replay-step .step-pattern { color:#fbbf24; min-width:50px; }
-.replay-step .step-cards { color:#94a3b8; }
+.replay-step .step-player { color:#f0c040; font-weight:600; min-width:60px; }
+.replay-step .step-pattern { color:#f0c040; min-width:50px; }
+.replay-step .step-cards { color:#9eacbd; }
 .replay-btns { display:flex; gap:10px; margin-top:16px; justify-content:center; }
 .replay-btns button {
     padding:8px 20px; border-radius:8px; border:none; font-size:13px; cursor:pointer;
 }
-.replay-btn-start { background:#2563eb; color:#fff; }
-.replay-btn-close { background:rgba(255,255,255,0.1); color:#94a3b8; }
+.replay-btn-start { background:#1a4a7a; color:#fff; }
+.replay-btn-close { background:rgba(255,255,255,0.1); color:#9eacbd; }
 
 
 /* 头像容器 */
@@ -209,7 +209,7 @@ body {
 }
 .profile-avatar-img {
     width:72px; height:72px; border-radius:50%; object-fit:cover;
-    border:3px solid rgba(96,165,250,0.3); display:none;
+    border:3px solid rgba(240,192,64,0.3); display:none;
 }
 .avatar-overlay {
     position:absolute; bottom:0; right:0; background:rgba(0,0,0,0.6); border-radius:50%;
@@ -269,14 +269,14 @@ body {
 
 /* === 大厅设置 tab 样式 === */
 .settings-block{margin-bottom:16px;padding:14px;background:rgba(255,255,255,0.05);border-radius:10px;}
-.settings-block h4{color:#94a3b8;font-size:13px;font-weight:700;margin-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:6px;}
-.settings-row{display:flex;align-items:center;gap:10px;padding:8px 0;color:#e2e8f0;font-size:14px;}
-.settings-row input[type=range]{flex:1;accent-color:#60a5fa;}
-.settings-row span{width:40px;text-align:right;color:#94a3b8;font-size:12px;}
-.rules-text{color:#94a3b8;font-size:13px;line-height:1.8;max-height:180px;overflow-y:auto;}
+.settings-block h4{color:#9eacbd;font-size:13px;font-weight:700;margin-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:6px;}
+.settings-row{display:flex;align-items:center;gap:10px;padding:8px 0;color:#dce8f7;font-size:14px;}
+.settings-row input[type=range]{flex:1;accent-color:#f0c040;}
+.settings-row span{width:40px;text-align:right;color:#9eacbd;font-size:12px;}
+.rules-text{color:#9eacbd;font-size:13px;line-height:1.8;max-height:180px;overflow-y:auto;}
 .rules-text p{margin:4px 0;}
-.settings-block-btn{width:100%;padding:12px;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;background:rgba(255,255,255,0.1);color:#e2e8f0;}
-.settings-block-btn.danger{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;}
+.settings-block-btn{width:100%;padding:12px;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;background:rgba(255,255,255,0.1);color:#dce8f7;}
+.settings-block-btn.danger{background:linear-gradient(135deg,#c0392b,#96281b);color:#fff;}
 /* 大厅背景音乐小喇叭（2026-08-30 新增，与游戏页同款、可开关） */
 #lobby-bgm-toggle{
   width:34px;height:34px;border-radius:50%;border:none;background:rgba(0,0,0,0.5);
@@ -290,17 +290,17 @@ body {
 <body>
 
 <div class="header">
-    <h1>🃏 欢乐斗地主</h1>
+    <h1><svg viewBox="0 0 24 24" fill="none" stroke="#f0c040" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1.05em;height:1.05em;vertical-align:-0.14em"><rect x="5.6" y="3.6" width="12.8" height="16.8" rx="2.2"/><path d="M12 8.8c-1.9 1.7-2.7 2.7-2.7 3.7a1.75 1.75 0 0 0 2.7 1.5 1.75 1.75 0 0 0 2.7-1.5c0-1-.8-2-2.7-3.7Z"/></svg> 欢乐斗地主</h1>
     <div class="user-info">
-        <button id="lobby-bgm-toggle" title="背景音乐" onclick="toggleLobbyBgm()">🔊</button>
-        <span>欢迎，</span><span class="name" id="userName" onclick="openProfile()" style="cursor:pointer;text-decoration:underline dotted rgba(96,165,250,0.3)">-</span>
+        <button id="lobby-bgm-toggle" title="背景音乐" onclick="toggleLobbyBgm()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M11 5 6.5 8.5H3v7h3.5L11 19V5Z"/><path d="M15.5 8.7a4.6 4.6 0 0 1 0 6.6"/><path d="M18.3 6.2a8.4 8.4 0 0 1 0 11.6"/></svg></button>
+        <span>欢迎，</span><span class="name" id="userName" onclick="openProfile()" style="cursor:pointer;text-decoration:underline dotted rgba(240,192,64,0.3)">-</span>
         <button class="btn-logout" onclick="logout()">退出</button>
     </div>
 </div>
 
 <div class="main">
     <div class="stats-card">
-        <h2>📊 我的战绩</h2>
+        <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M3.5 20.5h17"/><path d="M7 20.5V12M12 20.5V6.5M17 20.5v-5"/></svg> 我的战绩</h2>
         <div class="stats-grid">
             <div class="stat-item">
                 <div class="num" id="statTotal">0</div>
@@ -323,11 +323,11 @@ body {
 
     <div class="actions">
         <button class="btn-play" onclick="startGame()">开 始 游 戏</button>
-        <button class="btn-secondary" onclick="location.reload()">🔄 刷新</button>
+        <button class="btn-secondary" onclick="location.reload()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M20.2 12a8.2 8.2 0 1 1-2.4-5.8"/><path d="M20.2 3.6v4.6h-4.6"/></svg> 刷新</button>
     </div>
 
     <div class="leaderboard">
-        <h2>🏆 排行榜</h2>
+        <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M8 4h8v5a4 4 0 0 1-8 0V4Z"/><path d="M8 5.2H5.4A2.6 2.6 0 0 0 8.2 9M16 5.2h2.6A2.6 2.6 0 0 1 15.8 9"/><path d="M12 13v3.6"/><path d="M8.8 20h6.4"/><path d="M9.6 16.6h4.8"/></svg> 排行榜</h2>
         <table class="lb-table">
             <thead>
                 <tr>
@@ -356,10 +356,10 @@ function toggleLobbyBgm(){
   if(bgm.muted){
     bgm.muted=false;bgm.volume=(localStorage.getItem('doudizhu_bgm_vol')||80)/100;
     bgm.play().catch(function(){});
-    btn.textContent='🔊';
+    btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M11 5 6.5 8.5H3v7h3.5L11 19V5Z"/><path d="M15.5 8.7a4.6 4.6 0 0 1 0 6.6"/><path d="M18.3 6.2a8.4 8.4 0 0 1 0 11.6"/></svg>';
     localStorage.setItem('doudizhu_bgm_muted','false');
   }else{
-    bgm.muted=true;bgm.pause();btn.textContent='🔇';
+    bgm.muted=true;bgm.pause();btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M11 5 6.5 8.5H3v7h3.5L11 19V5Z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>';
     localStorage.setItem('doudizhu_bgm_muted','true');
   }
 }
@@ -368,9 +368,9 @@ function initLobbyBgm(){
   var btn=document.getElementById('lobby-bgm-toggle');
   if(!bgm||!btn)return;
   if(localStorage.getItem('doudizhu_bgm_muted')==='true'){
-    bgm.muted=true;bgm.pause();btn.textContent='🔇';
+    bgm.muted=true;bgm.pause();btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M11 5 6.5 8.5H3v7h3.5L11 19V5Z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>';
   }else{
-    bgm.muted=false;btn.textContent='🔊';
+    bgm.muted=false;btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M11 5 6.5 8.5H3v7h3.5L11 19V5Z"/><path d="M15.5 8.7a4.6 4.6 0 0 1 0 6.6"/><path d="M18.3 6.2a8.4 8.4 0 0 1 0 11.6"/></svg>';
     bgm.volume=(localStorage.getItem('doudizhu_bgm_vol')||80)/100;
     bgm.play().catch(function(){});
   }
@@ -455,7 +455,7 @@ async function lobbyLoadLeaderboard() {
             const rankClass = item.rank <= 3 ? ' r' + item.rank : '';
             return '<tr class="' + (isMe ? 'me' : '') + ' clickable" data-name="' + escapeAttr(item.name) + '" style="cursor:pointer">' +
                 '<td class="rank' + rankClass + '">' + item.rank + '</td>' +
-                '<td><img src="' + API + '/users/' + encodeURIComponent(item.name) + '/avatar?t=' + Date.now() + '" style="width:24px;height:24px;border-radius:50%;vertical-align:middle;margin-right:8px" onerror="this.style.display=\'none\'">' + escapeHtml(item.name) + (isMe ? ' ⭐' : '') + '</td>' +
+                '<td><img src="' + API + '/users/' + encodeURIComponent(item.name) + '/avatar?t=' + Date.now() + '" style="width:24px;height:24px;border-radius:50%;vertical-align:middle;margin-right:8px" onerror="this.style.display=\'none\'">' + escapeHtml(item.name) + (isMe ? ' <svg viewBox="0 0 24 24" fill="none" stroke="#f0c040" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-0.14em"><path d="M12 3.6 14.6 9l6 .65-4.45 4 1.25 5.85L12 16.5l-5.4 3 1.25-5.85-4.45-4 6-.65Z"/></svg>' : '') + '</td>' +
                 '<td>' + item.total + '</td>' +
                 '<td>' + item.wins + '</td>' +
                 '<td>' + item.win_rate + '%</td>' +
@@ -565,20 +565,20 @@ async function loadProfileGames(name) {
         const data = await resp.json();
         if (data.hidden) {
             allGames = [];
-            document.getElementById('gamesList').innerHTML = '<div style="color:#94a3b8;text-align:center;padding:20px;">对方已隐藏战绩</div>';
+            document.getElementById('gamesList').innerHTML = '<div style="color:#9eacbd;text-align:center;padding:20px;">对方已隐藏战绩</div>';
             return;
         }
         allGames = data.games || [];
         renderGames(allGames);
     } catch(e) {
-        document.getElementById('gamesList').innerHTML = '<div style="color:#475569;text-align:center;padding:20px;">加载失败</div>';
+        document.getElementById('gamesList').innerHTML = '<div style="color:#6b7f96;text-align:center;padding:20px;">加载失败</div>';
     }
 }
 
 function renderGames(games) {
     const list = document.getElementById('gamesList');
     if (!games.length) {
-        list.innerHTML = '<div style="color:#475569;text-align:center;padding:20px;">还没有对局记录</div>';
+        list.innerHTML = '<div style="color:#6b7f96;text-align:center;padding:20px;">还没有对局记录</div>';
         return;
     }
     list.innerHTML = games.map(g => {
@@ -589,7 +589,7 @@ function renderGames(games) {
         const timeText = g.created_at ? g.created_at.substring(5, 16).replace('T', ' ') : '';
         // 最近3局可回看
         const canReplay = games.indexOf(g) < 3;
-        const replayBtn = canReplay ? '<button class="btn-replay" onclick="goReplay(' + g.game_id + ')">▶ 回看</button>' : '';
+        const replayBtn = canReplay ? '<button class="btn-replay" onclick="goReplay(' + g.game_id + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M7.5 4.8v14.4L19.5 12 7.5 4.8Z"/></svg> 回看</button>' : '';
         return '<div class="game-row">'
             + '<div class="result-dot ' + (isWin ? 'win' : 'lose') + '">' + (isWin ? '胜' : '败') + '</div>'
             + '<div class="game-info"><div class="game-mode">' + (g.mode || '经典新手场') + '</div>'
@@ -782,7 +782,7 @@ function lobbyDeleteAccount(){
   if(!currentUser){alert('登录状态已失效，请重新登录');window.location.href='/';return;}
   var userName = typeof currentUser === 'string' ? currentUser : (currentUser && currentUser.name);
   if(!userName){alert('登录状态已失效，请重新登录');window.location.href='/';return;}
-  if(typeof confirm==='function' && !confirm('⚠️ 注销账号将永久删除你的所有战绩数据，且不可恢复！确定继续吗？'))return;
+  if(typeof confirm==='function' && !confirm('注意：注销账号将永久删除你的所有战绩数据，且不可恢复！确定继续吗？'))return;
   // 手机浏览器禁用 prompt，改用页面内自定义密码输入框
   var box=document.getElementById('del-pwd-box');
   if(box){
@@ -841,7 +841,7 @@ function doDeleteAccount(userName,pwd){
                 <div class="profile-avatar-container" onclick="openAvatarModal()">
                     <div class="profile-avatar" id="profileAvatar">-</div>
                     <img class="profile-avatar-img" id="profileAvatarImg" src="">
-                    <div class="avatar-overlay" id="avatarOverlay">📷</div>
+                    <div class="avatar-overlay" id="avatarOverlay"><svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><rect x="2.6" y="7" width="18.8" height="12.6" rx="2"/><path d="M8.6 7l1.5-2.4h3.8L15.4 7"/><circle cx="12" cy="13" r="3.4"/></svg></div>
                 </div>
                 <div class="profile-nick" id="profileNick">-</div>
                 <div class="profile-stats3">
@@ -860,13 +860,13 @@ function doDeleteAccount(userName,pwd){
                     <button onclick="filterGames('collection',this)">合集</button>
                     <button onclick="filterGames('fav',this)">收藏</button>
                 </div>
-                <div class="games-list" id="gamesList"><div style="color:#475569;text-align:center;padding:20px;">加载中...</div></div>
+                <div class="games-list" id="gamesList"><div style="color:#6b7f96;text-align:center;padding:20px;">加载中...</div></div>
                 <label class="games-privacy" id="privacyLabel" style="display:none"><input type="checkbox" id="privacyToggle"> 不允许他人看我的战绩</label>
             </div>
             <!-- 设置 tab -->
             <div id="profileSettings" style="display:none">
                 <div class="settings-block">
-                    <h4>🔊 音效设置</h4>
+                    <h4><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M11 5 6.5 8.5H3v7h3.5L11 19V5Z"/><path d="M15.5 8.7a4.6 4.6 0 0 1 0 6.6"/><path d="M18.3 6.2a8.4 8.4 0 0 1 0 11.6"/></svg> 音效设置</h4>
                     <div class="settings-row">
                         <label>背景音乐</label>
                         <input type="range" id="lobby-bgm-volume" min="0" max="100" oninput="setLobbyBgmVolume(this.value)">
@@ -879,7 +879,7 @@ function doDeleteAccount(userName,pwd){
                     </div>
                 </div>
                 <div class="settings-block">
-                    <h4>📖 游戏规则</h4>
+                    <h4><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M12 6.6C10.4 5.1 8.4 4.6 6 4.6c-1 0-2 .1-3 .4v13.9c1-.3 2-.4 3-.4 2.4 0 4.4.5 6 2 1.6-1.5 3.6-2 6-2 1 0 2 .1 3 .4V5c-1-.3-2-.4-3-.4-2.4 0-4.4.5-6 2Z"/><path d="M12 6.6v14"/></svg> 游戏规则</h4>
                     <div class="rules-text">
                         <p><b>发牌：</b>54张牌，每人17张，3张底牌</p>
                         <p><b>叫地主：</b>按顺序叫分/抢地主，最高者当地主拿底牌</p>
@@ -890,10 +890,10 @@ function doDeleteAccount(userName,pwd){
                     </div>
                 </div>
                 <button class="settings-block-btn" onclick="lobbyLogout()">退出登录</button>
-                <button class="settings-block-btn danger" onclick="lobbyDeleteAccount()">🗑️ 注销账号</button>
+                <button class="settings-block-btn danger" onclick="lobbyDeleteAccount()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M4 7h16"/><path d="M9.4 7V4.6h5.2V7"/><path d="M6.4 7l1 13h9.2l1-13"/><path d="M10 10.8v5.6M14 10.8v5.6"/></svg> 注销账号</button>
                 <!-- 2026-08-14 注销密码输入框（替代手机被禁用的 prompt） -->
                 <div id="del-pwd-box" style="display:none;margin-top:10px;padding:12px;background:rgba(0,0,0,0.3);border-radius:10px;">
-                    <p style="margin:0 0 8px;color:#e2e8f0;font-size:13px;">请输入账号「<span id="del-pwd-name" style="color:#fbbf24"></span>」的密码确认注销：</p>
+                    <p style="margin:0 0 8px;color:#dce8f7;font-size:13px;">请输入账号「<span id="del-pwd-name" style="color:#f0c040"></span>」的密码确认注销：</p>
                     <input type="password" id="del-pwd-input" placeholder="输入密码" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:#fff;font-size:14px;box-sizing:border-box;margin-bottom:8px;">
                     <div style="display:flex;gap:8px;">
                         <button class="settings-block-btn" onclick="confirmDeleteAccount()" style="flex:1;margin:0;">确认注销</button>
@@ -911,7 +911,7 @@ function doDeleteAccount(userName,pwd){
         <div class="replay-title" id="replayTitle">对局回放</div>
         <div class="replay-steps" id="replaySteps"></div>
         <div class="replay-btns">
-            <button class="replay-btn-start" onclick="startReplay()">▶ 播放</button>
+            <button class="replay-btn-start" onclick="startReplay()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M7.5 4.8v14.4L19.5 12 7.5 4.8Z"/></svg> 播放</button>
             <button class="replay-btn-close" onclick="closeReplay()">关闭</button>
         </div>
     </div>
@@ -921,12 +921,12 @@ function doDeleteAccount(userName,pwd){
 <!-- 头像更换弹窗 -->
 <div class="avatar-modal-overlay" id="avatarModalOverlay" onclick="if(event.target===this)closeAvatarModal()">
     <div class="avatar-modal">
-        <h3 style="margin-bottom:20px;color:#e2e8f0">更换头像</h3>
-        <div id="avatarPreview" style="width:120px;height:120px;border-radius:50%;margin:0 auto 20px;border:3px solid rgba(96,165,250,0.3);overflow:hidden;background:linear-gradient(135deg,#2563eb,#3b82f6)"></div>
-        <p style="color:#94a3b8;font-size:13px;margin-bottom:20px">支持 JPG、PNG、GIF，最大 2MB</p>
+        <h3 style="margin-bottom:20px;color:#dce8f7"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><rect x="2.6" y="7" width="18.8" height="12.6" rx="2"/><path d="M8.6 7l1.5-2.4h3.8L15.4 7"/><circle cx="12" cy="13" r="3.4"/></svg> 更换头像</h3>
+        <div id="avatarPreview" style="width:120px;height:120px;border-radius:50%;margin:0 auto 20px;border:3px solid rgba(240,192,64,0.3);overflow:hidden;background:linear-gradient(135deg,#1a4a7a,#2e76c7)"></div>
+        <p style="color:#9eacbd;font-size:13px;margin-bottom:20px">支持 JPG、PNG、GIF，最大 2MB</p>
         <div style="display:flex;gap:10px;justify-content:center">
-            <button onclick="doUploadAvatar()" style="padding:10px 20px;border-radius:8px;border:none;background:#2563eb;color:#fff;cursor:pointer">📷 选择图片</button>
-            <button onclick="closeAvatarModal()" style="padding:10px 20px;border-radius:8px;border:none;background:rgba(255,255,255,0.1);color:#94a3b8;cursor:pointer">关闭</button>
+            <button onclick="doUploadAvatar()" style="padding:10px 20px;border-radius:8px;border:none;background:#1a4a7a;color:#fff;cursor:pointer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><rect x="2.6" y="7" width="18.8" height="12.6" rx="2"/><path d="M8.6 7l1.5-2.4h3.8L15.4 7"/><circle cx="12" cy="13" r="3.4"/></svg> 选择图片</button>
+            <button onclick="closeAvatarModal()" style="padding:10px 20px;border-radius:8px;border:none;background:rgba(255,255,255,0.1);color:#9eacbd;cursor:pointer">关闭</button>
         </div>
     </div>
 </div>

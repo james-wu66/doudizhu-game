@@ -83,6 +83,19 @@ async function initReplayMode(gameId){
           el.style.flexShrink='0';
           lc.appendChild(el);
         });
+        // 顶牌角标/中央花色按实际牌高等比设字号（防花色占满牌面；桌面/手机自动适配）
+        Array.prototype.forEach.call(lc.querySelectorAll('.card'),function(el){
+          var hh=el.offsetHeight||63;
+          var lrF=hh*0.30,lsF=hh*0.186,lcF=hh*0.42;
+          var corners=el.querySelectorAll('.corner');
+          corners.forEach(function(cn){
+            cn.style.setProperty('font-size',lsF+'px','important');
+            var lrn=cn.querySelector('.rank');if(lrn)lrn.style.setProperty('font-size',lrF+'px','important');
+            var lsu=cn.querySelector('.suit');if(lsu)lsu.style.setProperty('font-size',lsF+'px','important');
+          });
+          var lcs=el.querySelector('.center-suit');
+          if(lcs){lcs.style.setProperty('font-size',lcF+'px','important');lcs.style.setProperty('line-height','1','important');}
+        });
       }
     }
     // 开始自动回放

@@ -80,12 +80,16 @@ function renderReplayOpponent(containerId,cards,label){
   // 与玩家手牌同尺寸基础上整体缩小20%（等比例：花纹/数字字号随牌高自动缩）
   var styles=getComputedStyle(document.documentElement);
   function r2(n){return Math.round(n*100)/100;}
-  var replayScale=(window.innerWidth<1100)?0.72:0.8;
+  // 三档缩放：桌面≥1100 原样；手机横屏 767~1100 适度放大(0.66)；竖屏<767 维持(0.57)
+  var replayScale=(window.innerWidth>=1100)?0.72:((window.innerWidth>=767)?0.66:0.57);
   var cw=r2((parseFloat(styles.getPropertyValue('--legacy-card-w'))||window.innerHeight*.065)*replayScale);
   var ch=r2((parseFloat(styles.getPropertyValue('--legacy-card-h'))||cw*1.4)*replayScale);
-  // 两行排布：第一行固定10张（17张=10+7，20张=10+10），重叠比例同玩家手牌（45%）
+  // 两行排布：第一行固定10张（17张=10+7，20张=10+10）
+  // 桌面空间充裕用45%重叠；手机宽度窄用60%重叠缩rowW，避免左右两家顶牌糊在一起
   var rowCount=10;
-  var overlap=r2(cw*.45);
+  // 三档重叠：桌面≥1100 露55%；手机横屏 767~1100 露50%；竖屏<767 维持露40%
+  var overlapRatio=(window.innerWidth>=1100)?0.45:((window.innerWidth>=767)?0.50:0.60);
+  var overlap=r2(cw*overlapRatio);
   var step=r2(cw-overlap); // 每张牌占位宽度
   var rowW=r2(cw+(rowCount-1)*step); // 第一行10张总宽
   var rowH=r2(ch+6); // 每行高度（牌高+行距）
@@ -110,10 +114,10 @@ function renderReplayOpponent(containerId,cards,label){
     el.style.setProperty('left',r2(col*step)+'px','important');
     el.style.setProperty('top',r2(row*rowH)+'px','important');
     el.style.setProperty('margin','0','important');
-    // 花纹与牌等比缩放：点数=牌高*30%，花色=牌高*26%，中央=牌高*55%
-    var rFont=ch*0.30;
-    var sFont=ch*0.186;
-    var cFont=ch*0.314;
+    // 花纹与牌等比缩放：点数=牌高*26%，花色=牌高*16%，中央=牌高*55%
+    var rFont=ch*0.26;
+    var sFont=ch*0.16;
+    var cFont=ch*0.55;
     var corners=el.querySelectorAll('.corner');
     corners.forEach(function(corner){
       corner.style.setProperty('font-size',sFont+'px','important');
@@ -174,8 +178,8 @@ function renderReplayPlayedCards(who,cards){
     el.style.setProperty('flex','0 0 '+cardW+'px','important');
     el.style.setProperty('flex-shrink','0','important');
     el.style.setProperty('margin',(i===0?'0':'0 0 0 '+(-cardW*0.45)+'px'),'important');
-    // 待办1：角标和中央花色按牌面比例设置字号
-    var rF=cardH*0.30,sF=cardH*0.186,cF=cardH*0.314;
+    // 角标和中央花色按牌面比例设置字号；中央花色放大以减少牌面中空
+    var rF=cardH*0.30,sF=cardH*0.186,cF=cardH*0.42;
     var corners=el.querySelectorAll('.corner');
     corners.forEach(function(corner){
       corner.style.setProperty('font-size',sF+'px','important');
@@ -193,19 +197,19 @@ function showReplayBar(){
   var bar=document.createElement('div');
   bar.id='replay-bar';
   bar.style.cssText='position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,0.85);padding:12px 20px;display:flex;align-items:center;justify-content:center;gap:16px;z-index:9999;';
-  bar.innerHTML='<span style="color:#94a3b8;font-size:13px">回放速度：</span>'
+  bar.innerHTML='<span style="color:#9eacbd;font-size:13px">回放速度：</span>'
     +'<button onclick="setReplaySpeed(1)" class="replay-speed-btn active" data-speed="1">1x</button>'
     +'<button onclick="setReplaySpeed(2)" class="replay-speed-btn" data-speed="2">2x</button>'
     +'<button onclick="setReplaySpeed(4)" class="replay-speed-btn" data-speed="4">4x</button>'
     +'<button onclick="setReplaySpeed(8)" class="replay-speed-btn" data-speed="8">8x</button>'
-    +'<span style="color:#64748b;font-size:12px" id="replay-progress">0/'+replayData.length+'</span>'
-    +'<button onclick="toggleReplayPause()" id="replay-pause-btn" style="padding:6px 16px;border-radius:6px;border:1px solid rgba(96,165,250,0.4);background:rgba(96,165,250,0.15);color:#60a5fa;font-size:13px;cursor:pointer">暂停</button>'
-    +'<button onclick="replaySkip(-10)" title="后退10秒" style="padding:6px 14px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:#e2e8f0;font-size:13px;cursor:pointer">⏪ 10秒</button>'
-    +'<button onclick="replaySkip(10)" title="前进10秒" style="padding:6px 14px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:#e2e8f0;font-size:13px;cursor:pointer">⏩ 10秒</button>'
-    +'<button onclick="exitReplay()" style="padding:6px 16px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:#ef4444;font-size:13px;cursor:pointer;margin-left:24px">退出回放</button>';
+    +'<span style="color:#6b7f96;font-size:12px" id="replay-progress">0/'+replayData.length+'</span>'
+    +'<button onclick="toggleReplayPause()" id="replay-pause-btn" style="padding:6px 16px;border-radius:6px;border:1px solid rgba(240,192,64,0.4);background:rgba(240,192,64,0.12);color:#f0c040;font-size:13px;cursor:pointer">暂停</button>'
+    +'<button onclick="replaySkip(-10)" title="后退10秒" style="padding:6px 14px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:#dce8f7;font-size:13px;cursor:pointer">⏪ 10秒</button>'
+    +'<button onclick="replaySkip(10)" title="前进10秒" style="padding:6px 14px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:#dce8f7;font-size:13px;cursor:pointer">⏩ 10秒</button>'
+    +'<button onclick="exitReplay()" style="padding:6px 16px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:#c0392b;font-size:13px;cursor:pointer;margin-left:24px">退出回放</button>';
   document.body.appendChild(bar);
   var style=document.createElement('style');
-  style.textContent='.replay-speed-btn{padding:4px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#94a3b8;font-size:13px;cursor:pointer;}.replay-speed-btn.active{background:rgba(96,165,250,0.2);color:#60a5fa;border-color:#60a5fa;}';
+  style.textContent='.replay-speed-btn{padding:4px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#9eacbd;font-size:13px;cursor:pointer;}.replay-speed-btn.active{background:rgba(240,192,64,0.2);color:#f0c040;border-color:#f0c040;}';
   document.head.appendChild(style);
 }
 
