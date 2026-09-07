@@ -35,10 +35,6 @@ def serve_js(filename):
 def serve_manifest():
     return send_from_directory("../frontend", "manifest.json")
 
-@static_bp.route("/sw.js")
-def serve_sw():
-    return send_from_directory("../frontend", "sw.js")
-
 @static_bp.route("/icons/<path:filename>")
 def serve_icons(filename):
     return send_from_directory("../frontend/icons", filename)

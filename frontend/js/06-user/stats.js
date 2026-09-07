@@ -73,6 +73,13 @@ function loadStats(){
     })
     .catch(e=>console.warn('stats err',e));
 }
+// HTML 转义：用户名等不可信字符串拼进 innerHTML 前必须转义，否则有存储型 XSS
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
 // === 排行榜 ===
 function loadLeaderboard(){
   fetch('/api/leaderboard')
@@ -90,7 +97,7 @@ function loadLeaderboard(){
         tr.style.borderBottom='1px solid rgba(255,255,255,0.05)';
         const rankColor=r.rank<=3?['#fbbf24','#94a3b8','#cd7f32'][r.rank-1]:'#94a3b8';
         tr.innerHTML='<td style="padding:6px 8px;font-weight:700;color:'+rankColor+'">'+r.rank+'</td>'
-          +'<td style="padding:6px 8px;color:#e2e8f0">'+r.name+'</td>'
+          +'<td style="padding:6px 8px;color:#e2e8f0">'+escapeHtml(r.name)+'</td>'
           +'<td style="padding:6px 8px;text-align:center;color:#94a3b8">'+r.total+'</td>'
           +'<td style="padding:6px 8px;text-align:center;color:#4ade80">'+r.win_rate+'%</td>';
         body.appendChild(tr);

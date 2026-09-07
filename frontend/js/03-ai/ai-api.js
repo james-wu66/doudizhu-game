@@ -135,11 +135,14 @@ function fallbackBidSimple(hand) {
 // 后端格式转前端 card 对象（从手牌中匹配）
 function apiCardsToHand(apiCards, hand) {
   const used = new Set();
-  return apiCards.map(a => {
+  const out = [];
+  apiCards.forEach(a => {
     const match = hand.find(c => c.rank === a.r && c.suit === a.s && !used.has(c.id));
-    if (match) { used.add(match.id); return match; }
-    return { id: -1, rank: a.r, suit: a.s };
+    if (match) { used.add(match.id); out.push(match); }
+    // 匹配不到的牌直接丢弃：以前会造出 id:-1 的"幽灵牌"，出牌时手牌删不掉导致局面错乱
+    else console.warn('AI 返回的牌不在手牌中，已丢弃: r=' + a.r + ' s=' + a.s);
   });
+  return out;
 }
 
 // ===== 出牌入口（改为后端 API 调用 + 简化 fallback） =====
