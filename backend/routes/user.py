@@ -6,7 +6,7 @@ import os
 import uuid
 from urllib.parse import unquote
 from flask import Blueprint, request, jsonify, send_from_directory
-from utils import get_db, UPLOAD_FOLDER, allowed_file, MAX_FILE_SIZE
+from utils import get_db, UPLOAD_FOLDER, allowed_file, MAX_FILE_SIZE, fmt_created_at
 
 user_bp = Blueprint("user", __name__)
 
@@ -71,7 +71,7 @@ def get_user_games(name):
         games.append({
             "game_id": row["id"], "result": row["result"], "mode": "经典新手场",
             "role": row["role"] or "", "score_change": row["score_change"] or 0,
-            "bid_score": row["bid_score"] or 0, "created_at": row["created_at"] or ""
+            "bid_score": row["bid_score"] or 0, "created_at": fmt_created_at(row["created_at"])
         })
     return jsonify({"success": True, "games": games})
 

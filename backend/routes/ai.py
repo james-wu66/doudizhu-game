@@ -4,7 +4,7 @@ AI 接口路由：出牌决策、叫地主、提示、学习数据收集与查�
 
 import json
 from flask import Blueprint, request, jsonify
-from utils import get_db
+from utils import get_db, beijing_now_str
 from ai.state import GameState, PLAYER, LEFT, RIGHT
 from ai.engine import ai_play as ai_play_engine
 from ai.candidates import generate_candidates as ai_candidates
@@ -17,7 +17,11 @@ ai_bp = Blueprint("ai", __name__)
 def _ai_learning_insert(conn, fields):
     """写入 ai_learning。
     CloudBase 为该表注入的 _openid 列是 NOT NULL 且无默认值，INSERT 不带该列会报 1364；
-    而本地 SQLite 表没有该列，带上反而会报错。故优先带 _openid，失败则回退为不带。"""
+    而本地 SQLite 表没有该列，带上反而会报错。故优先带 _openid，失败则回退为不带。
+    20260907 时区修复：显式写入北京时间 created_at。"""
+    if "created_at" not in fields:
+        fields = dict(fields)
+        fields["created_at"] = beijing_now_str()
     try:
         cols = ",".join(fields.keys()) + ",_openid"
         ph = ",".join(["%s"] * (len(fields) + 1))

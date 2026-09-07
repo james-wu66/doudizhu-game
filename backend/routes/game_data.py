@@ -5,7 +5,7 @@
 import json
 from urllib.parse import unquote
 from flask import Blueprint, request, jsonify
-from utils import get_db, cloud_upload
+from utils import get_db, cloud_upload, beijing_now_str, fmt_created_at
 
 game_bp = Blueprint("game", __name__)
 
@@ -50,9 +50,9 @@ def record_game():
     conn = get_db()
     c = conn.cursor()
     c.execute("""
-        INSERT INTO game_records (user_name, result, role, rounds, duration_seconds, ai_decisions, score_change, bid_score)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-    """, (name, result, role, rounds, duration, ai_decisions, score_change, bid_score))
+        INSERT INTO game_records (user_name, result, role, rounds, duration_seconds, ai_decisions, score_change, bid_score, created_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """, (name, result, role, rounds, duration, ai_decisions, score_change, bid_score, beijing_now_str()))
     game_id = c.lastrowid
     conn.commit()
     conn.close()
@@ -103,5 +103,5 @@ def get_game_replay(game_id):
         "success": True, "game_id": game_id, "user_name": row["user_name"],
         "result": row["result"], "role": row["role"], "bid_score": row["bid_score"],
         "score_change": row["score_change"], "rounds": row["rounds"] if row["rounds"] is not None else 0,
-        "created_at": row["created_at"], "moves": moves
+        "created_at": fmt_created_at(row["created_at"]), "moves": moves
     })

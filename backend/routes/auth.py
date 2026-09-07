@@ -4,7 +4,7 @@
 
 import secrets
 from flask import Blueprint, request, jsonify
-from utils import get_db, hash_password, cloud_upload
+from utils import get_db, hash_password, cloud_upload, beijing_now_str
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -25,8 +25,8 @@ def register():
         conn.close()
         return jsonify({"error": "这个名字已经被用了"}), 400
     token = secrets.token_hex(16)
-    c.execute("INSERT INTO users (name, password_hash, token) VALUES (%s, %s, %s)",
-              (name, hash_password(password), token))
+    c.execute("INSERT INTO users (name, password_hash, token, created_at) VALUES (%s, %s, %s, %s)",
+              (name, hash_password(password), token, beijing_now_str()))
     conn.commit()
     conn.close()
     return jsonify({"success": True, "token": token, "name": name})

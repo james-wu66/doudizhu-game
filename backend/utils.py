@@ -98,6 +98,26 @@ def get_db():
     return _SQLiteConn(conn)
 
 
+# === 时间戳统一（20260907 时区修复）===
+# sqlite 的 CURRENT_TIMESTAMP 恒为 UTC，导致本地库 created_at 比北京时间早 8 小时。
+# 所有 INSERT 改为显式写入北京时间的字面值，与线上 MySQL（SET time_zone='+08:00'）语义一致。
+# 用 UTC+8 计算，不依赖本机时区设置。
+def beijing_now_str():
+    from datetime import datetime, timezone, timedelta
+    return (datetime.now(timezone.utc) + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def fmt_created_at(v):
+    """接口输出统一 created_at 格式。
+    pymysql 取回的 datetime 对象会被 Flask 序列化成 RFC822 英文日期（"Tue, 01 Sep 2026 ... GMT"），
+    与本地 sqlite 的 "YYYY-MM-DD HH:MM:SS" 字符串不一致，前端 substring 截取会错位。
+    此处把 datetime 转回同格式字符串（线上库本身存的就是北京时间字面值）。"""
+    from datetime import datetime as _dt
+    if isinstance(v, _dt):
+        return v.strftime("%Y-%m-%d %H:%M:%S")
+    return v or ""
+
+
 # === 密码哈希 ===
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
