@@ -762,3 +762,5 @@ body.replay-mode #bid-actions{
   }
   body.replay-mode #landlord-area .card .center-suit{font-size:0.99em!important;}
 }
+/* 20260908 AI复盘与问答助手: 游戏页结算链接兜底（样式主体在 js/08-assistant/assistant.css） */
+#ast-settle-link { display: none; }

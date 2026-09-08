@@ -28,12 +28,14 @@ from routes.auth import auth_bp
 from routes.user import user_bp
 from routes.game_data import game_bp
 from routes.ai import ai_bp
+from routes.ai_assist import ai_assist_bp
 
 app.register_blueprint(static_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(user_bp)
 app.register_blueprint(game_bp)
 app.register_blueprint(ai_bp)
+app.register_blueprint(ai_assist_bp)
 
 
 # === 数据库模式检测 ===
@@ -107,6 +109,21 @@ def init_db():
                 who VARCHAR(10), bucket VARCHAR(100), result VARCHAR(50),
                 score_change FLOAT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""")
+        # === AI 复盘与问答助手审计表（20260908，红线：除此表外不动任何表结构）===
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS ai_usage (
+                id INT PRIMARY KEY AUTO_INCREMENT, user_name VARCHAR(255),
+                kind VARCHAR(20), session_id VARCHAR(255),
+                question TEXT, answer TEXT, tokens INT DEFAULT 0,
+                cached INT DEFAULT 0, feedback VARCHAR(10) DEFAULT '',
+                blocked INT DEFAULT 0, cache_key VARCHAR(255),
+                note VARCHAR(255) DEFAULT '', cost FLOAT DEFAULT 0,
+                created_at DATETIME
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""")
+        try:
+            c.execute("CREATE INDEX idx_ai_usage_cachekey ON ai_usage(cache_key)")
+        except Exception:
+            pass  # 已存在
         for col in ["round_id TEXT", "who TEXT", "bucket TEXT"]:
             try: c.execute(f"ALTER TABLE ai_learning ADD COLUMN {col}")
             except: pass
@@ -117,7 +134,7 @@ def init_db():
         # CloudBase 会为数据表自动注入 _openid 字段（NOT NULL 且无默认值），
         # 使所有 INSERT 报 1364 "Field '_openid' doesn't have a default value"，
         # 导致注册失败、战绩保存失败。建表后检测并补齐默认值。
-        for tbl in ("users", "game_records"):
+        for tbl in ("users", "game_records", "ai_usage"):
             try:
                 c.execute("""SELECT COLUMN_DEFAULT FROM information_schema.COLUMNS
                              WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s
@@ -149,6 +166,18 @@ def init_db():
             step_number INTEGER, hand_state TEXT, action_taken TEXT,
             action_type TEXT, who TEXT, bucket TEXT, result TEXT,
             score_change REAL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+        # === AI 复盘与问答助手审计表（20260908，红线：除此表外不动任何表结构）===
+        c.execute("""CREATE TABLE IF NOT EXISTS ai_usage (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, user_name TEXT,
+            kind TEXT, session_id TEXT, question TEXT, answer TEXT,
+            tokens INTEGER DEFAULT 0, cached INTEGER DEFAULT 0,
+            feedback TEXT DEFAULT '', blocked INTEGER DEFAULT 0,
+            cache_key TEXT, note TEXT DEFAULT '', cost REAL DEFAULT 0,
+            created_at TEXT)""")
+        try:
+            c.execute("CREATE INDEX IF NOT EXISTS idx_ai_usage_cachekey ON ai_usage(cache_key)")
+        except Exception:
+            pass  # 已存在
         for col in ["round_id TEXT", "who TEXT", "bucket TEXT",
                      "score_change INTEGER DEFAULT 0", "bid_score INTEGER DEFAULT 0",
                      "avatar_url TEXT", "allow_view_stats INTEGER DEFAULT 1"]:

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 用量控制台 · 会会斗地主</title>
+<link rel="stylesheet" href="js/08-assistant/vendor/adminlte.min.css">
+<style>
+  body { background: #f4f6f9; }
+  .content-wrapper { min-height: 100vh; }
+  .xk-filter .form-control, .xk-filter .btn { display: inline-block; width: auto; margin: 2px 4px 2px 0; vertical-align: middle; }
+  .xk-filter label { margin: 0 2px 0 10px; font-weight: 600; }
+  #xk-table th { cursor: pointer; user-select: none; white-space: nowrap; }
+  #xk-table td { font-size: 13px; }
+  .xk-sum .small-box h3 { font-size: 24px; }
+  .xk-sum .small-box p { font-size: 12px; }
+  .xk-sum .small-box { height: 90px; }
+  .xk-sum .icon i { font-size: 36px; top: 12px; }
+  .badge-paid { background: #28a745; } .badge-cache { background: #8894a3; }
+  .badge-deg { background: #fd7e14; } .badge-blocked { background: #dc3545; }
+  .badge-wl { background: #17a2b8; }
+  #xk-denied { display: none; text-align: center; padding: 80px 20px; }
+  .xk-meta { color: #8894a3; font-size: 11px; }
+</style>
+</head>
+<body class="hold-transition layout-top-nav">
+<div id="xk-denied">
+  <h2 class="text-muted">无权限</h2>
+  <p>本页面仅管理员可见。请先以管理员账号登录大厅。</p>
+  <a href="/lobby" class="btn btn-primary">返回大厅</a>
+</div>
+<div id="xk-main" class="wrapper" style="display:none">
+  <nav class="navbar navbar-expand navbar-white navbar-light">
+    <div class="container">
+      <div class="navbar-brand m-0">🤖 AI 用量控制台</div>
+      <div class="ml-auto align-self-center"><span id="xk-who" class="text-muted"></span>
+        <a href="/lobby" class="btn btn-sm btn-outline-primary ml-2">返回大厅</a></div>
+    </div>
+  </nav>
+  <div class="content-wrapper p-3">
+    <div class="container-fluid">
+      <div class="card card-outline card-primary xk-filter">
+        <div class="card-body py-2">
+          <label>用户</label><input id="f-user" class="form-control form-control-sm" placeholder="模糊匹配，留空=全部">
+          <label>类型</label>
+          <select id="f-kind" class="form-control form-control-sm"><option value="">全部</option><option value="ask">问答(ask)</option><option value="review">复盘(review)</option></select>
+          <label>日期</label><input id="f-from" type="date" class="form-control form-control-sm">
+          <label>至</label><input id="f-to" type="date" class="form-control form-control-sm">
+          <label>计费状态</label>
+          <select id="f-status" class="form-control form-control-sm">
+            <option value="">全部</option><option value="paid">付费(cached=0)</option>
+            <option value="cache">缓存命中(cached=1)</option><option value="degraded">降级(cached=2)</option>
+            <option value="whitelist">白名单</option><option value="blocked">敏感词拦截</option>
+          </select>
+          <button id="f-query" class="btn btn-sm btn-primary">查询</button>
+          <button id="f-csv" class="btn btn-sm btn-outline-success">导出 CSV</button>
+        </div>
+      </div>
+      <div class="row xk-sum" id="xk-cards">
+        <div class="col-6 col-lg-3"><div class="small-box bg-info"><div class="inner"><h3 id="c-calls">-</h3><p>总调用次数</p></div><div class="icon"><i>Σ</i></div></div></div>
+        <div class="col-6 col-lg-3"><div class="small-box bg-success"><div class="inner"><h3 id="c-tokens">-</h3><p>总 token</p></div><div class="icon"><i>T</i></div></div></div>
+        <div class="col-6 col-lg-3"><div class="small-box bg-warning"><div class="inner"><h3 id="c-cost">-</h3><p>总花费(¥ 按官方价估算，实际以中转站为准)</p></div><div class="icon"><i>¥</i></div></div></div>
+        <div class="col-6 col-lg-3"><div class="small-box bg-danger"><div class="inner"><h3 id="c-deg">-</h3><p>降级次数</p></div><div class="icon"><i>!</i></div></div></div>
+      </div>
+      <div class="row">
+        <div class="col-lg-9">
+          <div class="card card-outline card-info">
+            <div class="card-header"><h3 class="card-title">调用明细 <small id="xk-count" class="xk-meta"></small></h3></div>
+            <div class="card-body table-responsive p-0" style="max-height:520px;overflow:auto">
+              <table class="table table-sm table-hover thead-sticky" id="xk-table">
+                <thead><tr>
+                  <th data-sort="created_at">时间 ↕</th><th data-sort="user_name">用户</th><th data-sort="kind">类型</th>
+                  <th>内容摘要</th><th data-sort="tokens">token ↕</th><th data-sort="cost">花费 ↕</th><th>状态</th>
+                </tr></thead>
+                <tbody id="xk-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-3">
+          <div class="card card-outline card-secondary">
+            <div class="card-header"><h3 class="card-title">今日调用排行 TOP10</h3></div>
+            <div class="card-body p-0"><table class="table table-sm"><tbody id="xk-top"></tbody></table></div>
+          </div>
+          <div class="card card-outline card-secondary">
+            <div class="card-header"><h3 class="card-title">今日速览</h3></div>
+            <div class="card-body py-2">
+              <div>今日调用：<b id="s-total">-</b>（其中真实花钱 <b id="s-paid">-</b>）</div>
+              <div>👎 数：<b id="s-down">-</b>　敏感词拦截：<b id="s-blocked">-</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="js/08-assistant/vendor/jquery.min.js"></script>
+<script src="js/08-assistant/vendor/bootstrap.bundle.min.js"></script>
+<script src="js/08-assistant/vendor/adminlte.min.js"></script>
+<script>
+/* xk-usage 控制台（20260908）——全局一律 xk 前缀，避免撞名 */
+var xkRows = [], xkSortKey = 'id', xkSortDesc = true;
+
+function xkToken() {
+  var s = localStorage.getItem('doudizhu_user') || sessionStorage.getItem('doudizhu_user');
+  if (s) { try { var u = JSON.parse(s); return u.token || ''; } catch (e) {} }
+  return '';
+}
+function xkPost(path, body) {
+  return fetch('/api/assist' + path, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(Object.assign({ token: xkToken() }, body || {}))
+  }).then(function (r) { return r.json().catch(function () { return { ok: false }; }).then(function (d) { return { status: r.status, data: d }; }); });
+}
+function xkDeny() {
+  document.getElementById('xk-main').style.display = 'none';
+  document.getElementById('xk-denied').style.display = 'block';
+}
+function xkEsc(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function xkToday() {
+  var d = new Date(); var m = ('0' + (d.getMonth() + 1)).slice(-2); var dd = ('0' + d.getDate()).slice(-2);
+  return d.getFullYear() + '-' + m + '-' + dd;
+}
+function xkFilterBody() {
+  return {
+    user: document.getElementById('f-user').value.trim(),
+    kind: document.getElementById('f-kind').value,
+    date_from: document.getElementById('f-from').value,
+    date_to: document.getElementById('f-to').value,
+    status: document.getElementById('f-status').value
+  };
+}
+function xkStatus(row) {
+  var WL = { '本地1234': 1, '线上1234': 1 };
+  if (row.blocked) return '<span class="badge badge-blocked">拦截</span>';
+  if (row.cached === 1) return '<span class="badge badge-cache">缓存</span>';
+  if (row.cached === 2) return '<span class="badge badge-deg">降级</span>';
+  if (WL[row.user_name]) return '<span class="badge badge-wl">白名单</span>';
+  return '<span class="badge badge-paid">付费</span>';
+}
+function xkSum(arr) { return arr.reduce(function (a, b) { return a + (Number(b) || 0); }, 0); }
+function xkRender() {
+  var rows = xkRows.slice();
+  rows.sort(function (a, b) {
+    var va = a[xkSortKey], vb = b[xkSortKey];
+    if (typeof va === 'string') { return xkSortDesc ? String(vb).localeCompare(va) : va.localeCompare(vb); }
+    return xkSortDesc ? (vb - va) : (va - vb);
+  });
+  var tb = document.getElementById('xk-tbody');
+  var h = '';
+  rows.slice(0, 200).forEach(function (r) {
+    var q = String(r.question || ''); if (q.length > 30) q = q.slice(0, 30) + '…';
+    h += '<tr><td>' + xkEsc(r.created_at) + '</td><td>' + xkEsc(r.user_name) + '</td><td>' + xkEsc(r.kind) +
+         '</td><td>' + xkEsc(q) + '</td><td>' + (r.tokens || 0) + '</td><td>¥' + (Number(r.cost) || 0).toFixed(5) +
+         '</td><td>' + xkStatus(r) + '</td></tr>';
+  });
+  tb.innerHTML = h;
+  document.getElementById('xk-count').textContent = '共 ' + rows.length + ' 条（表内最多显示 200，导出 CSV 为全量）';
+  // 统计卡随筛选
+  document.getElementById('c-calls').textContent = rows.length;
+  document.getElementById('c-tokens').textContent = xkSum(rows.map(function (r) { return r.tokens; }));
+  document.getElementById('c-cost').textContent = '¥' + xkSum(rows.map(function (r) { return r.cost; })).toFixed(4);
+  document.getElementById('c-deg').textContent = rows.filter(function (r) { return r.cached === 2; }).length;
+}
+function xkQuery() {
+  xkPost('/admin/sessions', xkFilterBody()).then(function (res) {
+    if (res.status === 403 || res.status === 401) { xkDeny(); return; }
+    xkRows = res.data.sessions || [];
+    xkRender();
+    if (res.data.truncated) alert('结果超过 5000 条，已截断');
+  });
+}
+function xkSummary() {
+  xkPost('/admin/summary', {}).then(function (res) {
+    if (res.status !== 200) { xkDeny(); return; }
+    var d = res.data;
+    document.getElementById('s-total').textContent = d.today_calls;
+    document.getElementById('s-paid').textContent = d.today_paid;
+    document.getElementById('s-down').textContent = d.today_down;
+    document.getElementById('s-blocked').textContent = d.today_blocked;
+    document.getElementById('xk-who').textContent = '管理员视角 · 今日 ' + d.today_calls + ' 次';
+    xkPost('/admin/topusers', {}).then(function (r2) {
+      if (!r2.data || !r2.data.top) return;
+      document.getElementById('xk-top').innerHTML = r2.data.top.map(function (t) {
+        return '<tr><td>' + xkEsc(t.user_name) + '</td><td class="text-right">' + t.calls + '</td></tr>';
+      }).join('');
+    });
+  });
+}
+function xkIsWl(n) { return n === '本地1234' || n === '线上1234'; }
+function xkCsv() {
+  var head = ['时间', '用户', '类型', '内容摘要', 'token', '花费', '状态', 'question原文'];
+  var lines = [head.join(',')];
+  xkRows.forEach(function (r) {
+    var st = r.blocked ? '拦截' : (r.cached === 1 ? '缓存' : (r.cached === 2 ? '降级' : (xkIsWl(r.user_name) ? '白名单' : '付费')));
+    function cell(v) { v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+    lines.push([r.created_at, r.user_name, r.kind, String(r.question || '').slice(0, 30), r.tokens,
+                (Number(r.cost) || 0).toFixed(5), st, r.question].map(cell).join(','));
+  });
+  var blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'ai_usage_' + xkToday().replace(/-/g, '') + '.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+window.addEventListener('load', function () {
+  if (!xkToken()) { xkDeny(); return; }
+  document.getElementById('f-from').value = xkToday();
+  document.getElementById('f-to').value = xkToday();
+  xkSummary();
+  xkQuery();
+  document.getElementById('f-query').addEventListener('click', xkQuery);
+  document.getElementById('f-csv').addEventListener('click', xkCsv);
+  document.querySelectorAll('#xk-table th[data-sort]').forEach(function (th) {
+    th.addEventListener('click', function () {
+      var k = th.dataset.sort;
+      if (xkSortKey === k) xkSortDesc = !xkSortDesc; else { xkSortKey = k; xkSortDesc = true; }
+      xkRender();
+    });
+  });
+  document.getElementById('xk-main').style.display = 'block';
+});
+</script>
+</body>
+</html>

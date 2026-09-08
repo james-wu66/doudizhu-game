@@ -127,6 +127,7 @@ function endGame(winner){
     restartBtn.disabled=false;
   }
   document.getElementById('result-modal').classList.add('show');
+  try{astSettleLink&&astSettleLink();}catch(e){console.warn('assist link fail',e);}  // 20260908 AI复盘入口（红线6：仅加这一行，失败不影响结算）
 }
 
 // ==================== 局分结算渲染 ====================

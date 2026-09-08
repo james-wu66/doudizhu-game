@@ -2,9 +2,22 @@
 静态文件路由：前端页面、CSS/JS、音频、图标、工作台控制台
 """
 
-from flask import Blueprint, send_from_directory
+from flask import Blueprint, send_from_directory, abort
 
 static_bp = Blueprint("static", __name__)
+
+# === /workbench 开关（4.7：本地 config_local 设 True；线上无此文件 → 默认 False=关，安全默认）===
+try:
+    from config_local import ENABLE_WORKBENCH as _ENABLE_WORKBENCH
+except (ImportError, AttributeError):
+    _ENABLE_WORKBENCH = False
+
+
+@static_bp.route("/xk-usage.html")
+def xk_usage():
+    resp = send_from_directory("../frontend", "xk-usage.html")
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return resp
 
 
 @static_bp.route("/")
@@ -48,12 +61,16 @@ def lobby():
 @static_bp.route("/workbench")
 @static_bp.route("/workbench/")
 def workbench_index():
+    if not _ENABLE_WORKBENCH:
+        abort(404)
     resp = send_from_directory("../斗地主最终版工作台", "控制台.html")
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     return resp
 
 @static_bp.route("/workbench/<path:filename>")
 def workbench_file(filename):
+    if not _ENABLE_WORKBENCH:
+        abort(404)
     resp = send_from_directory("../斗地主最终版工作台", filename)
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     return resp
