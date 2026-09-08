@@ -55,6 +55,15 @@
 | AI 对战 | 三个 AI 对手（地主 / 门板农民 / 下家农民），具备手数分析、拆牌罚分、让牌三原则、概率记牌推算等策略，非随机出牌 |
 | 农民配合 | 门板顶牌、下家冲锋的角色分工；不压队友红线（浪费压制=0） |
 | AI 学习闭环 | 每局按"分桶"记录关键决策与结果写入数据库，样本量达门槛后以 ±20 分修正影响后续决策——**变的是数据，不是代码** |
+| AI 教练复盘 | 打完一局自动生成复盘：24 种局面场景 + 106 句人写文案模板，填入该局真实数据（手数 / 炸弹 / 关键回合），**本地模板引擎生成，零模型调用、毫秒级响应** |
+| 规则问答助手 | 右下角小气泡随时问「三带一能带对子吗」：621 行规则手册切片检索 + 双模型容灾（主 DeepSeek-V4-Flash / 备 mimo-v2.5，限流自动切换） |
+| 用量后台 | `/xk-usage.html` 白名单访问：调用审计、按用户 / 时间筛选、导出 CSV |
+| AI 教练复盘 | 打完一局自动生成复盘：24 种局面场景 × 106 句人写文案模板，用该局真实数据填空，**本地模板引擎生成，零模型调用、零 token、毫秒级响应** |
+| 规则问答助手 | 右下角小气泡随时提问（如「三带一能带对子吗」）：621 行规则手册切片检索 + 双模型容灾（主模型 DeepSeek-V4-Flash，限流 / 失败自动切备胎 mimo-v2.5） |
+| 用量后台 | `/xk-usage.html` 白名单访问：调用审计、按用户筛选、导出 CSV |
+| AI 教练复盘 | 打完一局自动生成复盘：24 种局面场景 × 106 句人写文案模板，用该局真实数据填空，**本地模板引擎生成，零模型调用、零 token、毫秒级响应** |
+| 规则问答助手 | 右下角小气泡随时提问（如「三带一能带对子吗」）：621 行规则手册切片检索 + 双模型容灾（主 DeepSeek-V4-Flash，限流 / 失败自动切备胎 mimo-v2.5） |
+| 用量后台 | `/xk-usage.html` 白名单访问：调用审计、按用户筛选、导出 CSV |
 | 用户系统 | 注册 / 登录 / 自动登录 / 注销、头像上传、隐私开关 |
 | 战绩与回放 | 保存每局完整操作序列，支持逐步回放复盘 |
 | 排行榜 | 多用户胜场 / 胜率排行（用户名做 HTML 转义防 XSS） |
@@ -65,16 +74,17 @@
 
 | 层 | 技术 | 规模 |
 |---|---|---|
-| 前端 | 原生 HTML/CSS/JS，无框架，按功能分 8 组 26 个模块 | ~2,600 行 JS |
-| 后端 | Python 3 + Flask + Blueprint（auth / user / game_data / ai / static 5 组路由） | ~1,400 行 |
+| 前端 | 原生 HTML/CSS/JS，无框架，按功能分 9 组 27 个模块 | ~3,000 行 JS |
+| 后端 | Python 3 + Flask + Blueprint（auth / user / game_data / ai / ai_assist / static 6 组路由） | ~2,300 行 |
 | AI 引擎 | 纯 Python 决策引擎（评估 / 策略 / 候选生成 / 门板成本模型 / 队友模型 / 学习修正） | ~4,400 行 |
-| 数据库 | 生产：腾讯云 TDSQL-C MySQL；本地：自动降级 SQLite（双模式，凭据全部环境变量注入） | 3 张核心表 |
+| AI 知识库 | 规则手册 621 行 + 复盘句库 106 句 + 敏感词表 856 词（纯文本 / JSON，随镜像打包） | 1,718 行 |
+| 数据库 | 生产：腾讯云 TDSQL-C MySQL；本地：自动降级 SQLite（双模式，凭据全部环境变量注入） | 4 张核心表 |
 | 部署 | Docker + CloudBase 云托管 + GitHub Actions CI/CD | 推送即部署 |
 
 ## 架构
 
 ```
-浏览器（frontend/js 26模块）
+浏览器（frontend/js 27模块 + AI 小助手气泡）
    │  fetch /api/*
    ▼
 Flask 后端（backend/app.py + routes/）
@@ -95,7 +105,8 @@ AI 引擎（backend/ai/）
 MySQL（TDSQL-C，环境变量注入凭据）/ SQLite（本地自动降级）
    ├─ users          账号
    ├─ game_records   战绩 + 完整操作序列（回放数据源）
-   └─ ai_learning    决策分桶账本（学习数据源）
+   ├─ ai_learning    决策分桶账本（学习数据源）
+   └─ ai_usage       AI 助手调用审计（用量后台数据源）
 ```
 
 ### AI 策略六要点
@@ -115,17 +126,35 @@ MySQL（TDSQL-C，环境变量注入凭据）/ SQLite（本地自动降级）
         → 60 秒缓存刷新，AI 行为随真实战绩缓慢演化
 ```
 
+### AI 复盘与问答助手（两条链路）
+
+```
+问答链路（走模型，双模型容灾）
+用户提问 → 领域过滤（非斗地主问题直接挡回）→ 敏感词过滤
+        → 规则手册切片检索（621 行按章节切分，只送相关片段，省 token 也省延迟）
+        → 主模型 DeepSeek-V4-Flash → 限流 / 返回空 → 自动切备胎 mimo-v2.5（60 秒冷却）
+        → 结果写入 ai_usage 审计表（供 /xk-usage.html 后台统计）
+
+复盘链路（不走模型，零 token）
+该局真实数据（手数 / 炸弹 / 关键回合 / 座位角色）
+        → 匹配 24 种局面场景 → 从 106 句人写文案挑句 → 真数填空 → 毫秒级输出
+```
+
+知识库文件用 `.txt` / `.json` 而非 `.md`，是因为 `.dockerignore` 排除了 `*.md`——必须绕过它，否则知识文件进不了线上镜像，AI 助手会在云端「裸奔」。
+
 ## 项目结构
 
 ```
 ├── backend/
 │   ├── app.py              # Flask 入口：建表、诊断接口 /api/diag
 │   ├── utils.py            # 数据库双模式连接（MySQL/SQLite 自动降级）
-│   ├── routes/             # 5 组 Blueprint：auth / user / game_data / ai / static
+│   ├── routes/             # 6 组 Blueprint：auth / user / game_data / ai / ai_assist / static
+│   ├── knowledge/          # AI 助手知识库：rules.txt / review_lines.json / blocked_words.txt
 │   └── ai/                 # AI 引擎（10 个模块，见上方架构图）
 ├── frontend/
 │   ├── index.html          # 游戏主界面
 │   ├── lobby.html          # 大厅：登录、排行榜、回放入口
+│   ├── xk-usage.html       # 用量后台（白名单访问）
 │   ├── sound.js / style.css / manifest.json
 │   └── js/
 │       ├── 01-core/        # 常量、状态、牌型识别
@@ -135,6 +164,7 @@ MySQL（TDSQL-C，环境变量注入凭据）/ SQLite（本地自动降级）
 │       ├── 05-ui/          # 卡牌渲染、布局、交互
 │       ├── 06-user/        # 登录注册、战绩、排行榜
 │       ├── 07-audio/       # 音效控制
+│       ├── 08-assistant/   # AI 小助手气泡 + 复盘入口（含 vendor/ 本地化前端资源）
 │       └── 99-init/        # 启动装配
 ├── audio/                  # 背景音乐与出牌语音
 ├── assets/screenshots/     # README 界面预览截图
@@ -170,6 +200,16 @@ git push origin main
    → tcb CLI 构建 Docker 镜像并部署到 CloudBase 云托管
    → 约 2 分钟生效，访问 GET /api/diag 验证（db_mode=mysql, db_ok=true）
 ```
+
+### 环境变量（均不入库，在 CloudBase 云托管控制台配置）
+
+| 变量 | 用途 | 缺失时行为 |
+|---|---|---|
+| `DB_HOST` / `DB_PORT` / `DB_USER` / `DB_PASSWORD` / `DB_NAME` | 生产 MySQL 连接 | 自动降级本地 SQLite |
+| `ASSIST_API_KEY` / `ASSIST_BASE_URL` / `ASSIST_MODEL` | 问答主模型（商汤 DeepSeek-V4-Flash） | 问答降级，复盘不受影响 |
+| `BACKUP_API_KEY` / `BACKUP_BASE_URL` / `BACKUP_MODEL` | 容灾备胎（小米 mimo-v2.5） | 主模型失败时无备胎可切 |
+
+本地开发把真实值写进 `backend/config_local.py`（已在 `.gitignore`，永不入库）。
 
 ## 质量保障
 
