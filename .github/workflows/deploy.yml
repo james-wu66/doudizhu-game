@@ -27,5 +27,6 @@ jobs:
           printf "No\nY\n" | tcb cloudrun deploy \
             --env-id ${{ secrets.TCB_ENV_ID }} \
             --service-name doudizhu-game \
+            --port 8080 \
             --force \
             --yes
