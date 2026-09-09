@@ -347,6 +347,19 @@ def ai_bid():
         # 已经有人抢过：说明有强敌，非顶级牌不跟抢
         grabbed_before = sum(1 for v in data.get("grab_acted", []) if v)
         threshold += grabbed_before * 2
+    # ===== BID 学习修正（20260909 补齐消费腿）=====
+    # 修正只加在 threshold 上，绝不加 score（加 score 会造成"记录分含修正值→下轮
+    # 再修正"的正反馈漂移）。桶名与下方记录侧同源：phase + ':' + power_band，
+    # power_band 依未修正原始分。路由只有 is_call_phase 布尔，final 天然归 'grab'。
+    _score_raw = report["score"]
+    _bid_bucket = ('call' if is_call_phase else 'grab') + ':' + (
+        'lt55' if _score_raw < 55 else ('gt70' if _score_raw > 70 else 'mid'))
+    try:
+        from ai.learning import load_learn_from_db, _learn_adjust
+        load_learn_from_db()
+        threshold -= _learn_adjust('BID', _bid_bucket)
+    except Exception:
+        pass
     bid = 0
     if report["score"] >= threshold: bid = 1
     if report["score"] >= threshold + 10: bid = 2
@@ -357,8 +370,9 @@ def ai_bid():
         who = data.get("who", "")
         if round_id:
             score_val = report["score"]
-            power_band = 'lt55' if score_val < 55 else ('gt70' if score_val > 70 else 'mid')
-            phase = 'call' if is_call_phase else 'grab'
+            # 桶名直接复用上方消费腿的 _bid_bucket（同一表达式算出），
+            # 消费/记录两侧物理同口径，杜绝将来改一处漏一处
+            bucket = _bid_bucket
             conn = get_db()
             _ai_learning_insert(conn, {
                 "round_id": round_id,
@@ -369,7 +383,7 @@ def ai_bid():
                 "result": "",
                 "score_change": 0,
                 "who": str(who),
-                "bucket": phase + ":" + power_band,
+                "bucket": bucket,
             })
             conn.commit()
             conn.close()

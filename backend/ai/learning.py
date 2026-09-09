@@ -27,6 +27,19 @@ class AIMemory:
 
 ai_mem = AIMemory()
 
+# ==================== 修正幅度上限（20260909 接线） ====================
+# 原先 ±20 写死在 _learn_adjust/_learn_pass_bias 内，config.json 的
+# thresholds.learning_max_correction 无人读取。现接线为统一开关：
+# 平时保持 20（行为不变）；A/B 对照测 B 组临时设 0 = 等效关闭全部学习修正，
+# 测完必须改回 20。读不到配置时兜底 20，绝不影响决策。
+# 每次取用时现读模块变量，进程内如需换档由重启 Flask 生效（灌桶脚本每组独立进程）。
+_LEARN_CLAMP = 20
+try:
+    with open(os.path.join(os.path.dirname(__file__), 'config.json'), 'r', encoding='utf-8') as _lc_f:
+        _LEARN_CLAMP = json.load(_lc_f).get('thresholds', {}).get('learning_max_correction', 20)
+except Exception:
+    pass
+
 # 学习数据（简化，替代前端 LEARN 全局变量）
 _learn = {
     'loaded': True,
@@ -61,7 +74,7 @@ def _learn_adjust(action_type, bucket):
     if base_wr is None:
         return 0
     raw = (b.get('win_rate', 0) - base_wr) * 200
-    clamped = max(-20, min(20, raw))
+    clamped = max(-_LEARN_CLAMP, min(_LEARN_CLAMP, raw))
     return clamped * min(1, b.get('total', 0) / 100)
 
 
@@ -85,7 +98,7 @@ def _learn_pass_bias(role, landlord_count):
         bias = (beat.get('win_rate', 0) - (base_wr if base_wr is not None else 0.5)) * 200
     elif pass_b:
         bias = -((pass_b.get('win_rate', 0) - (base_wr if base_wr is not None else 0.5)) * 200)
-    clamped = max(-20, min(20, bias))
+    clamped = max(-_LEARN_CLAMP, min(_LEARN_CLAMP, bias))
     min_total = min(beat.get('total', 999) if beat else 999, pass_b.get('total', 999) if pass_b else 999)
     return clamped * min(1, min_total / 100)
 

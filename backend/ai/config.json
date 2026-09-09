@@ -208,7 +208,7 @@
     "bb_finish_hands": 2,
     "bb_crisis_threat": 3,
     "bb_big_bomb_pen": -150,
-    "pb_override": 99,
+    "pb_override": 8,
     "c1_enable": 1,
     "pm_send_max": 4,
     "vm_next_must_top_L1": 1,
