@@ -9,3 +9,6 @@ requests>=2.31.0
 fastembed>=0.3.6
 rank-bm25>=0.2.2
 numpy>=1.26
+# 知识库文件解析（TASK-010 包B，仅 ai_kb/ingest 使用）
+python-docx>=1.1.0
+pypdf>=4.0.0

@@ -77,3 +77,35 @@ def esc(s):
         return s
     return (str(s).replace('&', '&amp;').replace('<', '&lt;')
             .replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;'))
+
+
+# ============================================================
+# TASK-010 包B：角色权限（users.role 列 user/moderator/admin，本期用 user/admin）
+# ============================================================
+def user_role(name):
+    """按真实用户名查 role，缺省 'user'。role 列未迁移时安全回落 user，绝不误判为 admin。"""
+    if not name:
+        return 'user'
+    conn = get_db()
+    try:
+        c = conn.cursor()
+        c.execute("SELECT role FROM users WHERE name = %s", (name,))
+        row = c.fetchone()
+        # row 可能是 sqlite3.Row 或 MySQL dict，统一用下标取值（Row 无 .get 方法）
+        return (row['role'] or 'user') if row else 'user'
+    except Exception:
+        return 'user'
+    finally:
+        conn.close()
+
+
+def require_admin():
+    """kb 管理类接口入口：token 反查 + role=admin 双重校验。
+    返回 (real_name, error_response)。无/无效 token→401；非 admin→403；
+    自报 user_name 与 token 不符→403+冒名审计（权限矩阵规格第5条）。"""
+    real, err = identify(claim_field='user_name')
+    if err:
+        return None, err
+    if user_role(real) != 'admin':
+        return None, (jsonify({'success': False, 'error': 'forbidden'}), 403)
+    return real, None

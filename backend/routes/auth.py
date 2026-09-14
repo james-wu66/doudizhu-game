@@ -8,6 +8,11 @@ from utils import get_db, hash_password, cloud_upload, beijing_now_str
 
 auth_bp = Blueprint("auth", __name__)
 
+# TASK-010 包B：保留名清单——拒绝新注册（堵注册侧提权漏洞：删号后同名重注册冒领 admin 席位）。
+# register 的 INSERT 只写 name/password_hash/token/created_at，绝不从请求读 role；
+# 新用户 role 恒走 DB 默认 'user'，无法自提权。普通名字的注册行为与旧版完全一致。
+RESERVED_NAMES = {'本地1234', '线上1234', 'admin', 'system'}
+
 
 @auth_bp.route("/api/register", methods=["POST"])
 def register():
@@ -16,6 +21,8 @@ def register():
     password = data.get("password", "")
     if not name:
         return jsonify({"error": "请输入名字"}), 400
+    if name in RESERVED_NAMES:
+        return jsonify({"error": "这个名字不可用"}), 400
     if len(password) < 4:
         return jsonify({"error": "密码至少4位"}), 400
     conn = get_db()

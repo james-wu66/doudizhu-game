@@ -139,3 +139,55 @@ def slice_chunks(text, doc_name='rules'):
                 parent_id=parent_id, seq=i + 1, text=s,
                 content_hash=content_hash(s), is_parent=0))
     return result
+
+
+_H3_RE = re.compile(r'(?m)^#{1,3} +(.+?)\s*$')
+
+
+def slice_chunks_generic(text, doc_name):
+    """TASK-010 包B：任意上传文档通用切片（可能没有"## 一、"式章号）。
+    规则：'#' 级标题 ≥2 个 → 按标题分章（首个标题前的引子独立成章）；
+    不足 2 个 → 按空行段落聚合成约 1500 字/章，单章超 1600 硬切。
+    章内子块复用包A _slice_body（250/320/120/50），id 规则与 rules 完全兼容：{doc}#{章序}#{块序}。"""
+    heads = list(_H3_RE.finditer(text))
+    chapters = []
+    if len(heads) >= 2:
+        if heads[0].start() > 60:
+            chapters.append(('引言', text[:heads[0].start()].strip()))
+        for i, m in enumerate(heads):
+            end = heads[i + 1].start() if i + 1 < len(heads) else len(text)
+            body = text[m.start():end].strip()
+            if body:
+                chapters.append((m.group(1).strip()[:60], body))
+    if len(chapters) < 2:
+        chapters, buf = [], ''
+        for para in text.split('\n\n'):
+            if buf and len(buf) + len(para) + 2 > 1500:
+                chapters.append(('', buf)); buf = para
+            else:
+                buf = (buf + '\n\n' + para) if buf else para
+        if buf.strip():
+            chapters.append(('', buf.strip()))
+        fixed = []
+        for title, body in chapters:
+            while len(body) > 1600:
+                fixed.append((title, body[:1600])); body = body[1600:]
+            if body.strip():
+                fixed.append((title, body.strip()))
+        chapters = fixed
+    result = []
+    for i, (title, body) in enumerate(chapters):
+        ch_no = str(i + 1)
+        t = title or ('第%s节' % ch_no)
+        parent_id = '%s#%s#0' % (doc_name, ch_no)
+        result.append(dict(
+            id=parent_id, doc_name=doc_name, chapter_no=ch_no, title=t,
+            parent_id=parent_id, seq=0, text=body,
+            content_hash=content_hash(body), is_parent=1))
+        subs = _slice_body(body) or [body]
+        for j, s in enumerate(subs):
+            result.append(dict(
+                id='%s#%s#%d' % (doc_name, ch_no, j + 1), doc_name=doc_name,
+                chapter_no=ch_no, title=t, parent_id=parent_id, seq=j + 1, text=s,
+                content_hash=content_hash(s), is_parent=0))
+    return result

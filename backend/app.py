@@ -29,6 +29,7 @@ from routes.user import user_bp
 from routes.game_data import game_bp
 from routes.ai import ai_bp
 from routes.ai_assist import ai_assist_bp
+from routes.kb import kb_bp  # TASK-010 包B 知识库管理
 
 app.register_blueprint(static_bp)
 app.register_blueprint(auth_bp)
@@ -36,6 +37,7 @@ app.register_blueprint(user_bp)
 app.register_blueprint(game_bp)
 app.register_blueprint(ai_bp)
 app.register_blueprint(ai_assist_bp)
+app.register_blueprint(kb_bp)
 
 
 # === 数据库模式检测 ===
@@ -131,6 +133,12 @@ def init_db():
                      "CREATE INDEX idx_ai_learning_stat ON ai_learning(action_type, bucket)"]:
             try: c.execute(idx)
             except: pass
+        # === AI 复盘与问答助手审计表（20260908，红线：除此表外不动任何表结构）===
+        # TASK-010 包B 例外授权：users.role 列（迁移幂等）
+        try:
+            c.execute("ALTER TABLE users ADD COLUMN role VARCHAR(16) DEFAULT 'user'")
+        except Exception:
+            pass  # 列已存在
         # CloudBase 会为数据表自动注入 _openid 字段（NOT NULL 且无默认值），
         # 使所有 INSERT 报 1364 "Field '_openid' doesn't have a default value"，
         # 导致注册失败、战绩保存失败。建表后检测并补齐默认值。
@@ -146,6 +154,7 @@ def init_db():
             except Exception:
                 pass
         conn.close()
+        _kb010_seed()  # TASK-010 包B：kb_document 建表 + admin 角色种子（MySQL 分支本机未实测）
         print("[数据库] MySQL 表初始化完成")
     else:
         os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
@@ -191,8 +200,31 @@ def init_db():
         except: pass
         try: c.execute("CREATE INDEX IF NOT EXISTS idx_ai_learning_stat ON ai_learning(action_type, bucket)")
         except: pass
+        # TASK-010 包B：users.role 列（幂等；game_records.role 是玩法列，与此无关）
+        try: c.execute("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'")
+        except: pass  # 列已存在
         conn.commit()
         conn.close()
+        _kb010_seed()
+
+
+def _kb010_seed():
+    """TASK-010 包B 迁移种子（幂等）：kb_document 建表 + 内置管理员名单 role 置 admin。
+    ADMIN_USERS 仅作迁移种子，运行期判断一律走 role 列。"""
+    try:
+        from ai_kb import pipeline
+        conn = get_db()
+        try:
+            pipeline.ensure_tables(conn)
+            c = conn.cursor()
+            for uname in ('本地1234', '线上1234'):  # 种子名单（迁移用，勿增删）
+                c.execute("UPDATE users SET role = 'admin' WHERE name = %s", (uname,))
+            c.execute("UPDATE users SET role = 'user' WHERE role IS NULL OR role = ''")
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception as e:
+        print("[010] 角色/kb_document 迁移告警(不阻塞启动):", type(e).__name__, e, flush=True)
 
 
 # === 诊断接口 ===
@@ -228,6 +260,11 @@ def diag():
 if __name__ == "__main__":
     init_db()
     cloud_download()
+    try:
+        from ai_kb import retriever
+        retriever.sync_all_published()  # TASK-010 包B：镜像自带/已发布文档首启补索引（异常内部吞）
+    except Exception as e:
+        print("[010] 启动索引对账跳过:", type(e).__name__, e, flush=True)
     print(f"========================================")
     print(f"  斗地主后端启动成功！")
     print(f"  数据库模式: {'MySQL' if USE_MYSQL else 'SQLite'}")
