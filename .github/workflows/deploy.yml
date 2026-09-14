@@ -22,11 +22,23 @@ jobs:
       - name: Login to CloudBase
         run: tcb login --apiKeyId ${{ secrets.TCB_SECRET_ID }} --apiKey ${{ secrets.TCB_SECRET_KEY }}
 
-      - name: Deploy to Cloud Run
+      - name: Deploy to Cloud Run (auto-retry 3x for intermittent tcb 400)
         run: |
-          printf "No\nY\n" | tcb cloudrun deploy \
-            --env-id ${{ secrets.TCB_ENV_ID }} \
-            --service-name doudizhu-game \
-            --port 8080 \
-            --force \
-            --yes
+          for i in 1 2 3; do
+            echo "===== 第 $i/3 次尝试部署 ====="
+            if printf "No\nY\n" | tcb cloudrun deploy \
+              --env-id ${{ secrets.TCB_ENV_ID }} \
+              --service-name doudizhu-game \
+              --port 8080 \
+              --force \
+              --yes; then
+              echo "===== 部署成功 ====="
+              exit 0
+            fi
+            if [ "$i" -lt 3 ]; then
+              echo "===== 第 $i 次失败，60 秒后重试 ====="
+              sleep 60
+            fi
+          done
+          echo "===== 三次尝试均失败，部署终止 ====="
+          exit 1
