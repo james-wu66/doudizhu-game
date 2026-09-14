@@ -15,6 +15,7 @@ let astBusy = false;
 /* === 常量 === */
 const astPRESETS = ['三带一能带对子吗', '什么时候该叫地主', '队友出牌要不要压'];
 const astAPIBASE = '/api/assist';
+const astCHAT_KEY = 'ast_chat_v1';   // 问答显示记录+投票状态本地持久化（仅恢复显示，非云端历史）
 const astADMINSET = { '本地1234': 1, '线上1234': 1 };
 const astTHINK_HTML = '<span class="ast-spinner"></span>正在思考中…';
 
@@ -213,11 +214,59 @@ function astBuildBubble() {
     });
   });
 }
+/* ---------- 聊天显示记录本地持久化（刷新/重开恢复显示与投票高亮；云端审计为准，这里只是 UI 记忆） ---------- */
+function astChatLoad() {
+  try {
+    var s = localStorage.getItem(astCHAT_KEY);
+    if (!s) return null;
+    var j = JSON.parse(s);
+    return (j && Array.isArray(j.items)) ? j : null;
+  } catch (e) { return null; }
+}
+function astChatSave(j) {
+  try {
+    if (j.items.length > 30) j.items = j.items.slice(-30);   // 只留最近 30 轮，防溢出
+    localStorage.setItem(astCHAT_KEY, JSON.stringify(j));
+  } catch (e) {}
+}
+function astChatPush(item) {
+  var user = astUserName();
+  var j = astChatLoad();
+  if (!j || j.user !== user) j = { user: user, items: [] };  // 换登录身份即开新档，防串号
+  j.items.push(item);
+  astChatSave(j);
+}
+function astChatVote(uid, v) {
+  var j = astChatLoad();
+  if (!j) return;
+  for (var i = j.items.length - 1; i >= 0; i--) {
+    if (j.items[i].uid === uid) { j.items[i].v = v; astChatSave(j); return; }
+  }
+}
+function astMarkVoted(botEl, v) {
+  var span = botEl && botEl.querySelector('.ast-fb');
+  if (!span || span.dataset.voted || !v) return;
+  span.dataset.voted = '1';
+  span.querySelectorAll('.ast-fb-btn').forEach(function (b) { b.disabled = true; });
+  var btn = span.querySelector('.ast-fb-btn[data-v="' + v + '"]');
+  if (btn) btn.classList.add(v === 'up' ? 'ast-fb-up-on' : 'ast-fb-down-on');
+  var tag = document.createElement('span');
+  tag.className = 'ast-fb-done'; tag.textContent = '已反馈';
+  span.appendChild(tag);
+}
 function astToggleDrawer() {
   var d = document.getElementById('ast-drawer');
   d.classList.toggle('ast-open');
   var chat = document.getElementById('ast-chat');
   if (d.classList.contains('ast-open') && !chat.querySelector('.ast-msg')) {
+    var j = astChatLoad();
+    if (j && j.user === astUserName() && j.items.length) {
+      j.items.forEach(function (it) {                       // 有本地档：按序重绘历史轮次
+        astAppendUser(it.q);
+        astMarkVoted(astAppendBot(astEsc(it.a), it.uid), it.v);
+      });
+      return;
+    }
     astAppendBot('想问什么都行，规则、打法、配合，尽管开口。');
     var note = document.createElement('div');
     note.className = 'ast-note'; note.textContent = '提问与回答会被记录，用于改进助手';
@@ -258,6 +307,7 @@ function astAsk(q) {
       if (d && d.ok) {
         astAppendBot(astEsc(d.answer), d.usage_id);
         astHistory.push({ q: q });
+        astChatPush({ q: q, a: d.answer, uid: d.usage_id || 0, v: '' });   // 存显示记录（uid=0 也存，点击时走原提示）
       } else {
         astAppendBot('哎呀，刚才走神了，你稍等会儿再试试～');
       }
@@ -275,6 +325,7 @@ function astVote(btn) {
   btn.classList.add('ast-fb-busy');
   astPost('/feedback', { usage_id: uid, vote: v }).then(function (d) {
     if (d && d.ok) {
+      astChatVote(uid, v);                                   // 同步本地档，刷新后保持高亮
       span.dataset.voted = '1';
       span.querySelectorAll('.ast-fb-btn').forEach(function (b) { b.disabled = true; });
       btn.classList.remove('ast-fb-busy');
