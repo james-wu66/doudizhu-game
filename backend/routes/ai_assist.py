@@ -90,7 +90,8 @@ def _call_once(key, base, model, messages, max_tokens,
         if not content:   # 推理模型预算烧尽返回空串 = 视为失败, 交给备胎/降级
             return None, None
         return content, (d.get('usage') or {})
-    except Exception:
+    except Exception as e:
+        print('[assist] _call_once 异常(%s): %s' % (type(e).__name__, str(e)[:150]), flush=True)
         return None, None
 
 
@@ -240,12 +241,19 @@ def _rewrite_question(q, hist):
         prompt = ('根据对话历史，把最后的问题改写成一个不依赖上下文、可独立检索的完整问题'
                   '（保持斗地主领域用词）。只输出改写后的问题，不要任何解释。\n'
                   '历史提问：\n%s\n最后的问题：%s' % (ctx, q))
-        bkey, bbase, bmodel = _cfg3('BACKUP')
-        if not (bkey and bbase and bmodel):
+        # 通道选择：优先主模型（qwen，快且稳），失败回退备胎（商汤429频发）。
+        # 偏离任务书"调小米备胎"的原因：小米中转 500 全灭、商汤限流频发，主通道反而最稳。
+        for prefix in ('ASSIST', 'BACKUP'):
+            k, b, m = _cfg3(prefix)
+            if not (k and b and m):
+                continue
+            content, _u = _call_once(k, b, m,
+                                     [{'role': 'user', 'content': prompt}],
+                                     max_tokens=60, temperature=0, timeout=(5, 15))
+            if content:
+                break
+        else:
             return q, 'qr_fail'
-        content, _u = _call_once(bkey, bbase, bmodel,
-                                 [{'role': 'user', 'content': prompt}],
-                                 max_tokens=60, temperature=0, timeout=(5, 5))
         content = (content or '').strip().strip('"“”')
         if not content or len(content) > 40 or '\n' in content:
             return q, 'qr_fail'
