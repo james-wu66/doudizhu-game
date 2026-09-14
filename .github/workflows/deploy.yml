@@ -17,21 +17,24 @@ jobs:
           node-version: '20'
 
       - name: Install CloudBase CLI
-        run: npm install -g @cloudbase/cli@3.8.1
+        # 固定 3.7.0（2026-09-15 收口）：3.8.1 的源码部署请求被云托管连续 5 次 400 拒绝，
+        # 同包同环境本机 3.7.0 秒过（版本 107 实证）。勿随意升级 CLI 版本。
+        run: npm install -g @cloudbase/cli@3.7.0
 
       - name: Login to CloudBase
         run: tcb login --apiKeyId ${{ secrets.TCB_SECRET_ID }} --apiKey ${{ secrets.TCB_SECRET_KEY }}
 
       - name: Deploy to Cloud Run (auto-retry 3x for intermittent tcb 400)
+        # 3.7.0 无 --env-id/--yes 参数；环境用 tcb env use 指定。
+        # 部署命令带"是否灰度发布"确认题，用 yes "" 自动回车选默认 No（23:49 本机实测通过）。
         run: |
+          tcb env use ${{ secrets.TCB_ENV_ID }}
           for i in 1 2 3; do
             echo "===== 第 $i/3 次尝试部署 ====="
-            if printf "No\nY\n" | tcb cloudrun deploy \
-              --env-id ${{ secrets.TCB_ENV_ID }} \
-              --service-name doudizhu-game \
+            if yes "" | tcb cloudrun deploy \
+              -s doudizhu-game \
               --port 8080 \
-              --force \
-              --yes; then
+              --force; then
               echo "===== 部署成功 ====="
               exit 0
             fi

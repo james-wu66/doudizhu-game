@@ -332,14 +332,19 @@ def _insert_usage(user_name, kind, session_id, question, answer, tokens_in,
             cur = conn.cursor().execute(sql, vals)
             rid = cur.lastrowid
         else:
+            # 注意：pymysql 的 execute() 返回 int(rowcount) 而非 cursor，
+            # 不能链式取 .lastrowid（会 AttributeError → 审计行 id 丢失返回 0）。
+            # 必须先拿 cursor 对象再单独 execute。
+            cur = conn.cursor()
             try:
                 sql = "INSERT INTO ai_usage (%s,_openid) VALUES (%s)" % (
                     ','.join(cols), ','.join(['%s'] * (len(cols) + 1)))
-                cur = conn.cursor().execute(sql, vals + [''])
+                cur.execute(sql, vals + [''])
             except Exception:
                 sql = "INSERT INTO ai_usage (%s) VALUES (%s)" % (
                     ','.join(cols), ','.join(['%s'] * len(cols)))
-                cur = conn.cursor().execute(sql, vals)
+                cur = conn.cursor()
+                cur.execute(sql, vals)
             rid = cur.lastrowid
         try:
             conn.commit()  # sqlite 非 autocommit；mysql 分支 autocommit=True 重复 commit 无害
