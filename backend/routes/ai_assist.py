@@ -708,22 +708,33 @@ def ask():
         rid = audit(2, answer=T[tcode])  # T1/T9 均记一行 cached=2（第七节）
         return jsonify({'ok': True, 'degraded': True, 'type': 'no_model',
                         'answer': T[tcode], 'tokens': 0, 'usage_id': rid})
-    # 4) 缓存（4.9: ak|user|date|today_games|md5(q)[:12]）
+    # 4) 缓存（4.9: ak|user|date|today_games|md5(q)[:12]；TASK-009 检索内核升级后前缀改 ak2| 防新旧缓存互相污染）
     md5 = hashlib.md5(q.encode('utf-8')).hexdigest()[:12]
-    key = 'ak|%s|%s|%d|%s' % (real, beijing_now_str()[:10],
-                              _today_games_count(real) if real != '游客' else 0, md5)
+    key = 'ak2|%s|%s|%d|%s' % (real, beijing_now_str()[:10],
+                               _today_games_count(real) if real != '游客' else 0, md5)
     hit = _cache_get(key)
     if hit:
         rid = audit(1, answer=hit['answer'], cache_key=key, note='cache_hit')
         return jsonify({'ok': True, 'answer': hit['answer'], 'tokens': 0,
                         'cached': True, 'usage_id': rid})
-    # 5) 手册切片（C2 + 全文兜底 L1 修订）
+    # 5) 手册切片（TASK-009 包A：向量+BM25 混合检索优先；任何异常回退旧 _slice_rules，链路不报错）
     rules = _load_rules()
     if not rules:
         rid = audit(2, answer=T['T6'], cache_key=key, note='no_rules')
         return jsonify({'ok': True, 'degraded': True, 'type': 'no_model',
                         'answer': T['T6'], 'tokens': 0, 'usage_id': rid})
-    sliced, hits, note = _slice_rules(q)
+    rag_hits = None
+    try:
+        from ai_kb import retriever
+        sliced, rag_hits = retriever.hybrid_search(q)
+    except Exception as e:
+        print('[assist] rag 检索失败, 回退关键词路由:', type(e).__name__, e, flush=True)
+        sliced, rag_hits = None, None
+    if rag_hits is not None:
+        hits, note = [], 'rag:' + ','.join(rag_hits)[:60]
+    else:
+        sliced, hits, note = _slice_rules(q)
+        note = note or 'rag_fallback'
     # 6) 模型（多轮：只带最近 2 轮用户问题，V7）
     hist = (data.get('history') or [])[-2:]
     ctx = ''

@@ -66,12 +66,24 @@ function astMin2s(startPromise, startedAt) {
   });
 }
 
-/* ---------- 反馈按钮（每条答案带；记录提示改首次打开一次性显示） ---------- */
+/* ---------- 反馈按钮（微信风线性图标，非 emoji；服务端确认才算反馈成功） ---------- */
+var AST_ICON_UP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>';
+var AST_ICON_DOWN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3z"/><path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/></svg>';
+
 function astFeedbackHtml(usageId) {
-  if (!usageId) return '';
-  return '<span class="ast-fb" data-uid="' + usageId + '">' +
-         '<button class="ast-fb-btn" data-v="up">👍</button>' +
-         '<button class="ast-fb-btn" data-v="down">👎</button></span>';
+  /* uid=0（审计写入失败）也渲染按钮，点击时给提示，不再整排消失 */
+  return '<span class="ast-fb" data-uid="' + (usageId || 0) + '">' +
+         '<button class="ast-fb-btn" data-v="up" aria-label="有帮助" title="有帮助">' + AST_ICON_UP + '</button>' +
+         '<button class="ast-fb-btn" data-v="down" aria-label="没帮上" title="没帮上">' + AST_ICON_DOWN + '</button></span>';
+}
+
+function astToast(msg) {
+  var chat = document.getElementById('ast-chat');
+  if (!chat) return;
+  var el = document.createElement('div');
+  el.className = 'ast-toast'; el.textContent = msg;
+  chat.appendChild(el); chat.scrollTop = chat.scrollHeight;
+  setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 2400);
 }
 
 /* ---------- 通用请求期置灰（第2轮3.3: 慢也要看得见地活着） ---------- */
@@ -223,7 +235,7 @@ function astAppendBot(html, usageId) {
   var chat = document.getElementById('ast-chat');
   var d = document.createElement('div');
   d.className = 'ast-msg ast-bot';
-  var fb = usageId ? astFeedbackHtml(usageId) : '';
+  var fb = (usageId === undefined || usageId === null) ? '' : astFeedbackHtml(usageId);
   d.innerHTML = '<div class="ast-bubble">' + html + fb + '</div>';
   chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
   return d;
@@ -256,11 +268,32 @@ function astAsk(q) {
 function astVote(btn) {
   if (!btn) return;
   var span = btn.parentNode;
-  if (!span || span.dataset.voted) return;
-  span.dataset.voted = '1';
-  var uid = span.dataset.uid, v = btn.dataset.v;
-  span.innerHTML = (v === 'up' ? '👍 已反馈' : '👎 已反馈');
-  astPost('/feedback', { usage_id: Number(uid), vote: v }).catch(function () {});
+  if (!span || span.dataset.voted || span.dataset.pending) return;
+  var uid = Number(span.dataset.uid), v = btn.dataset.v;
+  if (!uid) { astToast('这条回答暂时记不了账，反馈先谢过啦'); return; }
+  span.dataset.pending = '1';
+  btn.classList.add('ast-fb-busy');
+  astPost('/feedback', { usage_id: uid, vote: v }).then(function (d) {
+    if (d && d.ok) {
+      span.dataset.voted = '1';
+      span.querySelectorAll('.ast-fb-btn').forEach(function (b) { b.disabled = true; });
+      btn.classList.remove('ast-fb-busy');
+      btn.classList.add(v === 'up' ? 'ast-fb-up-on' : 'ast-fb-down-on');
+      var tag = document.createElement('span');
+      tag.className = 'ast-fb-done'; tag.textContent = '已反馈';
+      span.appendChild(tag);
+    } else {
+      btn.classList.remove('ast-fb-busy');
+      var err = (d && d.error) || '';
+      if (err === 'unauthorized') astToast('登录之后才能反馈哦～');
+      else if (err === 'already_voted') { span.dataset.voted = '1'; astToast('这条你已经反馈过啦'); }
+      else if (err === 'not_found') { span.dataset.voted = '1'; astToast('这条回答的账目没找到，反馈先谢过啦'); }
+      else astToast('刚才没送出去，再试一次？');
+    }
+  }).catch(function () {
+    btn.classList.remove('ast-fb-busy');
+    astToast('网络开小差了，稍后再试');
+  }).finally(function () { delete span.dataset.pending; });
 }
 
 /* ============================================================
@@ -302,7 +335,7 @@ function astGenReview(n) {
     var hint = d.hint ? '<div class="ast-hint">' + astEsc(d.hint) + '</div>' : '';
     /* 第2轮4.5: 不显示"降级"标签, 答案本文统一呈现 */
     body.innerHTML = hint + '<div class="ast-rv-answer">' + astEsc(d.answer) +
-      (d.usage_id ? astFeedbackHtml(d.usage_id) : '') + '</div>';
+      (d.usage_id !== undefined && d.usage_id !== null ? astFeedbackHtml(d.usage_id) : '') + '</div>';
     var fb = body.querySelector('.ast-fb');
     fb && fb.addEventListener('click', function (e) {
       var btn = e.target.closest ? e.target.closest('.ast-fb-btn') : null;

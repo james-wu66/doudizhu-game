@@ -1,0 +1,50 @@
+{
+  "_meta": {
+    "task": "TASK-009 包A 金样评测集",
+    "date": "2026-09-14",
+    "rule": "expect_chapters 允许多章；宽松命中=上下文父块章号与 expect 有交集；精确命中=宽松且章块数<=5；full_fallback 不算精确命中。",
+    "counts": {"domain": 30, "out_of_domain": 6}
+  },
+  "domain_queries": [
+    {"id": "K01", "kind": "控制组", "question": "这游戏都有什么牌型", "expect_chapters": ["一"]},
+    {"id": "K02", "kind": "控制组", "question": "顺子最少要几张牌", "expect_chapters": ["一"]},
+    {"id": "K03", "kind": "控制组", "question": "三带一和三带二有什么区别", "expect_chapters": ["一"]},
+    {"id": "K04", "kind": "控制组", "question": "叫地主和抢地主是怎么个流程", "expect_chapters": ["二"]},
+    {"id": "K05", "kind": "控制组", "question": "有大小王就能叫地主吗", "expect_chapters": ["二"]},
+    {"id": "K06", "kind": "控制组", "question": "赢了之后分是怎么分的", "expect_chapters": ["三"]},
+    {"id": "K07", "kind": "控制组", "question": "春天是什么意思", "expect_chapters": ["三"]},
+    {"id": "K08", "kind": "控制组", "question": "农民之间要互相让牌吗", "expect_chapters": ["四"]},
+    {"id": "K09", "kind": "控制组", "question": "拆牌到底好不好", "expect_chapters": ["六"]},
+    {"id": "K10", "kind": "控制组", "question": "新手常犯的错误有哪些", "expect_chapters": ["七"]},
+    {"id": "K11", "kind": "控制组", "question": "地主就剩一张了是不是该出大牌卡他", "expect_chapters": ["五", "六"]},
+    {"id": "K12", "kind": "控制组", "question": "对子什么时候该拆成单张出", "expect_chapters": ["六", "五"]},
+    {"id": "K13", "kind": "控制组", "question": "倍数每一局都会重新算吗", "expect_chapters": ["二", "三"]},
+    {"id": "K14", "kind": "控制组", "question": "农民为什么不压地主的4", "expect_chapters": ["四"]},
+    {"id": "K15", "kind": "控制组", "question": "四带二算什么牌型，算炸弹吗", "expect_chapters": ["一", "七"]},
+    {"id": "K16", "kind": "控制组", "question": "队友就剩三张牌了电脑还会压他吗", "expect_chapters": ["八", "四"]},
+    {"id": "S01", "kind": "语义组", "question": "为什么地主出小牌我不能不管", "expect_chapters": ["四"]},
+    {"id": "S02", "kind": "语义组", "question": "火箭什么时候甩出去最划算", "expect_chapters": ["五"]},
+    {"id": "S03", "kind": "语义组", "question": "地主刚出一张牌就被打死会怎么样", "expect_chapters": ["三"]},
+    {"id": "S04", "kind": "语义组", "question": "开局先扔什么样的牌比较稳", "expect_chapters": ["五"]},
+    {"id": "S05", "kind": "语义组", "question": "上来就把大王丢了行不行", "expect_chapters": ["五", "七"]},
+    {"id": "S06", "kind": "语义组", "question": "打满十局的排名是怎么排的", "expect_chapters": ["三"]},
+    {"id": "S07", "kind": "语义组", "question": "点一下提示能换一种出法是怎么回事", "expect_chapters": ["八"]},
+    {"id": "S08", "kind": "语义组", "question": "电脑能看见别人手里的牌吗", "expect_chapters": ["八", "九"]},
+    {"id": "S09", "kind": "语义组", "question": "对面手里只剩一张了我该出什么", "expect_chapters": ["六"]},
+    {"id": "S10", "kind": "语义组", "question": "一直点不要会不会反而输了", "expect_chapters": ["六", "三"]},
+    {"id": "S11", "kind": "语义组", "question": "手上没有王光有一对2想抢一把行吗", "expect_chapters": ["二"]},
+    {"id": "S12", "kind": "语义组", "question": "335577能一起打出去吗", "expect_chapters": ["一"]},
+    {"id": "S13", "kind": "语义组", "question": "我的尖会不会被还没露面的2吃掉", "expect_chapters": ["九"]},
+    {"id": "S14", "kind": "语义组", "question": "外面还有没有10没出过怎么判断", "expect_chapters": ["九"]},
+    {"id": "S15", "kind": "语义组", "question": "抓到什么条件的牌才值得当地主", "expect_chapters": ["二"]},
+    {"id": "S16", "kind": "语义组", "question": "怎么把出牌的权利抢回来", "expect_chapters": ["五", "四"]}
+  ],
+  "out_of_domain_queries": [
+    {"id": "O01", "question": "西红柿炒鸡蛋怎么做", "must_be_intercepted": true},
+    {"id": "O02", "question": "推荐几部好看的电影", "must_be_intercepted": true},
+    {"id": "O03", "question": "屏幕突然黑屏了怎么修", "must_be_intercepted": true},
+    {"id": "O04", "question": "英语里的时态一共有几种", "must_be_intercepted": true},
+    {"id": "O05", "question": "明天会下雨吗要不要带伞", "must_be_intercepted": true},
+    {"id": "O06", "question": "去北京的高铁票在哪里买", "must_be_intercepted": true}
+  ]
+}

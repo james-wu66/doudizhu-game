@@ -154,6 +154,7 @@ def init_db():
         c.execute("""CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL, token TEXT,
+            avatar_url TEXT, allow_view_stats INTEGER DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
         c.execute("""CREATE TABLE IF NOT EXISTS game_records (
             id INTEGER PRIMARY KEY AUTOINCREMENT, user_name TEXT NOT NULL,
@@ -178,10 +179,13 @@ def init_db():
             c.execute("CREATE INDEX IF NOT EXISTS idx_ai_usage_cachekey ON ai_usage(cache_key)")
         except Exception:
             pass  # 已存在
-        for col in ["round_id TEXT", "who TEXT", "bucket TEXT",
-                     "score_change INTEGER DEFAULT 0", "bid_score INTEGER DEFAULT 0",
-                     "avatar_url TEXT", "allow_view_stats INTEGER DEFAULT 1"]:
+        # 补列（幂等）：ai_learning 只补自身缺失列；users 的 avatar_url/allow_view_stats
+        # 曾被错误 ALTER 到 ai_learning，导致 SQLite 模式下个人主页/隐私/战绩全部 500，此处归位。
+        for col in ["round_id TEXT"]:
             try: c.execute(f"ALTER TABLE ai_learning ADD COLUMN {col}")
+            except: pass
+        for col in ["avatar_url TEXT", "allow_view_stats INTEGER DEFAULT 1"]:
+            try: c.execute(f"ALTER TABLE users ADD COLUMN {col}")
             except: pass
         try: c.execute("CREATE INDEX IF NOT EXISTS idx_ai_learning_round ON ai_learning(round_id)")
         except: pass
