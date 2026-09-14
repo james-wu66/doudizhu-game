@@ -21,6 +21,12 @@
   .badge-wl { background: #17a2b8; }
   #xk-denied { display: none; text-align: center; padding: 80px 20px; }
   .xk-meta { color: #8894a3; font-size: 11px; }
+  .xk-tabs .btn { margin-right: 6px; }
+  #xk-tab-badcase { display: none; }
+  #bc-tbody tr { cursor: pointer; }
+  .bc-detail { background: #f8f9fa; border-left: 3px solid #17a2b8; padding: 8px 12px; margin: 4px 0; font-size: 13px; }
+  .bc-badge-open { background: #dc3545; } .bc-badge-in_progress { background: #fd7e14; }
+  .bc-badge-resolved { background: #28a745; } .bc-badge-wontfix { background: #8894a3; }
 </style>
 </head>
 <body class="hold-transition layout-top-nav">
@@ -39,6 +45,11 @@
   </nav>
   <div class="content-wrapper p-3">
     <div class="container-fluid">
+      <div class="xk-tabs mb-2">
+        <button id="xk-tabbtn-usage" class="btn btn-sm btn-primary">调用明细</button>
+        <button id="xk-tabbtn-badcase" class="btn btn-sm btn-outline-danger">差评队列 👎</button>
+      </div>
+      <div id="xk-tab-usage">
       <div class="card card-outline card-primary xk-filter">
         <div class="card-body py-2">
           <label>用户</label><input id="f-user" class="form-control form-control-sm" placeholder="模糊匹配，留空=全部">
@@ -90,6 +101,33 @@
             </div>
           </div>
         </div>
+      </div>
+      </div><!-- /xk-tab-usage -->
+      <div id="xk-tab-badcase">
+        <div class="card card-outline card-danger xk-filter">
+          <div class="card-body py-2">
+            <label>日期</label><input id="bc-from" type="date" class="form-control form-control-sm">
+            <label>至</label><input id="bc-to" type="date" class="form-control form-control-sm">
+            <label>状态</label>
+            <select id="bc-status" class="form-control form-control-sm">
+              <option value="">全部</option><option value="open">待处理</option>
+              <option value="in_progress">处理中</option><option value="resolved">已解决</option>
+              <option value="wontfix">不修</option>
+            </select>
+            <button id="bc-query" class="btn btn-sm btn-danger">刷新差评队列</button>
+            <span class="xk-meta">差评不是终点是需求单：同问题自动归并，点行展开详情</span>
+          </div>
+        </div>
+        <div class="card card-outline card-info">
+          <div class="card-header"><h3 class="card-title">差评队列 <small id="bc-count" class="xk-meta"></small></h3></div>
+          <div class="card-body table-responsive p-0" style="max-height:520px;overflow:auto">
+            <table class="table table-sm table-hover" id="bc-table">
+              <thead><tr><th>问题</th><th>差评次数</th><th>最近差评</th><th>最近检索命中(note)</th><th>状态</th></tr></thead>
+              <tbody id="bc-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="bc-detail-box"></div>
       </div>
     </div>
   </div>
@@ -206,6 +244,91 @@ function xkCsv() {
   a.click();
   URL.revokeObjectURL(a.href);
 }
+/* ===== TASK-013 差评队列 ===== */
+var bcRows = [], bcOpenId = null;
+function xkSwitchTab(tab) {
+  document.getElementById('xk-tab-usage').style.display = (tab === 'usage') ? 'block' : 'none';
+  document.getElementById('xk-tab-badcase').style.display = (tab === 'badcase') ? 'block' : 'none';
+  document.getElementById('xk-tabbtn-usage').className = 'btn btn-sm ' + (tab === 'usage' ? 'btn-primary' : 'btn-outline-primary');
+  document.getElementById('xk-tabbtn-badcase').className = 'btn btn-sm ' + (tab === 'badcase' ? 'btn-danger' : 'btn-outline-danger');
+  if (tab === 'badcase') xkBadcaseQuery();
+}
+function bcStatusBadge(s) {
+  var cn = { open: '待处理', in_progress: '处理中', resolved: '已解决', wontfix: '不修' }[s] || s;
+  return '<span class="badge bc-badge-' + xkEsc(s) + '">' + xkEsc(cn) + '</span>';
+}
+function xkBadcaseQuery() {
+  xkPost('/admin/badcases', {
+    date_from: document.getElementById('bc-from').value,
+    date_to: document.getElementById('bc-to').value,
+    status: document.getElementById('bc-status').value
+  }).then(function (res) {
+    if (res.status === 403 || res.status === 401) { xkDeny(); return; }
+    bcRows = res.data.badcases || [];
+    bcOpenId = null;
+    document.getElementById('bc-detail-box').innerHTML = '';
+    bcRender();
+  });
+}
+function bcRender() {
+  var tb = document.getElementById('bc-tbody');
+  var h = '';
+  bcRows.forEach(function (b, i) {
+    var q = String(b.question || ''); if (q.length > 40) q = q.slice(0, 40) + '…';
+    var note = String(b.last_rag_note || ''); if (note.length > 40) note = note.slice(0, 40) + '…';
+    h += '<tr data-i="' + i + '"><td>' + xkEsc(q) + '</td><td>' + b.down_count +
+         '</td><td>' + xkEsc(b.last_time) + '</td><td class="xk-meta">' + xkEsc(note) +
+         '</td><td>' + bcStatusBadge(b.status) + (b.hint ? ' <span class="badge badge-light">金样集</span>' : '') + '</td></tr>';
+  });
+  tb.innerHTML = h;
+  document.getElementById('bc-count').textContent = '共 ' + bcRows.length + ' 条';
+  tb.querySelectorAll('tr').forEach(function (tr) {
+    tr.addEventListener('click', function () { bcExpand(Number(tr.dataset.i)); });
+  });
+}
+function bcExpand(i) {
+  var b = bcRows[i];
+  if (!b) return;
+  bcOpenId = b.id;
+  var box = document.getElementById('bc-detail-box');
+  var h = '<div class="card card-outline card-warning"><div class="card-header"><h3 class="card-title">差评详情 #'
+       + xkEsc(b.id) + ' · ' + bcStatusBadge(b.status) + '</h3></div><div class="card-body">';
+  h += '<div class="bc-detail"><b>归并问题：</b><span id="bc-d-q"></span></div>';
+  h += '<div class="bc-detail"><b>答案样本：</b><span id="bc-d-a"></span></div>';
+  h += '<div class="bc-detail"><b>原文样本（差评时间线按次数 ' + xkEsc(b.down_count) + ' 次归并）：</b><ul id="bc-d-s"></ul></div>';
+  if (b.hint) h += '<div class="bc-detail text-success"><b>提示：</b><span id="bc-d-h"></span></div>';
+  h += '<div class="form-group"><label><b>处理说明（resolved 建议写 rules.txt 修改点）：</b></label>'
+     + '<textarea id="bc-note" class="form-control" rows="2" placeholder="如：补术语：接风→六章"></textarea></div>';
+  h += '<div>';
+  ['open', 'in_progress', 'resolved', 'wontfix'].forEach(function (s) {
+    h += '<button class="btn btn-sm ' + (s === 'resolved' ? 'btn-success' : 'btn-outline-secondary')
+       + ' bc-act" data-s="' + xkEsc(s) + '" style="margin-right:6px">' + xkEsc({ open: '待处理', in_progress: '处理中', resolved: '标记已解决', wontfix: '不修' }[s]) + '</button>';
+  });
+  h += '</div></div></div>';
+  box.innerHTML = h;
+  // 用户输入一律 textContent 注入，绝不 innerHTML（存储型 XSS 防线）
+  document.getElementById('bc-d-q').textContent = b.question_norm || b.question || '';
+  document.getElementById('bc-d-a').textContent = b.answer_sample || '（无答案样本）';
+  var ul = document.getElementById('bc-d-s');
+  (b.samples && b.samples.length ? b.samples : [b.question]).forEach(function (s) {
+    var li = document.createElement('li'); li.textContent = s; ul.appendChild(li);
+  });
+  if (b.hint) document.getElementById('bc-d-h').textContent = b.hint;
+  box.querySelectorAll('.bc-act').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      xkPost('/admin/badcase/status', {
+        badcase_id: b.id, status: btn.dataset.s,
+        resolution_note: document.getElementById('bc-note').value
+      }).then(function (res) {
+        if (res.status !== 200 || !res.data.ok) { alert('改状态失败：' + (res.data.error || res.status)); return; }
+        if (res.data.warning) alert(res.data.warning);
+        if (res.data.hint) alert(res.data.hint);
+        xkBadcaseQuery();
+      });
+    });
+  });
+  box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
 window.addEventListener('load', function () {
   if (!xkToken()) { xkDeny(); return; }
   document.getElementById('f-from').value = xkToday();
@@ -214,6 +337,11 @@ window.addEventListener('load', function () {
   xkQuery();
   document.getElementById('f-query').addEventListener('click', xkQuery);
   document.getElementById('f-csv').addEventListener('click', xkCsv);
+  document.getElementById('bc-from').value = xkToday();
+  document.getElementById('bc-to').value = xkToday();
+  document.getElementById('xk-tabbtn-usage').addEventListener('click', function () { xkSwitchTab('usage'); });
+  document.getElementById('xk-tabbtn-badcase').addEventListener('click', function () { xkSwitchTab('badcase'); });
+  document.getElementById('bc-query').addEventListener('click', xkBadcaseQuery);
   document.querySelectorAll('#xk-table th[data-sort]').forEach(function (th) {
     th.addEventListener('click', function () {
       var k = th.dataset.sort;
