@@ -68,6 +68,23 @@ def main():
     print('基线：ai_usage %d 行, maxid %d, kb_badcase 已有组 %d' % (baseline, maxid0, len(bc_norms0)))
     TA = admin_token()
 
+    # ===== 双数据库行形态回归（20260915 线上500病根：MySQL created_at=datetime对象,
+    # SQLite=字符串, 原聚合循环 datetime>='' 首行必炸——双库行为差异第二例）=====
+    import datetime as _dt
+    from routes import ai_assist as _A
+    _rm = {'id': 1, 'question': NPREFIX + '接风', 'answer': '答', 'note': 'rag:x',
+           'created_at': _dt.datetime(2026, 9, 15, 2, 10, 33)}       # MySQL DictCursor 形态
+    _rs = dict(_rm, created_at='2026-09-15 02:10:33')                # SQLite 形态
+    _rn = dict(_rm, created_at=None)                                 # 可空列兜底
+    try:
+        g1, o1 = _A._badcase_groups([_rm, _rs, _rn])
+        check('聚合(MySQL/SQLite/None三形态)不炸且同组', len(o1) == 1, '%d组' % len(o1))
+        check('三形态归并次数=3', g1[o1[0]]['down_count'] == 3, g1[o1[0]]['down_count'])
+        lt = g1[o1[0]]['last_time']
+        check('last_time 归一为非空字符串', isinstance(lt, str) and lt != '', lt)
+    except Exception as e:
+        check('聚合三形态不炸', False, '%s: %s' % (type(e).__name__, e))
+
     # 注册普通用户做 403（已存在则登录取 token）
     st, r, _ = post('/api/register', {'name': 'bc013_user', 'password': 'bc1234'})
     TU = r.get('token', '')

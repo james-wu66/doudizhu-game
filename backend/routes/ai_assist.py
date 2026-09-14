@@ -1030,6 +1030,33 @@ def _norm_question(q):
     return re.sub(r'[\s?]+$', '', s)
 
 
+def _badcase_groups(rows):
+    """差评行实时聚合（纯函数不碰库，便于单测覆盖双数据库行形态）：
+    同问题归并（次数/最近时间/最近rag命中/答案样本1条）。
+    20260915 修复线上500病根：MySQL DictCursor 的 created_at 返回 datetime 对象、
+    SQLite 返回字符串，原循环 `datetime >= ''` 首行必炸（双数据库行为差异第二例，
+    与 85b6678 修的 lastrowid 同类）；此处统一转字符串后再比较/输出，None 亦兜住。"""
+    groups = {}
+    order = []
+    for r in rows:
+        created = str(r['created_at'] or '')
+        norm = _norm_question(r['question'])
+        g = groups.get(norm)
+        if g is None:
+            g = groups[norm] = {'question_norm': norm, 'question_sample': r['question'],
+                                'samples': [], 'down_count': 0, 'last_time': '',
+                                'last_rag_note': '', 'answer_sample': ''}
+            order.append(norm)
+        g['down_count'] += 1
+        if len(g['samples']) < 10 and r['question'] not in g['samples']:
+            g['samples'].append(r['question'])
+        if created >= g['last_time']:
+            g['last_time'] = created
+            g['last_rag_note'] = (r['note'] or '')[:255]
+            g['answer_sample'] = (r['answer'] or '')[:200]
+    return groups, order
+
+
 def _ensure_badcase_table():
     """kb_badcase 幂等建表（SQLite/MySQL 双方言）。返回连接。"""
     conn = get_db()
@@ -1101,24 +1128,8 @@ def admin_badcases():
     rows = _fetchall(conn,
         "SELECT id, question, answer, note, created_at FROM ai_usage WHERE "
         + ' AND '.join(where) + " ORDER BY id ASC", tuple(params))
-    # 实时聚合：同问题归并（次数/最近时间/最近rag命中/答案样本1条）
-    groups = {}
-    order = []
-    for r in rows:
-        norm = _norm_question(r['question'])
-        g = groups.get(norm)
-        if g is None:
-            g = groups[norm] = {'question_norm': norm, 'question_sample': r['question'],
-                                'samples': [], 'down_count': 0, 'last_time': '',
-                                'last_rag_note': '', 'answer_sample': ''}
-            order.append(norm)
-        g['down_count'] += 1
-        if len(g['samples']) < 10 and r['question'] not in g['samples']:
-            g['samples'].append(r['question'])
-        if r['created_at'] >= g['last_time']:
-            g['last_time'] = r['created_at']
-            g['last_rag_note'] = (r['note'] or '')[:255]
-            g['answer_sample'] = (r['answer'] or '')[:200]
+    # 实时聚合：同问题归并（纯函数 _badcase_groups，双数据库行形态已归一，见其注释）
+    groups, order = _badcase_groups(rows)
     # 懒插入 + 计数回写（kb_badcase 是本模块自己的状态表，ai_usage 只读）。
     # 20260915 排障加固：状态表建表/读写异常一律降级"无状态表模式"——差评列表本体
     # 来自 ai_usage 聚合，不能因状态表问题整条 500（前端会把 500 静默渲染成"共 0 条"，
