@@ -249,7 +249,8 @@ def _rewrite_question(q, hist):
                 continue
             content, _u = _call_once(k, b, m,
                                      [{'role': 'user', 'content': prompt}],
-                                     max_tokens=60, temperature=0, timeout=(5, 15))
+                                     max_tokens=1024, temperature=0, timeout=(5, 15))
+                                    # max_tokens 1024：qwen3.8-flash 为思考型模型，60 会秒回400/思考烧尽返空；输出校验仍限40字
             if content:
                 break
         else:
