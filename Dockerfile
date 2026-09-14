@@ -1,4 +1,4 @@
-# last update: 2026-09-14 20:05 TASK-016 路线丙：模型构建时从对象存储拉取
+# last update: 2026-09-14 23:20 触发重建（106曾复用旧镜像，带入b783903双通道+a9da0bc max_tokens修复）
 FROM python:3.11-slim
 
 WORKDIR /app
