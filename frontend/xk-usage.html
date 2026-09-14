@@ -264,10 +264,14 @@ function xkBadcaseQuery() {
     status: document.getElementById('bc-status').value
   }).then(function (res) {
     if (res.status === 403 || res.status === 401) { xkDeny(); return; }
+    if (!res.data || !res.data.ok) { alert('差评队列接口异常：' + ((res.data && res.data.error) || ('HTTP ' + res.status))); return; }
     bcRows = res.data.badcases || [];
     bcOpenId = null;
     document.getElementById('bc-detail-box').innerHTML = '';
     bcRender();
+    /* 排障口径：明细>0而列表空=归并/状态表问题；明细=0=点踩没落库 */
+    document.getElementById('bc-count').textContent +=
+      '（库中差评明细 ' + (res.data.total_down_rows || 0) + ' 行）';
   });
 }
 function bcRender() {

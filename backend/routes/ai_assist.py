@@ -1119,37 +1119,53 @@ def admin_badcases():
             g['last_time'] = r['created_at']
             g['last_rag_note'] = (r['note'] or '')[:255]
             g['answer_sample'] = (r['answer'] or '')[:200]
-    # 懒插入 + 计数回写（kb_badcase 是本模块自己的状态表，ai_usage 只读）
-    conn = _ensure_badcase_table()
-    eval_norms = _eval_question_norms()
+    # 懒插入 + 计数回写（kb_badcase 是本模块自己的状态表，ai_usage 只读）。
+    # 20260915 排障加固：状态表建表/读写异常一律降级"无状态表模式"——差评列表本体
+    # 来自 ai_usage 聚合，不能因状态表问题整条 500（前端会把 500 静默渲染成"共 0 条"，
+    # 线上无从定位；20260915 实测云端投票落库正常但队列显示 0，即属此类盲区）。
+    conn = get_db()
+    bctable = True
     try:
-        existing = {r['question_norm']: r for r in _fetchall(conn, "SELECT * FROM kb_badcase")}
-        for norm in order:
-            g = groups[norm]
-            ex = existing.get(norm)
-            if ex is None:
-                _exec(conn,
-                      "INSERT INTO kb_badcase (question_norm, question_samples, down_count, "
-                      "last_rag_note, status, updated_by, updated_at, resolution_note) "
-                      "VALUES (%s,%s,%s,%s,'open',%s,%s,'')",
-                      (norm[:200], json.dumps(g['samples'], ensure_ascii=False),
-                       g['down_count'], g['last_rag_note'], real, beijing_now_str()))
-            else:
-                _exec(conn,
-                      "UPDATE kb_badcase SET down_count=%s, last_rag_note=%s WHERE id=%s",
-                      (g['down_count'], g['last_rag_note'], ex['id']))
-                g['id'] = ex['id']
+        conn = _ensure_badcase_table()
+    except Exception as e:
+        bctable = False
+        print('[assist] kb_badcase 建表失败,差评队列降级为无状态表模式:',
+              type(e).__name__, str(e)[:150], flush=True)
+    eval_norms = _eval_question_norms()
+    existing, rows2 = {}, {}
+    if bctable:
         try:
-            conn.commit()
-        except Exception:
-            pass
-        # 带上表内状态输出
-        rows2 = {r['question_norm']: r for r in _fetchall(conn, "SELECT * FROM kb_badcase")}
-    finally:
-        try:
-            conn.close()
-        except Exception:
-            pass
+            existing = {r['question_norm']: r for r in _fetchall(conn, "SELECT * FROM kb_badcase")}
+            for norm in order:
+                g = groups[norm]
+                ex = existing.get(norm)
+                if ex is None:
+                    _exec(conn,
+                          "INSERT INTO kb_badcase (question_norm, question_samples, down_count, "
+                          "last_rag_note, status, updated_by, updated_at, resolution_note) "
+                          "VALUES (%s,%s,%s,%s,'open',%s,%s,'')",
+                          (norm[:200], json.dumps(g['samples'], ensure_ascii=False),
+                           g['down_count'], g['last_rag_note'], real, beijing_now_str()))
+                else:
+                    _exec(conn,
+                          "UPDATE kb_badcase SET down_count=%s, last_rag_note=%s WHERE id=%s",
+                          (g['down_count'], g['last_rag_note'], ex['id']))
+                    g['id'] = ex['id']
+            try:
+                conn.commit()
+            except Exception:
+                pass
+            # 带上表内状态输出
+            rows2 = {r['question_norm']: r for r in _fetchall(conn, "SELECT * FROM kb_badcase")}
+        except Exception as e:
+            bctable = False
+            existing, rows2 = {}, {}
+            print('[assist] kb_badcase 读写失败,差评队列降级为无状态表模式:',
+                  type(e).__name__, str(e)[:150], flush=True)
+    try:
+        conn.close()
+    except Exception:
+        pass
     status_filter = data.get('status')
     items = []
     for norm in order:
@@ -1168,7 +1184,9 @@ def admin_badcases():
         if status_filter and item['status'] != status_filter:
             continue
         items.append(item)
-    return jsonify({'ok': True, 'badcases': items, 'total_groups': len(items)})
+    # total_down_rows=库中差评明细行数：>0 而列表空=归并/状态表问题；=0=点踩没落库（排障口径）
+    return jsonify({'ok': True, 'badcases': items, 'total_groups': len(items),
+                    'total_down_rows': len(rows)})
 
 
 @ai_assist_bp.route('/api/assist/admin/badcase/status', methods=['POST'])

@@ -145,7 +145,8 @@ def main():
              if r[0] not in bc_norms0]
     orphan = []
     for norm in added:
-        hit = c.execute("SELECT COUNT(*) FROM ai_usage WHERE kind='ask' AND feedback='down' "
+        # 20260915 口径同步：队列含复盘差评后，孤儿检查同样覆盖 ask+review
+        hit = c.execute("SELECT COUNT(*) FROM ai_usage WHERE kind IN ('ask','review') AND feedback='down' "
                         "AND id<=? AND TRIM(REPLACE(question,'？','?')) LIKE ?",
                         (maxid0, '%' + norm.replace('?', '') + '%')).fetchone()[0]
         if not hit:
