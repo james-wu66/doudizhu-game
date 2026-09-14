@@ -3,7 +3,7 @@
 AI 复盘与问答助手 后端蓝图
 路由前缀: /api/assist
 红线: 不碰 routes/ai.py、backend/ai/；只新增 ai_usage 表；全量写审计。
-20260908 R3: 问答=双模型(商汤主/小米备, 429自动跳+60s冷却)；复盘=本地模板引擎(零模型零token)。
+20260908 R3: 问答=双模型(主/备见下方模型配置, 失败自动跳+60s冷却)；复盘=本地模板引擎(零模型零token)。
 """
 
 import os
@@ -48,8 +48,9 @@ def _review_str(n):
 
 # ============================================================
 # 模型配置（13.3：config_local 优先、os.environ 兜底，绝不硬编码 key）
-# 主 ASSIST_* = 商汤 token.sensenova.cn deepseek-v4-flash（2~3秒，免费额度但有TPM/RPM限流）
-# 备 BACKUP_* = 小米 mm-api mimo-v2.5（6~15秒，预付按量计费）
+# 主 ASSIST_* = 阿里 dashscope qwen3.8-flash（思考型；本机实测 2~13 秒，偶发 ReadTimeout/限流）
+# 备 BACKUP_* = 商汤 token.sensenova.cn deepseek-v4-flash（2~3秒，免费额度但 429 频发）
+# （以 config_local / 环境变量实际配置为准，云端与本地可能不同——排查时看 ai_usage.note 首段=实际作答模型名）
 # 主撞429→挂60秒冷却，冷却期内直接走备；到期自动回主试探。两家都挂→None→调用方降级。
 # ============================================================
 _fail_until = 0.0
@@ -221,7 +222,7 @@ def _slice_rules(question):
     return rules, [], 'full_fallback'
 
 
-# === TASK-012 模块2：多轮追问改写（只调小米备胎，temp 0 / max_tokens 60 / 超时5秒）===
+# === TASK-012 模块2：多轮追问改写（只调备通道 BACKUP，temp 0 / max_tokens 1024 / 超时5,15秒）===
 # 指示词表（12 词 ≤ 20 上限）；触发条件=命中任一词 且 history 非空。
 # 改写结果只用于检索与缓存 key，送回答模型的仍是原始问题；失败静默走原问题不重试。
 _QR_WORDS = ['它', '他', '这', '这个', '这些', '那', '那个', '那样',
@@ -241,16 +242,19 @@ def _rewrite_question(q, hist):
         prompt = ('根据对话历史，把最后的问题改写成一个不依赖上下文、可独立检索的完整问题'
                   '（保持斗地主领域用词）。只输出改写后的问题，不要任何解释。\n'
                   '历史提问：\n%s\n最后的问题：%s' % (ctx, q))
-        # 通道选择：优先主模型（qwen，快且稳），失败回退备胎（商汤429频发）。
-        # 偏离任务书"调小米备胎"的原因：小米中转 500 全灭、商汤限流频发，主通道反而最稳。
-        for prefix in ('ASSIST', 'BACKUP'):
+        # 通道选择：只走备通道 BACKUP（20260915 收口，回归任务书原设计）。
+        # 曾改主通道优先(85b6678)：但追问=改写+主调用对同一主通道连打，主通道一旦
+        # 限流/超时（本机实测 ReadTimeout+9~13s 慢响应），主调用就落到 429 频发的
+        # 备通道→双通道全败→T10_ASK 走神。改写绝不与主调用抢主通道；改写失败仅
+        # 损失检索精度(qr_fail 静默走原问题)，单轮在哪能通追问就在哪能通。
+        for prefix in ('BACKUP',):
             k, b, m = _cfg3(prefix)
             if not (k and b and m):
                 continue
             content, _u = _call_once(k, b, m,
                                      [{'role': 'user', 'content': prompt}],
                                      max_tokens=1024, temperature=0, timeout=(5, 15))
-                                    # max_tokens 1024：qwen3.8-flash 为思考型模型，60 会秒回400/思考烧尽返空；输出校验仍限40字
+                                    # max_tokens 1024：思考型模型小额度秒回400/思考烧尽返空；输出校验仍限40字
             if content:
                 break
         else:
@@ -1083,7 +1087,9 @@ def admin_badcases():
     if err:
         return err
     data = request.get_json(silent=True) or {}
-    where = ["kind='ask'", "feedback='down'"]
+    # 20260915 口径修正：复盘(kind=review)差评同属差评队列——此前硬编码 ask，
+    # 用户在复盘回答上点的踩永不进队（交接§10-3 根因①，jameswu 反馈④）。
+    where = ["kind IN ('ask','review')", "feedback='down'"]
     params = []
     if data.get('date_from'):
         where.append("substr(created_at,1,10)>=%s")

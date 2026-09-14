@@ -38,7 +38,7 @@
 <div id="xk-main" class="wrapper" style="display:none">
   <nav class="navbar navbar-expand navbar-white navbar-light">
     <div class="container">
-      <div class="navbar-brand m-0">🤖 AI 用量控制台</div>
+      <div class="navbar-brand m-0">AI 用量控制台</div>
       <div class="ml-auto align-self-center"><span id="xk-who" class="text-muted"></span>
         <a href="/lobby" class="btn btn-sm btn-outline-primary ml-2">返回大厅</a></div>
     </div>
@@ -47,7 +47,7 @@
     <div class="container-fluid">
       <div class="xk-tabs mb-2">
         <button id="xk-tabbtn-usage" class="btn btn-sm btn-primary">调用明细</button>
-        <button id="xk-tabbtn-badcase" class="btn btn-sm btn-outline-danger">差评队列 👎</button>
+        <button id="xk-tabbtn-badcase" class="btn btn-sm btn-outline-danger">差评队列 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" style="vertical-align:-2px" aria-hidden="true"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3z"/><path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/></svg></button>
       </div>
       <div id="xk-tab-usage">
       <div class="card card-outline card-primary xk-filter">
@@ -97,7 +97,7 @@
             <div class="card-header"><h3 class="card-title">今日速览</h3></div>
             <div class="card-body py-2">
               <div>今日调用：<b id="s-total">-</b>（其中真实花钱 <b id="s-paid">-</b>）</div>
-              <div>👎 数：<b id="s-down">-</b>　敏感词拦截：<b id="s-blocked">-</b></div>
+              <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" style="vertical-align:-2px" aria-hidden="true"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3z"/><path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/></svg> 数：<b id="s-down">-</b>　敏感词拦截：<b id="s-blocked">-</b></div>
             </div>
           </div>
         </div>
@@ -106,7 +106,7 @@
       <div id="xk-tab-badcase">
         <div class="card card-outline card-danger xk-filter">
           <div class="card-body py-2">
-            <label>日期</label><input id="bc-from" type="date" class="form-control form-control-sm">
+            <label>日期(留空=全部)</label><input id="bc-from" type="date" class="form-control form-control-sm">
             <label>至</label><input id="bc-to" type="date" class="form-control form-control-sm">
             <label>状态</label>
             <select id="bc-status" class="form-control form-control-sm">
@@ -337,8 +337,7 @@ window.addEventListener('load', function () {
   xkQuery();
   document.getElementById('f-query').addEventListener('click', xkQuery);
   document.getElementById('f-csv').addEventListener('click', xkCsv);
-  document.getElementById('bc-from').value = xkToday();
-  document.getElementById('bc-to').value = xkToday();
+  /* 差评队列日期默认留空=全部历史（20260915 jameswu 反馈④：默认只看今天会把历史差评全滤没） */
   document.getElementById('xk-tabbtn-usage').addEventListener('click', function () { xkSwitchTab('usage'); });
   document.getElementById('xk-tabbtn-badcase').addEventListener('click', function () { xkSwitchTab('badcase'); });
   document.getElementById('bc-query').addEventListener('click', xkBadcaseQuery);

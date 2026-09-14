@@ -69,13 +69,14 @@ def part_a():
     check('A6 全角冒号+cite:九', tag == 'cite:九', tag)
 
     # A7 改写触发判定：词表命中+有history 才尝试改写（把 _call_once 换成探针，不真调模型）。
-    # 双通道版（TASK-016 后）：改写先试 ASSIST 再试 BACKUP，全失败才 qr_fail → 探针应记录 2 次调用。
+    # 单通道版（20260915 收口）：改写只走 BACKUP 备通道，绝不与主调用抢主通道（防 T10 走神），
+    # 全失败才 qr_fail → 探针应记录 1 次调用。
     calls = []
     orig_once = A._call_once
     A._call_once = lambda *a, **k: (calls.append(1), (None, None))[1]
     try:
         _, t1 = A._rewrite_question('它是怎么触发的', [{'q': '接风是什么意思'}])
-        check('A7 词表+history→双通道共2次改写尝试后qr_fail', len(calls) == 2 and t1 == 'qr_fail', '%d次|%s' % (len(calls), t1))
+        check('A7 词表+history→仅备通道1次改写尝试后qr_fail', len(calls) == 1 and t1 == 'qr_fail', '%d次|%s' % (len(calls), t1))
         calls.clear()
         _, t2 = A._rewrite_question('接风是怎么触发的', [{'q': '接风是什么意思'}])
         check('A7b 无指示词→不触发', len(calls) == 0 and t2 == '', t2)
@@ -102,7 +103,7 @@ def part_a():
     note = 'sensenova;qr:ok;cite:六;rag:' + ','.join(['rules#六#%d' % i for i in range(60)])
     check('A12 note 截断≤255', len(note[:255]) <= 255, len(note))
 
-    # A13 改写新增延迟（真实千问调用，6 连发；任务书目标 P95≤2s，qwen3.8-flash 实测 1.8~2.8s 略超，如实报告）
+    # A13 改写新增延迟（20260915 起改写只走备通道：真实商汤调用，6 连发；目标 P95≤2s，实测以输出为准）
     times = []
     for _ in range(6):
         time.sleep(1.2)  # 模拟真实节奏，避免测试连发触发QPS限流
@@ -114,7 +115,7 @@ def part_a():
             break
     else:
         check('A13 改写6/6成功且新增延迟≤3s', max(times) <= 3.0,
-              '平均%.2fs 最大%.2fs（任务书2s目标以qwen3.8-flash实测略有超出）' % (sum(times) / 6, max(times)))
+              '平均%.2fs 最大%.2fs（改写走备通道deepseek实测）' % (sum(times) / 6, max(times)))
 
 
 # ---------------- PartB 端到端（HTTP，需满血服务） ----------------
