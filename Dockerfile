@@ -13,6 +13,10 @@ RUN npm install -g @cloudbase/cli
 # 模型文件为公开开源数据（BAAI bge），已设对象级公有读；运行时零下载，根治线上问答504。
 # 布局与本地 KB_MODEL_DIR 一致：kb_models/fast-bge-small-zh-v1.5/
 ENV KB_MODEL_DIR=/app/kb_models
+# HF_HUB_OFFLINE=1：强制 fastembed/huggingface_hub 离线加载（模型已在镜像内）。
+# 不加它容器会联网校验模型，境内云访问 hf.co 被墙挂死 → 线上问答 504（本机同款坑，交接文档§5）。
+ENV HF_HUB_OFFLINE=1
+ENV HF_HUB_DISABLE_TELEMETRY=1
 RUN mkdir -p $KB_MODEL_DIR/fast-bge-small-zh-v1.5 && \
     for f in model_optimized.onnx tokenizer.json vocab.txt tokenizer_config.json special_tokens_map.json ort_config.json config.json; do \
         curl -fsSL -o "$KB_MODEL_DIR/fast-bge-small-zh-v1.5/$f" \
