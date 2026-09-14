@@ -25,6 +25,10 @@
     "learning_min_samples": 30,
     "learning_max_correction": 20
   },
+  "model_pass": {
+    "enabled": false,
+    "source": "sim"
+  },
   "thresholds_new": {
     "顶牌_小牌阈值": 10,
     "顶牌_大牌阈值": 14,

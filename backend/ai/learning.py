@@ -206,3 +206,118 @@ def ai_record_step(gs, action_type, who):
         ai_mem.pass_streak[who] = 0
 
 
+# ==================== TASK-011：PASS 监督模型推理（20260914） ====================
+# 试点制：只换 PASS 一个切入点。模型由 tools/train_pass_model.py 离线训练
+# （sklearn 只在训练脚本里用），系数导出为纯 JSON（ai/model_pass/pass_model.json），
+# 本文件推理纯 Python 点分 + sigmoid，禁止 import sklearn。
+# 静态文件：模型不随 load_learn_from_db 刷新，重训 = 换文件 + 重启进程。
+# 兜底：开关关 / 模型缺失 / 加载失败 / 预测异常，一律无声回退 _learn_pass_bias，
+# 决策链路绝不报错、绝不返回 None。修正分钳制复用顶部 _LEARN_CLAMP，不另设上限。
+
+_PASS_MODEL = {'enabled': None, 'ok': None, 'model': None}
+
+
+def _pass_model_config_enabled():
+    """读 config.json 的 model_pass.enabled。进程内读一次缓存（开关切换需重启）。"""
+    if _PASS_MODEL['enabled'] is None:
+        _enabled = False
+        try:
+            with open(os.path.join(os.path.dirname(__file__), 'config.json'), 'r', encoding='utf-8') as f:
+                _enabled = bool(json.load(f).get('model_pass', {}).get('enabled', False))
+        except Exception:
+            _enabled = False
+        _PASS_MODEL['enabled'] = _enabled
+    return _PASS_MODEL['enabled']
+
+
+def _pass_model_load():
+    """懒加载模型 JSON，进程内一次。任何失败记 ok=False（不反复重试拖慢决策）。"""
+    if _PASS_MODEL['ok'] is not None:
+        return _PASS_MODEL['ok']
+    try:
+        with open(os.path.join(os.path.dirname(__file__), 'model_pass', 'pass_model.json'),
+                  'r', encoding='utf-8') as f:
+            m = json.load(f)
+        coefs = [float(x) for x in m['coef']]
+        feats = list(m['feature_order'])
+        if len(coefs) != len(feats):
+            raise ValueError('coef/feature_order 长度不一致')
+        _PASS_MODEL['model'] = {
+            'coefs': dict(zip(feats, coefs)),
+            'intercept': float(m['intercept']),
+        }
+        _PASS_MODEL['ok'] = True
+    except Exception as e:
+        _PASS_MODEL['ok'] = False
+        print(f"[PASS模型] 加载失败，回退线性修正: {type(e).__name__}: {e}", flush=True)
+    return _PASS_MODEL['ok']
+
+
+def pass_model_ready():
+    """开关 true 且模型文件可加载才算 ready；否则调用方走 _learn_pass_bias。"""
+    return _pass_model_config_enabled() and _pass_model_load()
+
+
+def _pass_model_prob(feats):
+    """sigmoid(w·x + b)，纯 Python。feats 为特征名 -> 值的 dict。"""
+    m = _PASS_MODEL['model']
+    z = m['intercept']
+    for k, v in feats.items():
+        z += m['coefs'].get(k, 0.0) * v
+    if z >= 0:
+        return 1.0 / (1.0 + pow(2.718281828459045, -z))
+    e = pow(2.718281828459045, z)
+    return e / (1.0 + e)
+
+
+def _pass_model_features(role, landlord_count, hand_count):
+    """与 tools/train_pass_model.py 的 FEATURE_ORDER 严格一致（训练/推理同构）。"""
+    return {
+        'is_beat': 0.0,
+        'role_farmerPrev': 1.0 if role == 'farmerPrev' else 0.0,
+        'role_farmerNext': 1.0 if role == 'farmerNext' else 0.0,
+        'role_landlord': 1.0 if role == 'landlord' else 0.0,
+        'band_lt3': 1.0 if landlord_count <= 3 else 0.0,
+        'band_lt8': 1.0 if 4 <= landlord_count <= 8 else 0.0,
+        'band_gt8': 1.0 if landlord_count > 8 else 0.0,
+        'hand_norm': hand_count / 20.0,
+        'hand_le4': 1.0 if hand_count <= 4 else 0.0,
+    }
+
+
+def pass_model_adjust(gs, role, landlord_count):
+    """
+    PASS 监督模型修正分（与 _learn_pass_bias 同签名语义，正=更愿压，负=更愿让）。
+
+    公式：bias = (p_beat - p_pass) × 200，钳制 ±_LEARN_CLAMP。
+      p_beat = 模型对"此处选择压牌"的整局胜率预测（is_beat=1）
+      p_pass = 模型对"此处选择让牌"的同局面反事实预测（is_beat=0）
+      两者其余特征完全相同，差值只由 is_beat 系数驱动，天然单调：
+      压牌预测胜率高于让牌基准 → 正修正（倾向否决让牌），反之负。
+      与线性版 (beat桶胜率-桶胜率)×200 同构，但按 role/地主剩牌档/自身手数
+      连续平滑，且不依赖 60 秒桶缓存。
+    """
+    if not pass_model_ready():
+        return _learn_pass_bias(role, landlord_count)
+    try:
+        hand_count = 20
+        try:
+            cur = gs.current
+            if cur is not None and 0 <= cur < len(gs.hands) and gs.hands[cur]:
+                hand_count = len(gs.hands[cur])
+        except Exception:
+            hand_count = 20
+        base = _pass_model_features(role, landlord_count, hand_count)
+        x_pass = dict(base)
+        x_beat = dict(base)
+        x_pass['is_beat'] = 0.0
+        x_beat['is_beat'] = 1.0
+        p_pass = _pass_model_prob(x_pass)
+        p_beat = _pass_model_prob(x_beat)
+        raw = (p_beat - p_pass) * 200.0
+        return max(-_LEARN_CLAMP, min(_LEARN_CLAMP, raw))
+    except Exception as e:
+        print(f"[PASS模型] 预测异常，回退线性修正: {type(e).__name__}: {e}", flush=True)
+        return _learn_pass_bias(role, landlord_count)
+
+

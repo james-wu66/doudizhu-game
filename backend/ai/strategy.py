@@ -877,8 +877,8 @@ def vm_counter_vs_landlord(gs, hand, last, who, candidates):
     # 只否决'让牌'，且在本函数（地主分支）内——队友域物理隔绝，永不受此影响。
     if res:
         try:
-            from ai.learning import _learn_pass_bias
-            _bias = _learn_pass_bias(role, L)
+            from ai.learning import _learn_pass_bias, pass_model_adjust, pass_model_ready
+            _bias = pass_model_adjust(gs, role, L) if pass_model_ready() else _learn_pass_bias(role, L)
             if _bias >= P['pb_override']:
                 res = False   # 数据证明这种局面让牌赢率低 → 强制顶（出哪张仍按价值匹配）
         except Exception:
