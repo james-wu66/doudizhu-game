@@ -12,6 +12,7 @@ function recordGameResult(result, role, rounds, duration, aiDecisions, scoreChan
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({
       name: currentUser.name,
+      token: astUserToken(), // TASK-014a: 与问答助手同款取法，TASK-014 后端鉴权前置
       result: result,
       role: role,
       rounds: rounds,
@@ -63,7 +64,7 @@ function loadStats(){
   }
   if(el)el.style.display='grid';
   if(hint)hint.style.display='none';
-  fetch('/api/stats/'+encodeURIComponent(currentUser.name))
+  fetch('/api/stats/'+encodeURIComponent(currentUser.name)+'?token='+encodeURIComponent(astUserToken()))  // TASK-014a 增补: 本人查自己带 token（014b 隐私判定认本人）
     .then(r=>r.json())
     .then(d=>{
       document.getElementById('stat-total').textContent=d.total||0;

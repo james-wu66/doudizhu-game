@@ -109,7 +109,7 @@ function endGame(winner){
       });
       fetch(API_BASE + '/api/ai/backfill', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({round_id: LEARN.roundId, game_id: null, results: aiResults})
+        body: JSON.stringify({token: astUserToken(), round_id: LEARN.roundId, game_id: null, results: aiResults}) // TASK-014a: token 与问答助手同款取法，游客为空照提
       }).catch(()=>{});
     }catch(e){console.warn('AI backfill fail',e);}
   }catch(e){console.warn('record fail',e);}

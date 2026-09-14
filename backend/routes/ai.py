@@ -5,6 +5,7 @@ AI 接口路由：出牌决策、叫地主、提示、学习数据收集与查�
 import json
 from flask import Blueprint, request, jsonify
 from utils import get_db, beijing_now_str
+from auth_utils import identify  # TASK-014b: record/backfill 入口鉴权（decide/bid/hint 不碰）
 from ai.state import GameState, PLAYER, LEFT, RIGHT
 from ai.engine import ai_play as ai_play_engine
 from ai.candidates import generate_candidates as ai_candidates
@@ -395,6 +396,10 @@ def ai_bid():
 @ai_bp.route("/api/ai/record", methods=["POST"])
 def record_ai_step():
     data = request.json
+    # TASK-014b: 本表无用户列，只确认请求方为登录用户（游客/无效 token 401），防止伪造样本污染学习库
+    _real, _err = identify(claim_field=None)
+    if _err:
+        return _err
     conn = get_db()
     _ai_learning_insert(conn, {
         "game_id": data.get("game_id"),
@@ -436,6 +441,10 @@ def ai_insights():
 def backfill_ai_results():
     """局终回填：按 round_id + who 把该局所有 AI 步骤的胜负结果补上"""
     data = request.json
+    # TASK-014b: 同上，仅登录用户可回填（无用户列，鉴权后原逻辑一字不动）
+    _real, _err = identify(claim_field=None)
+    if _err:
+        return _err
     conn = get_db()
     c = conn.cursor()
     for item in data.get("results", []):

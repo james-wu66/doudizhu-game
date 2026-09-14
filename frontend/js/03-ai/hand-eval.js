@@ -60,6 +60,7 @@ function learnLoad(){
 function aiRecordStep(step, handState, action, actionType, bucket, who){
   if(!LEARN.roundId) return;
   const payload = {
+    token: astUserToken(), // TASK-014a: 与问答助手同款取法，TASK-014 后端鉴权前置
     round_id: LEARN.roundId,
     step: step,
     hand_state: handState,

@@ -386,6 +386,15 @@ document.addEventListener('click',function unlockLobbyBgm(){
 let currentUser = '';
 let currentProfileName = '';
 
+// TASK-014a 增补：统一取登录 token（与 startGame/回放跳转同款逻辑），供鉴权接口携带
+function lobbyToken() {
+    var token = '';
+    var saved = localStorage.getItem('doudizhu_user') || sessionStorage.getItem('doudizhu_user');
+    if (saved) { try { var u = JSON.parse(saved); token = (u && u.token) || ''; } catch(e){} }
+    if (!token) { try { token = new URLSearchParams(location.search).get('token') || ''; } catch(e){} }
+    return token;
+}
+
 function escapeHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
@@ -429,7 +438,7 @@ window.onload = function() {
 
 async function lobbyLoadStats() {
     try {
-        const resp = await fetch(API + '/stats/' + encodeURIComponent(currentUser));
+        const resp = await fetch(API + '/stats/' + encodeURIComponent(currentUser) + '?token=' + encodeURIComponent(lobbyToken())); // TASK-014a 增补: 本人查自己战绩带 token（014b 隐私判定认本人）
         const data = await resp.json();
         document.getElementById('statTotal').textContent = data.total;
         document.getElementById('statWins').textContent = data.wins;
@@ -542,7 +551,7 @@ function switchProfileTab(tab, btn) {
 async function loadProfileInfo(name) {
     name = name || currentProfileName || currentUser;
     try {
-        const resp = await fetch(API + '/users/' + encodeURIComponent(name));
+        const resp = await fetch(API + '/users/' + encodeURIComponent(name) + '?token=' + encodeURIComponent(lobbyToken())); // TASK-014a 增补: 带 token 供本人判定（隐藏战绩者看自己不被清零）
         const data = await resp.json();
         if (data.success) {
             document.getElementById('pTotal').textContent = data.stats.total;
@@ -562,7 +571,7 @@ let allGames = [];
 async function loadProfileGames(name) {
     name = name || currentProfileName || currentUser;
     try {
-        const resp = await fetch(API + '/users/' + encodeURIComponent(name) + '/games?viewer=' + encodeURIComponent(currentUser));
+        const resp = await fetch(API + '/users/' + encodeURIComponent(name) + '/games?viewer=' + encodeURIComponent(currentUser) + '&token=' + encodeURIComponent(lobbyToken())); // TASK-014a 增补: 本人判定改认 token，viewer 仅留作兼容
         const data = await resp.json();
         if (data.hidden) {
             allGames = [];
@@ -687,6 +696,7 @@ function doUploadAvatar() {
 
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('token', lobbyToken()); // TASK-014a 增补: 头像上传带 token（后端 014b 鉴权）
         try {
             const resp = await fetch(API + '/users/' + encodeURIComponent(currentUser) + '/avatar', {
                 method: 'POST', body: formData
@@ -730,7 +740,7 @@ async function savePrivacy(checked) {
         const resp = await fetch(API + '/users/' + encodeURIComponent(currentUser) + '/privacy', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ viewer: currentUser, allow_view: !checked })
+            body: JSON.stringify({ token: lobbyToken(), viewer: currentUser, allow_view: !checked })  // TASK-014a 增补: 带 token（后端 014b 鉴权）
         });
         const data = await resp.json();
         if (!data.success) {

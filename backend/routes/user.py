@@ -7,6 +7,7 @@ import uuid
 from urllib.parse import unquote
 from flask import Blueprint, request, jsonify, send_from_directory
 from utils import get_db, UPLOAD_FOLDER, allowed_file, MAX_FILE_SIZE, fmt_created_at
+from auth_utils import identify, viewer_identity, esc
 
 user_bp = Blueprint("user", __name__)
 
@@ -18,6 +19,15 @@ def get_user_profile(name):
     name = unquote(name)
     conn = get_db()
     c = conn.cursor()
+    # TASK-014b: 先查隐私开关；他人访问且非本人(token反查)时统计清零（本人判定不再信自报 viewer）
+    c.execute("SELECT allow_view_stats FROM users WHERE name = %s", (name,))
+    urow = c.fetchone()
+    allow_view = urow["allow_view_stats"] if urow and urow["allow_view_stats"] is not None else 1
+    if allow_view == 0 and viewer_identity() != name:
+        conn.close()
+        return jsonify({"success": True, "name": esc(name), "allow_view_stats": 0,
+                        "stats": {"total": 0, "wins": 0, "win_rate": 0, "streak": 0},
+                        "hidden": True})
     c.execute("""
         SELECT COUNT(*) as total,
                SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) as wins
@@ -43,7 +53,7 @@ def get_user_profile(name):
     urow = c.fetchone()
     allow_view = urow["allow_view_stats"] if urow and urow["allow_view_stats"] is not None else 1
     conn.close()
-    return jsonify({"success": True, "name": name, "allow_view_stats": allow_view, "stats": {"total": total, "wins": wins, "win_rate": win_rate, "streak": max_streak}})
+    return jsonify({"success": True, "name": esc(name), "allow_view_stats": allow_view, "stats": {"total": total, "wins": wins, "win_rate": win_rate, "streak": max_streak}})  # TASK-014b: 昵称转义
 
 
 @user_bp.route("/api/users/<name>/games")
@@ -55,7 +65,8 @@ def get_user_games(name):
     c.execute("SELECT allow_view_stats FROM users WHERE name = %s", (name,))
     urow = c.fetchone()
     allow = urow["allow_view_stats"] if urow and urow["allow_view_stats"] is not None else 1
-    is_self = (viewer == name)
+    # TASK-014b: 本人判定只认 token 反查，不再信 URL 自报 viewer
+    is_self = (viewer_identity() == name)
     if not is_self and allow == 0:
         conn.close()
         return jsonify({"success": True, "games": [], "hidden": True})
@@ -79,14 +90,19 @@ def get_user_games(name):
 @user_bp.route("/api/users/<name>/privacy", methods=["POST"])
 def update_privacy(name):
     name = unquote(name)
+    # TASK-014b: token 统一鉴权。URL 路径里的 name 只是"宣称"，与反查不符=冒名403；通过后只认反查名
+    real, err = identify()
+    if err:
+        return err
+    if name != real:
+        from auth_utils import _audit_impersonation
+        _audit_impersonation(real, name)
+        return jsonify({"success": False, "error": "forbidden"}), 403
     data = request.get_json(silent=True) or {}
-    viewer = data.get('viewer', '') or ''
-    if viewer != name:
-        return jsonify({"success": False, "error": "无权修改他人隐私设置"}), 403
     allow_view = 1 if data.get('allow_view', True) else 0
     conn = get_db()
     c = conn.cursor()
-    c.execute("UPDATE users SET allow_view_stats = %s WHERE name = %s", (allow_view, name))
+    c.execute("UPDATE users SET allow_view_stats = %s WHERE name = %s", (allow_view, real))
     conn.commit()
     conn.close()
     return jsonify({"success": True})
@@ -95,6 +111,14 @@ def update_privacy(name):
 @user_bp.route("/api/users/<name>/avatar", methods=["POST"])
 def upload_avatar(name):
     name = unquote(name)
+    # TASK-014b: multipart 上传，token 走表单字段；URL 路径 name 只是宣称，与反查不符=冒名403
+    real, err = identify(claim_field=None)
+    if err:
+        return err
+    if name != real:
+        from auth_utils import _audit_impersonation
+        _audit_impersonation(real, name)
+        return jsonify({"success": False, "error": "forbidden"}), 403
     if 'file' not in request.files:
         return jsonify({"success": False, "error": "没有文件"}), 400
     file = request.files['file']
@@ -120,7 +144,7 @@ def upload_avatar(name):
         except: pass
         conn = get_db()
         c = conn.cursor()
-        c.execute("UPDATE users SET avatar_url = %s WHERE name = %s", (filename, name))
+        c.execute("UPDATE users SET avatar_url = %s WHERE name = %s", (filename, real))
         conn.commit()
         conn.close()
         return jsonify({"success": True, "avatar_url": "/api/users/" + name + "/avatar"})

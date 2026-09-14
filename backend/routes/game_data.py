@@ -6,6 +6,7 @@ import json
 from urllib.parse import unquote
 from flask import Blueprint, request, jsonify
 from utils import get_db, cloud_upload, beijing_now_str, fmt_created_at
+from auth_utils import identify, viewer_identity, esc
 
 game_bp = Blueprint("game", __name__)
 
@@ -15,6 +16,14 @@ def get_stats(name):
     name = unquote(name)
     conn = get_db()
     c = conn.cursor()
+    # TASK-014b: 隐私拦截——allow_view_stats=0 且访问者非本人(token反查)时隐藏数据
+    c.execute("SELECT allow_view_stats FROM users WHERE name = %s", (name,))
+    urow = c.fetchone()
+    allow_view = urow["allow_view_stats"] if urow and urow["allow_view_stats"] is not None else 1
+    if allow_view == 0 and viewer_identity() != name:
+        conn.close()
+        return jsonify({"name": esc(name), "total": 0, "wins": 0, "losses": 0,
+                        "win_rate": 0, "streak": 0, "hidden": True})
     c.execute("""
         SELECT COUNT(*) as total,
                SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) as wins,
@@ -33,13 +42,17 @@ def get_stats(name):
         if r == "win": streak += 1
         else: break
     conn.close()
-    return jsonify({"name": name, "total": total, "wins": wins, "losses": losses, "win_rate": win_rate, "streak": streak})
+    return jsonify({"name": esc(name), "total": total, "wins": wins, "losses": losses, "win_rate": win_rate, "streak": streak})
 
 
 @game_bp.route("/api/game/end", methods=["POST"])
 def record_game():
     data = request.json
-    name = data.get("name")
+    # TASK-014b: token 统一鉴权——无/无效 token 401；自报名与 token 不符 403+冒名审计；归属人只认反查结果
+    real, err = identify()
+    if err:
+        return err
+    name = real
     result = data.get("result")
     role = data.get("role", "")
     rounds = data.get("rounds", 0)
@@ -76,7 +89,7 @@ def leaderboard():
     conn.close()
     result = []
     for i, row in enumerate(rows, 1):
-        result.append({"rank": i, "name": row["name"], "total": row["total"], "wins": row["wins"], "win_rate": row["win_rate"] or 0})
+        result.append({"rank": i, "name": esc(row["name"]), "total": row["total"], "wins": row["wins"], "win_rate": row["win_rate"] or 0})  # TASK-014b: 昵称转义
     return jsonify(result)
 
 
@@ -100,7 +113,7 @@ def get_game_replay(game_id):
     try: moves = json.loads(row["ai_decisions"]) if row["ai_decisions"] else []
     except: moves = []
     return jsonify({
-        "success": True, "game_id": game_id, "user_name": row["user_name"],
+        "success": True, "game_id": game_id, "user_name": esc(row["user_name"]),  # TASK-014b: 昵称转义
         "result": row["result"], "role": row["role"], "bid_score": row["bid_score"],
         "score_change": row["score_change"], "rounds": row["rounds"] if row["rounds"] is not None else 0,
         "created_at": fmt_created_at(row["created_at"]), "moves": moves
