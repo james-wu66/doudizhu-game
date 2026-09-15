@@ -31,3 +31,8 @@ verify_replay.js
 # 公开仓库里出现明文口令是负面信号。文件保留在本地，仅脱离版本控制。
 backend/kbtest_*.py
 backend/eval_rag.py
+
+# === 20260915 仓库治理：AI 助手工作目录不进仓库 ===
+# 理由：.workbuddy/ 是本机 AI 助手的项目笔记/记忆目录（含安全检查结论、
+# 内部约定），纯本地内容，绝不上传公开仓库。防止 "git add ." 误带上。
+.workbuddy/
