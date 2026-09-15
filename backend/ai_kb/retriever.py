@@ -262,7 +262,10 @@ def index_target_docs(extra=None):
         from utils import get_db
         conn = get_db()
         try:
-            rows = conn.cursor().execute("SELECT DISTINCT doc_name FROM kb_chunk").fetchall()
+            _c = conn.cursor()
+            # 同病同治：execute 返回 int 不是 cursor（案例E同款，20260915）
+            _c.execute("SELECT DISTINCT doc_name FROM kb_chunk")
+            rows = _c.fetchall()
             docs.update(r['doc_name'] for r in rows)
         finally:
             conn.close()
@@ -359,8 +362,9 @@ def remove_document(doc_name):
             conn.commit()
         else:
             cur = conn.cursor()
-            n = cur.execute("SELECT COUNT(*) c FROM kb_chunk WHERE doc_name=%s",
-                            (doc_name,)).fetchone()['c']
+            # ⚠️ pymysql execute 返回 int(rowcount) 不是 cursor——必须拆开取（James Wu / 案例E同款，20260915 删除路径 500 根因）
+            cur.execute("SELECT COUNT(*) c FROM kb_chunk WHERE doc_name=%s", (doc_name,))
+            n = cur.fetchone()['c']
             cur.execute("DELETE FROM kb_chunk WHERE doc_name=%s", (doc_name,))
         all_rows = _fetch_all(conn, is_sqlite)
     finally:
@@ -391,12 +395,15 @@ def sync_all_published(log=None):
             conn = get_db()
             try:
                 is_sqlite = ensure_table(conn)
-                cnt = conn.cursor().execute(
-                    "SELECT COUNT(*) c FROM kb_chunk WHERE doc_name=%s", (n,)).fetchone()['c']
+                # pymysql execute 返回 int 不是 cursor——链式取必炸后被本函数 except 吞掉，
+                # 导致启动对账在 MySQL 上静默失效（20260915 全后端链式扫描发现，拆开取）
+                _cc = conn.cursor()
+                _cc.execute("SELECT COUNT(*) c FROM kb_chunk WHERE doc_name=%s", (n,))
+                cnt = _cc.fetchone()['c']
                 if cnt:
                     continue
-                st = conn.cursor().execute(
-                    "SELECT status FROM kb_document WHERE doc_name=%s", (n,)).fetchone()
+                _cc.execute("SELECT status FROM kb_document WHERE doc_name=%s", (n,))
+                st = _cc.fetchone()
                 if not st or st['status'] != 'published':
                     continue
                 text = open(os.path.join(_KBDOCS, fn), encoding='utf-8').read()
@@ -417,8 +424,10 @@ def _doc_visibility(doc_name):
         from utils import get_db
         conn = get_db()
         try:
-            r = conn.cursor().execute(
-                "SELECT visibility FROM kb_document WHERE doc_name=%s", (doc_name,)).fetchone()
+            # 同款 pymysql 语义坑：execute 返回 int，链式 fetchone 必炸并被本 except 吞→永远 'public'
+            _cv = conn.cursor()
+            _cv.execute("SELECT visibility FROM kb_document WHERE doc_name=%s", (doc_name,))
+            r = _cv.fetchone()
             return (r['visibility'] if r and r['visibility'] else 'public')
         finally:
             conn.close()
