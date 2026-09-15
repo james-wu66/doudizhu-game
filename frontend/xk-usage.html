@@ -23,6 +23,11 @@
   .xk-meta { color: #8894a3; font-size: 11px; }
   .xk-tabs .btn { margin-right: 6px; }
   #xk-tab-badcase { display: none; }
+  #xk-tab-kb { display: none; }
+  .kb-badge-pending { background: #fd7e14; } .kb-badge-published { background: #28a745; }
+  .kb-badge-rejected { background: #8894a3; } .kb-badge-archived { background: #6c757d; }
+  .kb-act { margin-right: 4px; }
+  .kb-chunk { background: #f8f9fa; border-left: 3px solid #17a2b8; padding: 6px 10px; margin: 4px 0; font-size: 13px; }
   #bc-tbody tr { cursor: pointer; }
   .bc-detail { background: #f8f9fa; border-left: 3px solid #17a2b8; padding: 8px 12px; margin: 4px 0; font-size: 13px; }
   .bc-badge-open { background: #dc3545; } .bc-badge-in_progress { background: #fd7e14; }
@@ -48,6 +53,7 @@
       <div class="xk-tabs mb-2">
         <button id="xk-tabbtn-usage" class="btn btn-sm btn-primary">调用明细</button>
         <button id="xk-tabbtn-badcase" class="btn btn-sm btn-outline-danger">差评队列 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" style="vertical-align:-2px" aria-hidden="true"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3z"/><path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/></svg></button>
+        <button id="xk-tabbtn-kb" class="btn btn-sm btn-outline-info">知识库</button>
       </div>
       <div id="xk-tab-usage">
       <div class="card card-outline card-primary xk-filter">
@@ -128,6 +134,28 @@
           </div>
         </div>
         <div id="bc-detail-box"></div>
+      </div>
+      <div id="xk-tab-kb">
+        <div class="card card-outline card-info xk-filter">
+          <div class="card-body py-2">
+            <label>上传文档</label>
+            <input type="file" id="kb-file" accept=".txt,.md,.docx,.pdf" class="form-control-file d-inline-block mr-2" style="width:auto;max-width:320px;display:inline-block;vertical-align:middle">
+            <button id="kb-upload" class="btn btn-sm btn-info">上传</button>
+            <button id="kb-refresh" class="btn btn-sm btn-outline-secondary">刷新列表</button>
+            <span id="kb-msg" class="xk-meta ml-2"></span>
+            <div class="xk-meta mt-1">支持 .txt / .md / .docx / .pdf（≤20MB）。上传后进入"待审核"，<b>批准前线上检索仍是旧知识</b>；批准瞬间才落盘、重算向量并生效。</div>
+          </div>
+        </div>
+        <div class="card card-outline card-primary">
+          <div class="card-header"><h3 class="card-title">文档列表 <small id="kb-count" class="xk-meta"></small></h3></div>
+          <div class="card-body table-responsive p-0" style="max-height:420px;overflow:auto">
+            <table class="table table-sm table-hover mb-0" id="kb-table">
+              <thead><tr><th>文档</th><th>状态</th><th>来源</th><th>生效块数</th><th>字数</th><th>上传者/审核</th><th>更新</th><th>操作</th></tr></thead>
+              <tbody id="kb-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="kb-detail-box"></div>
       </div>
     </div>
   </div>
@@ -249,9 +277,12 @@ var bcRows = [], bcOpenId = null;
 function xkSwitchTab(tab) {
   document.getElementById('xk-tab-usage').style.display = (tab === 'usage') ? 'block' : 'none';
   document.getElementById('xk-tab-badcase').style.display = (tab === 'badcase') ? 'block' : 'none';
+  document.getElementById('xk-tab-kb').style.display = (tab === 'kb') ? 'block' : 'none';
   document.getElementById('xk-tabbtn-usage').className = 'btn btn-sm ' + (tab === 'usage' ? 'btn-primary' : 'btn-outline-primary');
   document.getElementById('xk-tabbtn-badcase').className = 'btn btn-sm ' + (tab === 'badcase' ? 'btn-danger' : 'btn-outline-danger');
+  document.getElementById('xk-tabbtn-kb').className = 'btn btn-sm ' + (tab === 'kb' ? 'btn-info' : 'btn-outline-info');
   if (tab === 'badcase') xkBadcaseQuery();
+  if (tab === 'kb') kbQuery();
 }
 function bcStatusBadge(s) {
   var cn = { open: '待处理', in_progress: '处理中', resolved: '已解决', wontfix: '不修' }[s] || s;
@@ -333,6 +364,134 @@ function bcExpand(i) {
   });
   box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
+/* ===== 知识库管理 tab（TASK-010 包B 前端入口，20260915） ===== */
+var kbDocs = [];
+function kbPost(path, body) {
+  return fetch('/api/kb/' + path, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(Object.assign({ token: xkToken() }, body || {}))
+  }).then(function (r) { return r.json().catch(function () { return { success: false }; }).then(function (d) { return { status: r.status, data: d }; }); });
+}
+function kbMsg(t) { document.getElementById('kb-msg').textContent = t; }
+function kbStatusBadge(s) {
+  var cn = { pending: '待审核', published: '已生效', rejected: '已驳回', archived: '已删除' }[s] || s;
+  return '<span class="badge kb-badge-' + xkEsc(s) + '">' + xkEsc(cn) + '</span>';
+}
+function kbQuery() {
+  kbPost('list', {}).then(function (res) {
+    if (res.status === 403 || res.status === 401) { xkDeny(); return; }
+    if (!res.data || !res.data.success) { alert('知识库列表接口异常：' + ((res.data && (res.data.msg || res.data.error)) || ('HTTP ' + res.status))); return; }
+    kbDocs = res.data.docs || [];
+    document.getElementById('kb-detail-box').innerHTML = '';
+    kbRender();
+  });
+}
+function kbRender() {
+  var tb = document.getElementById('kb-tbody');
+  var h = '';
+  kbDocs.forEach(function (d, i) {
+    var src = d.source_filename || 'paste';
+    var acts = '';
+    if (d.status === 'pending') acts = '<button class="btn btn-sm btn-outline-info kb-act" data-i="' + i + '" data-op="preview">预览</button>'
+      + '<button class="btn btn-sm btn-success kb-act" data-i="' + i + '" data-op="approve">批准</button>'
+      + '<button class="btn btn-sm btn-outline-danger kb-act" data-i="' + i + '" data-op="reject">驳回</button>';
+    else if (d.status === 'published') {
+      acts = '<button class="btn btn-sm btn-outline-info kb-act" data-i="' + i + '" data-op="preview">预览</button>';
+      if (d.doc_name !== 'rules') acts += '<button class="btn btn-sm btn-outline-secondary kb-act" data-i="' + i + '" data-op="del">删除</button>';
+      else acts += ' <span class="xk-meta">内置手册</span>';
+    } else {
+      acts = '<button class="btn btn-sm btn-outline-info kb-act" data-i="' + i + '" data-op="preview">预览</button>';
+    }
+    h += '<tr><td><b>' + xkEsc(d.title || d.doc_name) + '</b><div class="xk-meta">' + xkEsc(d.doc_name) + '</div></td>'
+       + '<td>' + kbStatusBadge(d.status) + '</td>'
+       + '<td class="xk-meta">' + xkEsc(src.length > 18 ? src.slice(0, 18) + '…' : src) + (d.pages ? ' · ' + d.pages + '页' : '') + '</td>'
+       + '<td>' + (d.chunks || 0) + '</td><td>' + (d.chars || 0) + '</td>'
+       + '<td class="xk-meta">' + xkEsc(d.uploader || '-') + (d.reviewer ? ' / ' + xkEsc(d.reviewer) : '') + '</td>'
+       + '<td class="xk-meta">' + xkEsc(d.updated_at || '') + '</td><td>' + acts + '</td></tr>';
+  });
+  tb.innerHTML = h || '<tr><td colspan="8" class="text-center text-muted py-3">暂无文档——上方上传 PDF/Word/txt 后在此审核</td></tr>';
+  document.getElementById('kb-count').textContent = '共 ' + kbDocs.length + ' 条';
+  tb.querySelectorAll('.kb-act').forEach(function (btn) {
+    btn.addEventListener('click', function () { kbAct(btn.dataset.op, kbDocs[Number(btn.dataset.i)]); });
+  });
+}
+function kbAct(op, d) {
+  if (!d) return;
+  if (op === 'del' && !confirm('确定删除《' + (d.title || d.doc_name) + '》？（逻辑删除，文本保留可恢复，索引即时移除）')) return;
+  var p = (op === 'del') ? 'delete' : op;
+  if (op === 'approve') kbMsg('正在重算向量并发布…');
+  kbPost(p, { doc_name: d.doc_name }).then(function (res) {
+    kbMsg('');
+    if (res.status !== 200 || !res.data.success) {
+      alert('操作失败：' + ((res.data && (res.data.msg || res.data.error)) || ('HTTP ' + res.status)));
+      return;
+    }
+    if (op === 'approve') { alert('已生效：重算块数 ' + (res.data.recomputed != null ? res.data.recomputed : '-') + '，耗时 ' + (res.data.elapsed_ms || '-') + 'ms'); }
+    if (op === 'preview') { kbShowPreview(d, res.data); return; }
+    kbQuery();
+  });
+}
+function kbShowPreview(d, pv) {
+  var box = document.getElementById('kb-detail-box');
+  var chunks = pv.chunks || [];
+  var h = '<div class="card card-outline card-warning"><div class="card-header d-flex justify-content-between align-items-center">'
+       + '<h3 class="card-title">切片预览 · ' + xkEsc(d.title || d.doc_name) + '　' + kbStatusBadge(pv.status)
+       + '<span class="xk-meta">　共 ' + chunks.length + ' 块（父块不计入）</span></h3>'
+       + '<button class="btn btn-sm btn-outline-secondary" id="kb-pv-close">收起</button></div>'
+       + '<div class="card-body" style="max-height:420px;overflow:auto" id="kb-pv-body"></div></div>';
+  box.innerHTML = h;
+  var body = document.getElementById('kb-pv-body');
+  /* 展开全文（20260915 jameswu 拍板）：后端 preview 已回 full_text，默认折叠 */
+  if (pv.full_text) {
+    var toggle = document.createElement('button');
+    toggle.className = 'btn btn-sm btn-outline-info mb-2'; toggle.type = 'button';
+    toggle.textContent = '展开全文';
+    var fullBox = document.createElement('pre');
+    fullBox.style.cssText = 'display:none;white-space:pre-wrap;word-break:break-all;max-height:300px;font-size:13px';
+    fullBox.textContent = pv.full_text + (pv.full_truncated ? '\n……（超2万字，仅显示前20000字）' : '');
+    toggle.addEventListener('click', function () {
+      var open = fullBox.style.display !== 'none';
+      fullBox.style.display = open ? 'none' : 'block';
+      toggle.textContent = open ? '展开全文' : '收起全文';
+    });
+    body.appendChild(toggle); body.appendChild(document.createElement('br'));
+    body.appendChild(fullBox);
+  }
+  if (!chunks.length) {
+    var p0 = document.createElement('p'); p0.className = 'text-muted'; p0.textContent = '无切片（文本为空或尚未发布）'; body.appendChild(p0);
+  }
+  chunks.forEach(function (c) {
+    var div = document.createElement('div'); div.className = 'kb-chunk';
+    var b = document.createElement('b'); b.textContent = '#' + (c.id != null ? c.id : '') + ' ' + (c.title || '') + '（' + (c.chars || 0) + '字）　';
+    div.appendChild(b);
+    div.appendChild(document.createTextNode(c.head || ''));
+    body.appendChild(div);
+  });
+  document.getElementById('kb-pv-close').addEventListener('click', function () { box.innerHTML = ''; });
+  box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function kbUpload() {
+  var fi = document.getElementById('kb-file');
+  var f = fi.files && fi.files[0];
+  if (!f) { alert('请先选择文件（.txt / .md / .docx / .pdf）'); return; }
+  if (f.size > 20 * 1024 * 1024) { alert('文件超过 20MB 上限'); return; }
+  var fd = new FormData();
+  fd.append('token', xkToken());
+  fd.append('file', f);
+  kbMsg('上传解析中…');
+  fetch('/api/kb/upload', { method: 'POST', body: fd })
+    .then(function (r) { return r.json().catch(function () { return { success: false }; }).then(function (d) { return { status: r.status, data: d }; }); })
+    .then(function (res) {
+      kbMsg('');
+      if (res.status === 403 || res.status === 401) { xkDeny(); return; }
+      if (!res.data.success) { alert('上传失败：' + ((res.data && (res.data.msg || res.data.error)) || ('HTTP ' + res.status))); return; }
+      fi.value = '';
+      if (res.data.unchanged) kbMsg('内容与库中已有版本相同，未重复入库（' + res.data.doc_name + '）');
+      else kbMsg('已入待审：' + res.data.doc_name + '，约 ' + ((res.data.summary && res.data.summary.est_chunks) || '?') + ' 块——请在下方列表【预览】后批准');
+      kbQuery();
+    })
+    .catch(function () { kbMsg(''); alert('上传请求失败（网络/服务未启动？）'); });
+}
 window.addEventListener('load', function () {
   if (!xkToken()) { xkDeny(); return; }
   document.getElementById('f-from').value = xkToday();
@@ -345,6 +504,9 @@ window.addEventListener('load', function () {
   document.getElementById('xk-tabbtn-usage').addEventListener('click', function () { xkSwitchTab('usage'); });
   document.getElementById('xk-tabbtn-badcase').addEventListener('click', function () { xkSwitchTab('badcase'); });
   document.getElementById('bc-query').addEventListener('click', xkBadcaseQuery);
+  document.getElementById('xk-tabbtn-kb').addEventListener('click', function () { xkSwitchTab('kb'); });
+  document.getElementById('kb-upload').addEventListener('click', kbUpload);
+  document.getElementById('kb-refresh').addEventListener('click', kbQuery);
   document.querySelectorAll('#xk-table th[data-sort]').forEach(function (th) {
     th.addEventListener('click', function () {
       var k = th.dataset.sort;

@@ -153,13 +153,16 @@ def _persist_body(doc_name, text):
 
 
 def preview(doc_name):
-    """切片预览：块数 + 每块前 80 字（父块不计入预览列表）。"""
+    """切片预览：块数 + 每块前 80 字（父块不计入预览列表）。
+    full_text：整份原文截前 20000 字（管理员"看全内容再批准"用，20260915 jameswu 拍板）。"""
     d = get_doc(doc_name)
     if not d:
         return None
     return {'doc_name': doc_name, 'status': d['status'],
             'visibility': d.get('visibility'),
-            'chunks': chunk_preview(d['text'], doc_name, d['status'])}
+            'chunks': chunk_preview(d['text'], doc_name, d['status']),
+            'full_text': (d['text'] or '')[:20000],
+            'full_truncated': len(d['text'] or '') > 20000}
 
 
 def chunk_preview(text, doc_name, status):
