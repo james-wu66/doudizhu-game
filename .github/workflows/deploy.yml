@@ -24,24 +24,14 @@ jobs:
       - name: Login to CloudBase
         run: tcb login --apiKeyId ${{ secrets.TCB_SECRET_ID }} --apiKey ${{ secrets.TCB_SECRET_KEY }}
 
-      - name: Deploy to Cloud Run (auto-retry 3x for intermittent tcb 400)
-        # 3.7.0 无 --env-id/--yes 参数；环境用 tcb env use 指定。
-        # 部署命令带"是否灰度发布"确认题，用 yes "" 自动回车选默认 No（23:49 本机实测通过）。
+      - name: Deploy to Cloud Run (single attempt, no retry)
+        # 2026-09-15 收口：400 根因=腾讯云拒收 GitHub Actions 出口 IP（登录成功、
+        # 仅部署步被拒；三次重试 0 成功实证），重试无意义，砍成单次失败即停
+        # （约 4 分钟），红了由本机 tcb 补部署。3.7.0 无 --env-id/--yes 参数；
+        # 环境用 tcb env use 指定。部署命令带"是否灰度发布"确认题，用 yes "" 自动回车。
         run: |
           tcb env use ${{ secrets.TCB_ENV_ID }}
-          for i in 1 2 3; do
-            echo "===== 第 $i/3 次尝试部署 ====="
-            if yes "" | tcb cloudrun deploy \
-              -s doudizhu-game \
-              --port 8080 \
-              --force; then
-              echo "===== 部署成功 ====="
-              exit 0
-            fi
-            if [ "$i" -lt 3 ]; then
-              echo "===== 第 $i 次失败，60 秒后重试 ====="
-              sleep 60
-            fi
-          done
-          echo "===== 三次尝试均失败，部署终止 ====="
-          exit 1
+          yes "" | tcb cloudrun deploy \
+            -s doudizhu-game \
+            --port 8080 \
+            --force
