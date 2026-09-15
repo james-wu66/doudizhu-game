@@ -25,3 +25,9 @@ backend/avatars/
 nul
 .hermes-tmp.*
 verify_replay.js
+
+# === 20260915 仓库治理：本地验收/评测脚本不进仓库 ===
+# 理由：属本地质量工具（与 tests/ 同类），且内含测试账号口令字面量；
+# 公开仓库里出现明文口令是负面信号。文件保留在本地，仅脱离版本控制。
+backend/kbtest_*.py
+backend/eval_rag.py
