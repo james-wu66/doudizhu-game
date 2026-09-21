@@ -17,10 +17,17 @@ function getCardAtX(x){
   return cards[0];
 }
 
+// 触屏标志：touchstart 已即时翻转选中后，浏览器补发的合成 click 必须吞掉。
+// 原来只靠 touchend 后 350ms 计时器压制，主线程忙（音效+重渲染）时 click 晚到
+// 就漏网，同一次点牌被翻转两次（表现为第一张牌偶发点了没反应）。标志位与计时器
+// 无关，晚到多久都能吞。suppressNextClick 保留给桌面 mousedown→click 路径用。
+let sawTouch=false;
+
 handEl.addEventListener('touchstart',e=>{
   if(G.phase!=='playing')return;
   const cardEl=e.target.closest('.card');
   if(!cardEl)return;
+  sawTouch=true;
   swipeActive=true;
   swipeSelectedIds.clear();
   swipeDeselectedIds.clear();
@@ -110,9 +117,12 @@ document.addEventListener('mouseup',e=>{
 handEl.addEventListener('click',e=>{
   const cardEl=e.target.closest('.card');
   if(!cardEl||G.phase!=='playing'||suppressNextClick)return;
+  if(sawTouch){sawTouch=false;return;}  // 吞掉本次 tap 的合成 click（touchstart 已处理）
   const id=parseInt(cardEl.dataset.id);
   if(Number.isInteger(id))toggleSelect(id);
 });
+
+handEl.addEventListener('touchcancel',()=>{swipeActive=false;});
 
 // ==================== EVENTS ====================
 document.getElementById('btn-start-continue').onclick=startFromMenu;

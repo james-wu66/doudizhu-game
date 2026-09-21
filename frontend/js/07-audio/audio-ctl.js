@@ -54,7 +54,7 @@ function toggleBgmMute(){
   }else{
     bgmMuted=false;
     var btn=document.getElementById('bgm-toggle');if(btn)btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M11 5 6.5 8.5H3v7h3.5L11 19V5Z"/><path d="M15.5 8.7a4.6 4.6 0 0 1 0 6.6"/><path d="M18.3 6.2a8.4 8.4 0 0 1 0 11.6"/></svg>';
-    var bgm=document.getElementById('bgm-audio');if(bgm){bgm.muted=false;bgm.volume=0.8;bgm.play().catch(()=>{});}
+    var bgm=document.getElementById('bgm-audio');if(bgm){bgm.muted=false;bgm.volume=parseInt(localStorage.getItem('doudizhu_bgm_vol')||'80')/100;bgm.play().catch(()=>{});}  // 与 toggleBgmMute 同款读存档，不再写死 0.8
   }
 })();
 // 音效试听防抖计时器（拖动滑块时短间隔内只播一次试听音）
