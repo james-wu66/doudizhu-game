@@ -52,7 +52,7 @@ async function doBidTurn(){
       showBidStep(who,'轮到你，请选择叫地主或不叫');showBidControls('call');return;
     }
     hideBidControls();showBidStep(who,label+'正在思考...');await sleep(1500);
-    const call=await aiDecideBid(G.hands[who],true);G.callActed[who]=true;
+    const call=await aiDecideBid(G.hands[who],true,who);G.callActed[who]=true;
     if(call){
       G.caller=who;G.lastGrabber=who;G.bidMult=2;updateMultiplierDisplay();
       playGameSound('voice_叫地主');recordBid(who,'叫地主');bidResult(who,label+'：叫地主（2倍）');await sleep(1500);
@@ -75,7 +75,7 @@ async function doBidTurn(){
       showBidStep(who,'轮到你，请选择再抢地主或不抢');showBidControls('final');return;
     }
     hideBidControls();showBidStep(who,label+'正在思考是否再抢...');await sleep(1500);
-    const finalGrab=await aiDecideBid(G.hands[who],false);
+    const finalGrab=await aiDecideBid(G.hands[who],false,who);
     if(finalGrab){playGameSound('voice_抢地主');G.lastGrabber=who;G.bidMult*=2;updateMultiplierDisplay();recordBid(who,'抢地主');bidResult(who,label+'：再抢（'+G.bidMult+'倍）');}
     else{playGameSound('voice_不抢');recordBid(who,'不抢');bidResult(who,label+'：不抢');}
     await sleep(1500);finishBidding();return;
@@ -85,7 +85,7 @@ async function doBidTurn(){
     showBidStep(who,'轮到你，请选择抢地主或不抢');showBidControls('grab');return;
   }
   hideBidControls();showBidStep(who,label+'正在思考是否抢地主...');await sleep(1500);
-  const grab=await aiDecideBid(G.hands[who],false);G.grabActed[who]=true;
+  const grab=await aiDecideBid(G.hands[who],false,who);G.grabActed[who]=true;
   if(grab){playGameSound('voice_抢地主');G.lastGrabber=who;G.bidMult*=2;updateMultiplierDisplay();recordBid(who,'抢地主');bidResult(who,label+'：抢地主（'+G.bidMult+'倍）');}
   else{playGameSound('voice_不抢');recordBid(who,'不抢');bidResult(who,label+'：不抢');}
   await sleep(1500);

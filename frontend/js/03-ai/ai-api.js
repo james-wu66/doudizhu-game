@@ -4,9 +4,9 @@
 // 来源：game.js 第 1407-1416 + 1481-1573 行（模块化拆分，代码未做改动）
 // ============================================================
 // ===== 叫地主 v4（改为后端 API 调用 + 简化 fallback） =====
-async function aiDecideBid(hand, isCallPhase) {
+async function aiDecideBid(hand, isCallPhase, who) {
   // 尝试后端 API
-  const apiBid = await aiBidViaAPI(hand, isCallPhase);
+  const apiBid = await aiBidViaAPI(hand, isCallPhase, who);
   if (apiBid >= 0) return apiBid;
 
   // 降级：简化判断
@@ -81,7 +81,7 @@ async function aiDecideViaAPI(hand, last, who, role, roundId, step) {
   }
 }
 
-async function aiBidViaAPI(hand, isCallPhase) {
+async function aiBidViaAPI(hand, isCallPhase, who) {
   try {
     const res = await fetch(AI_API + '/bid', {
       method: 'POST',
@@ -91,7 +91,11 @@ async function aiBidViaAPI(hand, isCallPhase) {
         isCallPhase,
         call_acted: (G.callActed || []),
         bid_mult: (G.bidMult || 2),
-        grab_acted: (G.grabActed || [])
+        grab_acted: (G.grabActed || []),
+        // BID 学习记录腿（20260921）：后端 ai.py 记录侧一直等这两个参数——
+        // 原不传导致 if round_id 恒假，线上 BID 桶 0 行、叫分学习是死的。
+        round_id: (typeof LEARN !== 'undefined' && LEARN.roundId) || '',
+        who: (typeof who === 'number' ? who : (G.bidCurrent != null ? G.bidCurrent : ''))
       })
     });
     const data = await res.json();
