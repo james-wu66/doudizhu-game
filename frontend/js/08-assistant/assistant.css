@@ -32,7 +32,9 @@
 #ast-drawer {
   position: fixed; right: 20px; bottom: calc(30vh + 54px);
   width: 340px; max-width: calc(100vw - 16px);
-  max-height: min(560px, 72vh);
+  /* 70vh-60：底锚 30vh+54px 时保证顶边≥6px 在屏内（原 72vh 恒超屏 2vh+54px，
+     笔记本矮屏上把标题栏/关闭钮顶出上沿）。≥1080 高时 70vh-60>560，行为不变 */
+  max-height: min(560px, calc(70vh - 60px));
   display: none; flex-direction: column;
   background:
     radial-gradient(rgba(255, 255, 255, .022) 1px, transparent 1.4px) 0 0 / 7px 7px,
