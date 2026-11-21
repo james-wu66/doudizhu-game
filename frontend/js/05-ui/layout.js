@@ -12,10 +12,10 @@ function resizeResponsiveLayout(){
   // 2026-08-04：手机横屏（宽<1100）按宽度算且明显放大，桌面按宽度算
   let cardW;
   if(w<1100)cardW=Math.min(52,Math.max(40,w*.058));
-  else cardW=Math.min(80,Math.max(56,w*.042));
+  else cardW=Math.min(90,Math.max(62,w*.054));
   const maxW=w*.94,needed=cardW+(n-1)*cardW*.55;
   if(needed>maxW)cardW=Math.max(40,maxW/(1+(n-1)*.55));
-  const cardH=cardW*1.4;
+  const cardH=cardW*1.46;
   root.style.setProperty('--legacy-card-w',cardW+'px');root.style.setProperty('--legacy-card-h',cardH+'px');
   root.style.setProperty('--legacy-card-font',(cardH*.30)+'px');root.style.setProperty('--legacy-suit-font',(cardH*.26)+'px');
   const playedW=w>=1100?75:40;root.style.setProperty('--played-card-w',playedW+'px');root.style.setProperty('--played-card-h',(playedW*1.4)+'px');

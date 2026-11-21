@@ -196,21 +196,20 @@ function renderReplayPlayedCards(who,cards){
 function showReplayBar(){
   var bar=document.createElement('div');
   bar.id='replay-bar';
-  bar.style.cssText='position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,0.85);padding:12px 20px;display:flex;align-items:center;justify-content:center;gap:16px;z-index:9999;';
-  bar.innerHTML='<span style="color:#9eacbd;font-size:13px">回放速度：</span>'
+  bar.innerHTML='<div class="replay-group"><span class="replay-label">回放</span><span id="replay-progress" class="replay-progress">0/'+replayData.length+'</span></div>'
+    +'<div class="replay-speed">'
     +'<button onclick="setReplaySpeed(1)" class="replay-speed-btn active" data-speed="1">1x</button>'
     +'<button onclick="setReplaySpeed(2)" class="replay-speed-btn" data-speed="2">2x</button>'
     +'<button onclick="setReplaySpeed(4)" class="replay-speed-btn" data-speed="4">4x</button>'
     +'<button onclick="setReplaySpeed(8)" class="replay-speed-btn" data-speed="8">8x</button>'
-    +'<span style="color:#6b7f96;font-size:12px" id="replay-progress">0/'+replayData.length+'</span>'
-    +'<button onclick="toggleReplayPause()" id="replay-pause-btn" style="padding:6px 16px;border-radius:6px;border:1px solid rgba(240,192,64,0.4);background:rgba(240,192,64,0.12);color:#f0c040;font-size:13px;cursor:pointer">暂停</button>'
-    +'<button onclick="replaySkip(-10)" title="后退10秒" style="padding:6px 14px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:#dce8f7;font-size:13px;cursor:pointer">⏪ 10秒</button>'
-    +'<button onclick="replaySkip(10)" title="前进10秒" style="padding:6px 14px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:#dce8f7;font-size:13px;cursor:pointer">⏩ 10秒</button>'
-    +'<button onclick="exitReplay()" style="padding:6px 16px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:#c0392b;font-size:13px;cursor:pointer;margin-left:24px">退出回放</button>';
+    +'</div>'
+    +'<div class="replay-transport">'
+    +'<button class="replay-ctrl" onclick="replaySkip(-10)" title="后退10秒"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 20 9 12l10-8v16Z"/><path d="M5 19V5"/></svg>10秒</button>'
+    +'<button class="replay-ctrl replay-pause" id="replay-pause-btn" onclick="toggleReplayPause()"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg><span>暂停</span></button>'
+    +'<button class="replay-ctrl" onclick="replaySkip(10)" title="前进10秒">10秒<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 4 10 8-10 8V4Z"/><path d="M19 5v14"/></svg></button>'
+    +'</div>'
+    +'<button class="replay-exit" onclick="exitReplay()">退出回放</button>';
   document.body.appendChild(bar);
-  var style=document.createElement('style');
-  style.textContent='.replay-speed-btn{padding:4px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#9eacbd;font-size:13px;cursor:pointer;}.replay-speed-btn.active{background:rgba(240,192,64,0.2);color:#f0c040;border-color:#f0c040;}';
-  document.head.appendChild(style);
 }
 
 function removeCardsFromHand(containerId,cardsStr){
