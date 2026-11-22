@@ -12,7 +12,7 @@
   <img alt="License" src="https://img.shields.io/badge/License-MIT-yellowgreen">
 </p>
 
-一个**全栈网页版斗地主游戏**：原生 JS 前端 + Flask 后端 + Python 启发式 AI 引擎（带数据驱动学习闭环）+ **基于混合检索（RAG）的规则知识库问答助手**，支持账号系统、战绩回放、排行榜与 AI 用量控制台，Docker 容器化部署在腾讯云 CloudBase，GitHub Actions 推送即部署。
+一个**全栈网页版斗地主游戏**：原生 JS 前端 + Flask 后端 + Python 启发式 AI 引擎（带数据驱动学习闭环）+ **基于混合检索（RAG）的规则知识库问答助手**，支持账号系统、战绩回放、排行榜与 AI 用量控制台，Docker 容器化部署在腾讯云 CloudBase（发布由本机 `tcb cloudrun deploy` 执行，GitHub Actions 负责推送后的语法校验）。
 
 - 🔗 在线演示：https://doudizhu-game-294184-6-1420872702.sh.run.tcloudbase.com
 
@@ -71,7 +71,7 @@
 | AI 引擎 | 纯 Python 决策引擎（评估 / 策略 / 候选生成 / 门板成本模型 / 队友模型 / 学习修正） | ~5,600 行 |
 | 知识库检索 | **混合检索（RAG）**：fastembed + BGE 中文嵌入模型（ONNX/CPU）+ rank_bm25 + RRF 融合，父子块分层索引 | ~1,100 行 |
 | 数据库 | 生产：腾讯云 TDSQL-C MySQL；本地：自动降级 SQLite（双模式，凭据全部环境变量注入） | 7 张核心表 |
-| 部署 | Docker（嵌入模型打入镜像、离线加载）+ CloudBase 云托管 + GitHub Actions CI/CD | 推送即部署 |
+| 部署 | Docker（嵌入模型打入镜像、离线加载）+ CloudBase 云托管 + GitHub Actions 校验 | 本机 `tcb` 发布 |
 
 ## 架构
 

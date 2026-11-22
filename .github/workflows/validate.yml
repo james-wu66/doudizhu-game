@@ -1,0 +1,35 @@
+name: Validate
+
+# 2026-11-22 收口：CI 不再负责部署，只做语法校验。
+# 原因（实锤）：Actions 部署步在源码包上传（PUT 到腾讯云构建服务存储）被 400 拒绝，
+# run #118/#119 均卡 4~5 分钟后失败；本机同版本 CLI 1 分钟内提交成功。
+# 详细排查见 斗地主最终版工作台/部署400排查_源码包上传错误体_20261122.md。
+# 正式发布路径：本机 `tcb cloudrun deploy -s doudizhu-game --port 8080 --force`。
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Python syntax check
+        run: python -m compileall -q backend
+
+      - name: JavaScript syntax check
+        run: |
+          fail=0
+          while IFS= read -r -d '' f; do
+            node --check "$f" || fail=1
+          done < <(find frontend -name '*.js' -type f -print0)
+          exit $fail
+
+      - name: Release policy
+        run: |
+          echo "Deployment is performed locally (Tencent Cloud rejects source-package uploads from GitHub egress)."
+          echo "Release command: tcb cloudrun deploy -s doudizhu-game --port 8080 --force"
