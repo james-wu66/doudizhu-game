@@ -21,6 +21,28 @@ jobs:
         # 同包同环境本机 3.7.0 秒过（版本 107 实证）。勿随意升级 CLI 版本。
         run: npm install -g @cloudbase/cli@3.7.0
 
+      - name: Patch CLI to surface upload error body
+        # 2026-11-22 诊断补丁（临时）：源码包上传（PUT 到构建服务存储）失败时，
+        # CLI 只抛 "400 Bad Request HTTP ERROR"，把响应体丢掉。这里把响应体前
+        # 800 字符拼进错误信息，用于定位 400 的真实错误码（如 RequestTimeout/
+        # IncompleteBody）。只改日志文案，不动部署逻辑；要求 4 处全部命中，
+        # 未命中直接失败，避免补丁静默失效后继续误导诊断。
+        run: |
+          CLI_FILE="$(npm root -g)/@cloudbase/cli/dist/standalone/cli.js"
+          node - "$CLI_FILE" <<'EOF'
+          const fs = require('fs');
+          const p = process.argv[2];
+          let s = fs.readFileSync(p, 'utf8');
+          const before = s.split('HTTP ERROR`').length - 1;
+          if (before !== 4) {
+            console.error('unexpected patch sites:', before);
+            process.exit(1);
+          }
+          s = s.replace(/HTTP ERROR`/g, 'HTTP ERROR :: `+String(text).slice(0,800)');
+          fs.writeFileSync(p, s);
+          console.log('patched sites:', before);
+          EOF
+
       - name: Login to CloudBase
         run: tcb login --apiKeyId ${{ secrets.TCB_SECRET_ID }} --apiKey ${{ secrets.TCB_SECRET_KEY }}
 
