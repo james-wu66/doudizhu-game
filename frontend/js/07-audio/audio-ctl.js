@@ -18,7 +18,7 @@ function setBgmVolume(val){
     if(bgm.paused)bgm.play().catch(function(){});  // 2026-08-30：拖动时若未在播则立即播放，保证有声音变化反馈
   }
   var slider=document.getElementById('bgm-volume');
-  if(slider){slider.value=val;slider.disabled=false;}  // 滑块永不禁用
+  if(slider){slider.value=val;slider.disabled=false;slider.style.setProperty('--fill',val+'%');}  // 滑块永不禁用
   var el=document.getElementById('bgm-volume-val');
   if(el)el.textContent=val+'%';
   localStorage.setItem('doudizhu_bgm_vol',val);
@@ -33,12 +33,12 @@ function toggleBgmMute(){
   var slider=document.getElementById('bgm-volume');
   if(bgmMuted){
     if(bgm){bgm.pause();bgm.muted=true;}
-    if(btn)btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M11 5 6.5 8.5H3v7h3.5L11 19V5Z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>';
+    if(btn)btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6.5 8.5H3v7h3.5L11 19V5Z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>';
   }else{
     // 恢复播放前先应用用户设置的音量
     var vol=parseInt(localStorage.getItem('doudizhu_bgm_vol')||'80');
     if(bgm){bgm.muted=false;bgm.volume=vol/100;bgm.play().catch(()=>{});}
-    if(btn)btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M11 5 6.5 8.5H3v7h3.5L11 19V5Z"/><path d="M15.5 8.7a4.6 4.6 0 0 1 0 6.6"/><path d="M18.3 6.2a8.4 8.4 0 0 1 0 11.6"/></svg>';
+    if(btn)btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6.5 8.5H3v7h3.5L11 19V5Z"/><path d="M15.5 8.7a4.6 4.6 0 0 1 0 6.6"/><path d="M18.3 6.2a8.4 8.4 0 0 1 0 11.6"/></svg>';
     if(slider)slider.disabled=false;
   }
   localStorage.setItem('doudizhu_bgm_muted',bgmMuted);
@@ -48,12 +48,12 @@ function toggleBgmMute(){
   var m=localStorage.getItem('doudizhu_bgm_muted');
   if(m==='true'){
     bgmMuted=true;
-    var btn=document.getElementById('bgm-toggle');if(btn)btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M11 5 6.5 8.5H3v7h3.5L11 19V5Z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>';
+    var btn=document.getElementById('bgm-toggle');if(btn)btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6.5 8.5H3v7h3.5L11 19V5Z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>';
     var bgm=document.getElementById('bgm-audio');if(bgm){bgm.muted=true;bgm.pause();}
     // 滑块不禁用（用户拖动即可调音量+自动取消静音）
   }else{
     bgmMuted=false;
-    var btn=document.getElementById('bgm-toggle');if(btn)btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M11 5 6.5 8.5H3v7h3.5L11 19V5Z"/><path d="M15.5 8.7a4.6 4.6 0 0 1 0 6.6"/><path d="M18.3 6.2a8.4 8.4 0 0 1 0 11.6"/></svg>';
+    var btn=document.getElementById('bgm-toggle');if(btn)btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6.5 8.5H3v7h3.5L11 19V5Z"/><path d="M15.5 8.7a4.6 4.6 0 0 1 0 6.6"/><path d="M18.3 6.2a8.4 8.4 0 0 1 0 11.6"/></svg>';
     var bgm=document.getElementById('bgm-audio');if(bgm){bgm.muted=false;bgm.volume=parseInt(localStorage.getItem('doudizhu_bgm_vol')||'80')/100;bgm.play().catch(()=>{});}  // 与 toggleBgmMute 同款读存档，不再写死 0.8
   }
 })();
@@ -68,7 +68,7 @@ function setSfxVolume(val){
     _sfxTrialTimer=setTimeout(function(){try{SoundSystem.play('voice_尖');}catch(e){}},180);
   }
   var slider=document.getElementById('sfx-volume');
-  if(slider)slider.value=val;
+  if(slider){slider.value=val;slider.style.setProperty('--fill',val+'%');}
   var el=document.getElementById('sfx-volume-val');
   if(el)el.textContent=val+'%';
   localStorage.setItem('doudizhu_sfx_vol',val);

@@ -5,6 +5,8 @@
 // ============================================================
 function openSettings() {
   document.getElementById('settings-modal').classList.add('show');
+  var box=document.getElementById('settings-box');
+  if(box)box.scrollTop=0;
   loadStats();
   loadLeaderboard();
   loadAiProgress();

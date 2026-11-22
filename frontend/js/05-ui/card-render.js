@@ -111,7 +111,7 @@ function updateBadges(){
   ['player-label','opp-left-label','opp-right-label'].forEach((id,i)=>{
     const el=document.getElementById(id);
     const old=el.querySelector('.landlord-icon');if(old)old.remove();
-    if(G.landlord===i){const s=document.createElement('span');s.className='landlord-icon';s.textContent='地主';s.style.fontSize='15px';s.style.width='auto';s.style.padding='2px 8px';s.style.fontWeight='900';s.style.letterSpacing='1px';s.style.boxShadow='0 2px 8px rgba(240,192,64,0.5)';el.insertBefore(s,el.children[1]||null);}
+    if(G.landlord===i){const s=document.createElement('span');s.className='landlord-icon';s.textContent='地主';s.style.fontSize='15px';s.style.width='auto';s.style.padding='2px 8px';s.style.fontWeight='900';s.style.letterSpacing='1px';s.style.boxShadow='0 2px 8px rgba(247,158,27,0.55)';el.insertBefore(s,el.children[1]||null);}
   });
 }
 

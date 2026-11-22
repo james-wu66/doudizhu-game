@@ -432,7 +432,7 @@ function astAdminButton() {
     if (!astADMINSET[n]) return;              // 普通玩家无此入口
     var b = document.createElement('button');
     b.className = 'btn-logout';
-    b.style.cssText = 'margin-left:10px;border-color:#f0c040;color:#f0c040;';
+    b.style.cssText = 'margin-left:10px;border-color:#f79e1b;color:#f79e1b;';
     b.textContent = 'AI用量';
     b.addEventListener('click', function () { location.href = '/xk-usage.html'; });
     nameEl.parentNode.insertBefore(b, nameEl.nextSibling.nextSibling);

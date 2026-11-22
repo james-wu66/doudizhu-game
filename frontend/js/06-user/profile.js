@@ -9,8 +9,8 @@ function showGuestFallbackTip(name) {
   console.warn('[登录态失效] 账号 ' + name + ' 已降级为游客，本局战绩不会保存');
   var tip = document.createElement('div');
   tip.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;'
-    + 'background:#7f1d1d;color:#fecaca;padding:10px 18px;border-radius:8px;font-size:14px;'
-    + 'box-shadow:0 4px 16px rgba(0,0,0,.4);max-width:90vw;text-align:center';
+    + 'background:linear-gradient(180deg,#ef6b5c,#d5463a);color:#fff;padding:10px 18px;border-radius:999px;font-size:14px;'
+    + 'box-shadow:0 10px 24px -6px rgba(213,70,58,.5);max-width:90vw;text-align:center';
   tip.textContent = '登录状态已失效（' + name + '），本局战绩不会保存。请重新登录。';
   document.body.appendChild(tip);
   setTimeout(function () { if (tip.parentNode) tip.parentNode.removeChild(tip); }, 6000);
@@ -19,7 +19,7 @@ function showGuestFallbackTip(name) {
 function loadAiProgress() {
   var el = document.getElementById('ai-learning-content');
   if (!el) return;
-  fetch(API + '/ai/learning/progress')
+  fetch(API_BASE + '/api/ai/learning/progress')
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (!d.strategies || d.strategies.length === 0) {
@@ -28,9 +28,9 @@ function loadAiProgress() {
       }
       var total = d.total || 0;
       var th = d.threshold || 30;
-      var html = '<div class="learn-summary">共积累 <b style="color:#4ade80">' + total + '</b> 条决策记录，达标门槛 <b>' + th + '</b> 条/桶</div>';
+      var html = '<div class="learn-summary">共积累 <b style="color:#2a9d5f">' + total + '</b> 条决策记录，达标门槛 <b>' + th + '</b> 条/桶</div>';
       // 策略汇总
-      html += '<div style="font-size:13px;color:#94a3b8;margin:8px 0 4px;font-weight:600">策略汇总</div>';
+      html += '<div class="learn-subtitle">策略汇总</div>';
       for (var i = 0; i < d.strategies.length; i++) {
         var s = d.strategies[i];
         var pct = Math.min(100, Math.round(s.total / th * 100));
@@ -42,25 +42,27 @@ function loadAiProgress() {
           + '<div class="learn-stat-bar-wrap"><div class="learn-stat-bar ' + barClass + '" style="width:' + pct + '%"></div></div>'
           + '<span class="learn-stat-value">' + s.total + '/' + th + '</span>'
           + '<span class="learn-stat-tag ' + tagClass + '">' + tagText + '</span>'
-          + '<span class="learn-stat-value" style="color:#94a3b8">' + (s.total > 0 ? Math.round(s.win_rate * 100) + '%' : '-') + '</span>'
+          + '<span class="learn-stat-value learn-rate">' + (s.total > 0 ? Math.round(s.win_rate * 100) + '%' : '-') + '</span>'
           + '</div>';
       }
       // 桶级明细
-      if (d.buckets.length > 0) {
-        html += '<div style="font-size:13px;color:#94a3b8;margin:12px 0 4px;font-weight:600">桶级明细（策略×局面）</div>';
+      if (d.buckets && d.buckets.length > 0) {
+        html += '<details class="learn-buckets"><summary>桶级明细（策略×局面）</summary>';
         for (var j = 0; j < d.buckets.length; j++) {
           var b = d.buckets[j];
           var bpct = Math.min(100, Math.round(b.total / th * 100));
           var bbar = b.threshold_met ? 'green' : 'yellow';
           var btag = b.threshold_met ? 'ok' : 'wait';
-          var btext = b.threshold_met ? '已生效' : b.total + '/' + th;
+          var btext = b.threshold_met ? '已生效' : '积累中';
           html += '<div class="learn-stat-row">'
             + '<span class="learn-stat-label" title="' + b.bucket + '">' + b.action_type + ' · ' + b.bucket + '</span>'
             + '<div class="learn-stat-bar-wrap"><div class="learn-stat-bar ' + bbar + '" style="width:' + bpct + '%"></div></div>'
             + '<span class="learn-stat-value">' + b.total + '/' + th + '</span>'
             + '<span class="learn-stat-tag ' + btag + '">' + btext + '</span>'
+            + '<span class="learn-stat-value learn-rate">' + (b.total > 0 ? Math.round(b.win_rate * 100) + '%' : '-') + '</span>'
             + '</div>';
         }
+        html += '</details>';
       }
       el.innerHTML = html;
     })

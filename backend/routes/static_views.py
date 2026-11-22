@@ -52,6 +52,10 @@ def serve_manifest():
 def serve_icons(filename):
     return send_from_directory("../frontend/icons", filename)
 
+@static_bp.route("/images/<path:filename>")
+def serve_images(filename):
+    return send_from_directory("../frontend/images", filename)
+
 @static_bp.route("/lobby")
 def lobby():
     resp = send_from_directory("../frontend", "lobby.html")

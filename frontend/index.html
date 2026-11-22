@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#0e2240">
+<meta name="theme-color" content="#8ec8f2">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="斗地主">
@@ -15,13 +15,16 @@
 <body>
 <div id="app">
 <div id="game-table">
-  <div id="watermark">吴</div>
-  <button id="bgm-toggle" title="背景音乐" onclick="toggleBgmMute()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M11 5 6.5 8.5H3v7h3.5L11 19V5Z"/><path d="M15.5 8.7a4.6 4.6 0 0 1 0 6.6"/><path d="M18.3 6.2a8.4 8.4 0 0 1 0 11.6"/></svg></button>
-  <button id="settings-btn" title="设置" onclick="openSettings()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><circle cx="12" cy="12" r="3.3"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8"/></svg></button>
+  <div id="table-decor" aria-hidden="true">
+    <div class="deco-arc"></div>
+    <svg class="deco-spade" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.8c2.2 3 7.8 6.6 7.8 10.3a4.1 4.1 0 0 1-6.6 3.3c.2 2 .9 3.6 2.2 5v.8H8.6v-.8c1.3-1.4 2-3 2.2-5a4.1 4.1 0 0 1-6.6-3.3C4.2 8.4 9.8 4.8 12 1.8Z"/></svg>
+  </div>
+  <button id="bgm-toggle" title="背景音乐" onclick="toggleBgmMute()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6.5 8.5H3v7h3.5L11 19V5Z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.1 4.9a9 9 0 0 1 0 14.2"/></svg></button>
+  <button id="settings-btn" title="设置" onclick="openSettings()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.24a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.24a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.24a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.24a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
   <div id="round-display">第1局 / 共10局</div>
   <div id="landlord-area"></div>
   <div id="opp-left" class="opponent">
-    <div class="opp-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="#f0c040" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:58%;height:58%"><circle cx="12" cy="8.1" r="3.6"/><path d="M4.6 20c1.4-3.7 4-5.5 7.4-5.5s6 1.8 7.4 5.5"/></svg></div>
+    <div class="opp-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
     <div class="opp-info">
       <div class="opp-label" id="opp-left-label"><span>电脑A</span><span class="multiplier" id="opp-left-mult"></span></div>
       <div id="opp-left-scores"></div>
@@ -30,7 +33,7 @@
     </div>
   </div>
   <div id="opp-right" class="opponent">
-    <div class="opp-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="#f0c040" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:58%;height:58%"><circle cx="12" cy="8.1" r="3.6"/><path d="M4.6 20c1.4-3.7 4-5.5 7.4-5.5s6 1.8 7.4 5.5"/></svg></div>
+    <div class="opp-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
     <div class="opp-info">
       <div class="opp-label" id="opp-right-label"><span>电脑B</span><span class="multiplier" id="opp-right-mult"></span></div>
       <div id="opp-right-scores"></div>
@@ -60,9 +63,17 @@
     </div>
     <div id="player-hand"><div id="player-hand-inner"></div></div>
   </div>
+  <div id="rotate-hint" aria-hidden="true">
+    <div class="rotate-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/></svg></div>
+    <div class="rotate-title">请横屏游玩</div>
+    <div class="rotate-sub">横屏体验更佳</div>
+  </div>
   <div id="start-modal" aria-modal="true">
     <div class="start-box">
-      <h2 id="start-title">斗地主终极版</h2>
+      <div class="start-brand">
+        <span class="start-tile" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.8c2.2 3 7.8 6.6 7.8 10.3a4.1 4.1 0 0 1-6.6 3.3c.2 2 .9 3.6 2.2 5v.8H8.6v-.8c1.3-1.4 2-3 2.2-5a4.1 4.1 0 0 1-6.6-3.3C4.2 8.4 9.8 4.8 12 1.8Z"/></svg></span>
+        <h2 id="start-title">斗地主终极版</h2>
+      </div>
       <p id="start-status"></p>
       <div class="start-actions" id="start-actions-basic">
         <button class="btn btn-red" id="btn-start-continue">开始游戏</button>
@@ -75,17 +86,23 @@
   </div>
   <div id="result-modal">
     <div class="result-box">
-      <h2 id="result-title">游戏结束</h2>
-      <p id="result-text"></p>
-      <p id="result-mult"></p>
-      <div id="round-result-scores"></div>
-      <div class="settlement-hands">
-        <div class="settlement-player" id="settlement-left"><h4>电脑A手牌</h4><div class="settlement-cards"></div></div>
-        <div class="settlement-player" id="settlement-right"><h4>电脑B手牌</h4><div class="settlement-cards"></div></div>
-        <div class="settlement-player you" id="settlement-player"><h4>你的完整手牌</h4><div class="settlement-cards"></div></div>
+      <div class="result-hero">
+        <span class="result-medal" id="result-medal" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 2h10v2h3.5A1.5 1.5 0 0 1 22 5.5V8a4.5 4.5 0 0 1-4.7 4.5A7.2 7.2 0 0 1 13 16.8V19h3.2a1.1 1.1 0 1 1 0 2.2H7.8A1.1 1.1 0 1 1 7.8 19H11v-2.2a7.2 7.2 0 0 1-4.3-4.3A4.5 4.5 0 0 1 2 8V5.5A1.5 1.5 0 0 1 3.5 4H7V2Zm0 4H4v2a2.5 2.5 0 0 0 2.4 2.5A11 11 0 0 1 7 6Zm10 0a11 11 0 0 1-.4 4.5A2.5 2.5 0 0 0 20 8V6h-3Z"/></svg></span>
+        <div class="result-round" id="result-round">第1局 / 共10局</div>
+        <h2 id="result-title">游戏结束</h2>
+        <p id="result-text"></p>
       </div>
-      <button class="btn btn-red" id="btn-restart" style="display:block;width:100%;margin:8px auto;">下一局</button>
-      <button class="btn btn-blue" id="btn-back-to-lobby" style="display:block;width:100%;margin:8px auto;">返回大厅</button>
+      <div class="result-mult" id="result-mult"></div>
+      <div class="result-scoreboard" id="round-result-scores"></div>
+      <div class="settlement-hands">
+        <div class="settlement-player" id="settlement-left"><h4>电脑A剩余手牌</h4><div class="settlement-cards"></div></div>
+        <div class="settlement-player" id="settlement-right"><h4>电脑B剩余手牌</h4><div class="settlement-cards"></div></div>
+        <div class="settlement-player you" id="settlement-player"><h4>你的剩余手牌</h4><div class="settlement-cards"></div></div>
+      </div>
+      <div class="result-actions">
+        <button class="btn btn-red" id="btn-restart">下一局</button>
+        <button class="btn btn-blue" id="btn-back-to-lobby">返回大厅</button>
+      </div>
     </div>
   </div>
 </div>
@@ -98,85 +115,72 @@
 <!-- Settings Modal -->
 <div id="settings-modal">
   <div id="settings-box">
-    <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><circle cx="12" cy="12" r="3.3"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8"/></svg> 设置</h2>
-    
+    <div class="settings-head">
+      <span class="set-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.24a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.24a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.24a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.24a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></span>
+      <h2>设置</h2>
+      <button class="settings-close" onclick="closeSettings()" aria-label="关闭设置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="settings-body">
+
     <div class="settings-section">
-      <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M11 5 6.5 8.5H3v7h3.5L11 19V5Z"/><path d="M15.5 8.7a4.6 4.6 0 0 1 0 6.6"/><path d="M18.3 6.2a8.4 8.4 0 0 1 0 11.6"/></svg> 音效设置</h3>
-      <div class="settings-item" style="flex-direction:column;align-items:stretch;gap:6px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <label>背景音乐</label>
-          <span id="bgm-volume-val" style="color:#9eacbd;font-size:13px;">80%</span>
-        </div>
-        <input type="range" id="bgm-volume" min="0" max="100" value="80" style="width:100%;accent-color:#f0c040;" oninput="setBgmVolume(this.value)">
+      <h3><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 5 6.5 8.5H3v7h3.5L11 19V5Z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07l1.42 1.42a7 7 0 0 0 0-9.9l-1.42 1.41ZM19.1 4.9a9 9 0 0 1 0 14.2l1.42 1.42a11 11 0 0 0 0-17.04L19.1 4.9Z"/></svg> 音效设置</h3>
+      <div class="vol-row">
+        <label for="bgm-volume">背景音乐</label>
+        <input type="range" id="bgm-volume" class="vol-slider" min="0" max="100" value="80" oninput="setBgmVolume(this.value)">
+        <span id="bgm-volume-val" class="vol-val">80%</span>
       </div>
-      <div class="settings-item" style="flex-direction:column;align-items:stretch;gap:6px;margin-top:12px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <label>出牌音效</label>
-          <span id="sfx-volume-val" style="color:#9eacbd;font-size:13px;">100%</span>
-        </div>
-        <input type="range" id="sfx-volume" min="0" max="100" value="100" style="width:100%;accent-color:#f0c040;" oninput="setSfxVolume(this.value)">
+      <div class="vol-row">
+        <label for="sfx-volume">出牌音效</label>
+        <input type="range" id="sfx-volume" class="vol-slider" min="0" max="100" value="100" oninput="setSfxVolume(this.value)">
+        <span id="sfx-volume-val" class="vol-val">100%</span>
       </div>
     </div>
-    
+
     <div class="settings-section">
-      <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><circle cx="12" cy="8.1" r="3.6"/><path d="M4.6 20c1.4-3.7 4-5.5 7.4-5.5s6 1.8 7.4 5.5"/></svg> 账户信息</h3>
+      <h3><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="7.6" r="4.2"/><path d="M12 14c-4.7 0-8.2 2.7-8.2 6.1V21h16.4v-.9c0-3.4-3.5-6.1-8.2-6.1Z"/></svg> 账户信息</h3>
       <div class="user-info-panel" id="user-info-panel">
-        <div class="avatar" id="user-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="#f0c040" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:55%;height:55%;vertical-align:-0.14em"><circle cx="12" cy="8.1" r="3.6"/><path d="M4.6 20c1.4-3.7 4-5.5 7.4-5.5s6 1.8 7.4 5.5"/></svg></div>
-        <div class="uname" id="user-name-display">游客</div>
-        <div class="ustatus" id="user-status">未登录</div>
+        <div class="avatar" id="user-avatar"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="7.6" r="4.2"/><path d="M12 14c-4.7 0-8.2 2.7-8.2 6.1V21h16.4v-.9c0-3.4-3.5-6.1-8.2-6.1Z"/></svg></div>
+        <div class="uinfo-text">
+          <div class="uname" id="user-name-display">游客</div>
+          <div class="ustatus" id="user-status">未登录</div>
+        </div>
+        <svg class="uinfo-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
       </div>
     </div>
-    
+
     <div class="settings-section" id="stats-section">
-      <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M3.5 20.5h17"/><path d="M7 20.5V12M12 20.5V6.5M17 20.5v-5"/></svg> 战绩统计</h3>
-      <div id="stats-panel" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:8px 0;">
-        <div style="text-align:center;background:rgba(255,255,255,0.05);border-radius:10px;padding:12px;">
-          <div style="font-size:24px;font-weight:800;color:#dce8f7;" id="stat-total">0</div>
-          <div style="font-size:12px;color:#9eacbd;">总场次</div>
-        </div>
-        <div style="text-align:center;background:rgba(255,255,255,0.05);border-radius:10px;padding:12px;">
-          <div style="font-size:24px;font-weight:800;color:#4caf50;" id="stat-wins">0</div>
-          <div style="font-size:12px;color:#9eacbd;">胜利</div>
-        </div>
-        <div style="text-align:center;background:rgba(255,255,255,0.05);border-radius:10px;padding:12px;">
-          <div style="font-size:24px;font-weight:800;color:#f0c040;" id="stat-rate">0%</div>
-          <div style="font-size:12px;color:#9eacbd;">胜率</div>
-        </div>
-        <div style="text-align:center;background:rgba(255,255,255,0.05);border-radius:10px;padding:12px;">
-          <div style="font-size:24px;font-weight:800;color:#f44336;" id="stat-streak">0</div>
-          <div style="font-size:12px;color:#9eacbd;">连胜</div>
-        </div>
+      <h3><svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="12.5" width="4.2" height="8.5" rx="1.6"/><rect x="9.9" y="7" width="4.2" height="14" rx="1.6"/><rect x="16.8" y="3" width="4.2" height="18" rx="1.6"/></svg> 战绩统计</h3>
+      <div class="settings-stats" id="stats-panel">
+        <div class="settings-stat"><div class="num blue" id="stat-total">0</div><div class="lbl">总场次</div></div>
+        <div class="settings-stat"><div class="num green" id="stat-wins">0</div><div class="lbl">胜利</div></div>
+        <div class="settings-stat"><div class="num orange" id="stat-rate">0%</div><div class="lbl">胜率</div></div>
+        <div class="settings-stat"><div class="num red" id="stat-streak">0</div><div class="lbl">连胜</div></div>
       </div>
-      <div id="stats-login-hint" style="display:none;text-align:center;color:#9eacbd;font-size:13px;padding:10px;">登录后可查看战绩</div>
+      <div id="stats-login-hint" style="display:none;">登录后可查看战绩</div>
     </div>
-    
+
     <div class="settings-section" id="leaderboard-section">
-      <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M8 4h8v5a4 4 0 0 1-8 0V4Z"/><path d="M8 5.2H5.4A2.6 2.6 0 0 0 8.2 9M16 5.2h2.6A2.6 2.6 0 0 1 15.8 9"/><path d="M12 13v3.6"/><path d="M8.8 20h6.4"/><path d="M9.6 16.6h4.8"/></svg> 排行榜</h3>
-      <div id="leaderboard-panel" style="max-height:200px;overflow-y:auto;">
-        <div id="lb-empty" style="text-align:center;color:#9eacbd;font-size:13px;padding:10px;">暂无数据</div>
-        <table id="lb-table" style="width:100%;border-collapse:collapse;display:none;">
-          <thead><tr style="border-bottom:1px solid rgba(255,255,255,0.1);">
-            <th style="text-align:left;padding:6px 8px;color:#9eacbd;font-size:12px;">排名</th>
-            <th style="text-align:left;padding:6px 8px;color:#9eacbd;font-size:12px;">玩家</th>
-            <th style="text-align:center;padding:6px 8px;color:#9eacbd;font-size:12px;">场次</th>
-            <th style="text-align:center;padding:6px 8px;color:#9eacbd;font-size:12px;">胜率</th>
-          </tr></thead>
+      <h3><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 2h10v2h3.5A1.5 1.5 0 0 1 22 5.5V8a4.5 4.5 0 0 1-4.7 4.5A7.2 7.2 0 0 1 13 16.8V19h3.2a1.1 1.1 0 1 1 0 2.2H7.8A1.1 1.1 0 1 1 7.8 19H11v-2.2a7.2 7.2 0 0 1-4.3-4.3A4.5 4.5 0 0 1 2 8V5.5A1.5 1.5 0 0 1 3.5 4H7V2Zm0 4H4v2a2.5 2.5 0 0 0 2.4 2.5A11 11 0 0 1 7 6Zm10 0a11 11 0 0 1-.4 4.5A2.5 2.5 0 0 0 20 8V6h-3Z"/></svg> 排行榜</h3>
+      <div id="leaderboard-panel">
+        <div id="lb-empty" style="display:block;">暂无数据</div>
+        <table id="lb-table" class="settings-lb" style="display:none;">
+          <thead><tr><th>排名</th><th>玩家</th><th>场次</th><th>胜率</th></tr></thead>
           <tbody id="lb-body"></tbody>
         </table>
       </div>
     </div>
-    
+
     <div class="settings-section">
-      <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M12 6.6C10.4 5.1 8.4 4.6 6 4.6c-1 0-2 .1-3 .4v13.9c1-.3 2-.4 3-.4 2.4 0 4.4.5 6 2 1.6-1.5 3.6-2 6-2 1 0 2 .1 3 .4V5c-1-.3-2-.4-3-.4-2.4 0-4.4.5-6 2Z"/><path d="M12 6.6v14"/></svg> 游戏规则</h3>
+      <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg> 游戏规则</h3>
       <div class="rules-content">
         <h4>基本规则</h4>
         <p>斗地主是一款三人扑克牌游戏，使用一副54张牌（含大小王）。</p>
         <p>每人发17张牌，留3张底牌给地主。</p>
-        
+
         <h4>叫地主</h4>
         <p>玩家轮流选择是否叫地主（抢地主），叫地主的人拿到底牌后成为地主。</p>
         <p>地主1人对抗另外2个农民。</p>
-        
+
         <h4>出牌规则</h4>
         <ul>
           <li><b>单张</b>：任意一张牌</li>
@@ -190,11 +194,11 @@
           <li><b>炸弹</b>：4张同点数的牌（可炸任何牌）</li>
           <li><b>火箭</b>：大小王（最大的牌，可炸任何牌）</li>
         </ul>
-        
+
         <h4>胜负判定</h4>
         <p>地主先把牌出完则地主赢，任一农民先出完则农民赢。</p>
         <p>炸弹和火箭会翻倍计分。</p>
-        
+
         <h4>计分规则</h4>
         <p>基础分3分，每出一个炸弹/火箭翻一倍。</p>
         <p>地主赢：两个农民各输基础分；地主赢2倍基础分。</p>
@@ -203,34 +207,57 @@
     </div>
 
     <div class="settings-section" id="ai-learning-section">
-      <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.6" y="9.6" width="4.8" height="4.8"/><path d="M9 2.8V6M15 2.8V6M9 18v3.2M15 18v3.2M2.8 9H6M2.8 15H6M18 9h3.2M18 15h3.2"/></svg> AI 学习进度</h3>
+      <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/></svg> AI 学习进度</h3>
       <div id="ai-learning-content" class="learn-summary">加载中...</div>
     </div>
 
-    <button class="settings-btn settings-btn-secondary" onclick="closeSettings()">关闭设置</button>
-    <button class="settings-btn settings-btn-secondary" onclick="goToLobby()" style="margin-top:8px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M4 11.2 12 4.2l8 7"/><path d="M6.4 9.6V20h11.2V9.6"/></svg> 返回大厅</button>
-    <button class="settings-btn settings-btn-danger" id="btn-logout" onclick="logoutUser()" style="display:none;">退出登录</button>
-    <button class="settings-btn settings-btn-danger" id="btn-delete-account" onclick="deleteAccount()" style="display:none;margin-top:4px;font-size:13px;opacity:0.8;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M4 7h16"/><path d="M9.4 7V4.6h5.2V7"/><path d="M6.4 7l1 13h9.2l1-13"/><path d="M10 10.8v5.6M14 10.8v5.6"/></svg> 注销账号</button>
+    <div class="settings-actions">
+      <button class="settings-btn settings-btn-secondary" onclick="closeSettings()">关闭设置</button>
+      <button class="settings-btn settings-btn-secondary" onclick="goToLobby()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.6 2.8 10a1 1 0 0 0 .64 1.77H5V20a2 2 0 0 0 2 2h3.5v-6h3v6H17a2 2 0 0 0 2-2v-8.23h1.56A1 1 0 0 0 21.2 10L12 2.6Z"/></svg>返回大厅</button>
+      <button class="settings-btn settings-btn-danger" id="btn-logout" onclick="logoutUser()" style="display:none;">退出登录</button>
+      <button class="settings-btn settings-btn-danger" id="btn-delete-account" onclick="deleteAccount()" style="display:none;">注销账号</button>
+    </div>
+    </div>
   </div>
 </div>
 
 <!-- Login Modal -->
 <div id="login-modal">
   <div id="login-box">
-    <h2><svg viewBox="0 0 24 24" fill="none" stroke="#f0c040" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1.1em;height:1.1em;vertical-align:-0.14em"><rect x="5.6" y="3.6" width="12.8" height="16.8" rx="2.2"/><path d="M12 8.8c-1.9 1.7-2.7 2.7-2.7 3.7a1.75 1.75 0 0 0 2.7 1.5 1.75 1.75 0 0 0 2.7-1.5c0-1-.8-2-2.7-3.7Z"/></svg> 斗地主</h2>
+    <div class="brand">
+      <span class="brand-tile" aria-hidden="true">
+        <span class="tile-back"></span>
+        <span class="tile-front">
+          <svg class="mark" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="6.6" r="3.5"/><circle cx="7.4" cy="12.4" r="3.5"/><circle cx="16.6" cy="12.4" r="3.5"/><path d="M10.6 12.4h2.8l1 7.2h-4.8z"/></svg>
+          <svg class="spade" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.8c2.2 3 7.8 6.6 7.8 10.3a4.1 4.1 0 0 1-6.6 3.3c.2 2 .9 3.6 2.2 5v.8H8.6v-.8c1.3-1.4 2-3 2.2-5a4.1 4.1 0 0 1-6.6-3.3C4.2 8.4 9.8 4.8 12 1.8Z"/></svg>
+        </span>
+      </span>
+      <h1>斗地主</h1>
+    </div>
     <div class="login-tabs">
       <button class="login-tab active" id="tab-login" onclick="switchTab('login')">登录</button>
       <button class="login-tab" id="tab-register" onclick="switchTab('register')">注册</button>
     </div>
     <form id="login-form" onsubmit="handleLogin(event)">
-      <input type="text" class="login-input" id="input-name" placeholder="请输入昵称" maxlength="12" autocomplete="off">
-      <div class="password-wrapper">
-        <input type="password" class="login-input" id="input-password" placeholder="请输入密码（至少4位）" maxlength="20" autocomplete="off">
-        <button type="button" class="toggle-pwd" onclick="togglePwd('input-password',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M2.2 12S5.8 5.8 12 5.8 21.8 12 21.8 12 18.2 18.2 12 18.2 2.2 12 2.2 12Z"/><circle cx="12" cy="12" r="2.7"/></svg></button>
+      <div class="field">
+        <svg class="lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <input type="text" class="login-input" id="input-name" placeholder="请输入昵称" maxlength="12" autocomplete="off">
       </div>
-      <div class="password-wrapper" id="confirm-password-group" style="display:none">
+      <div class="field">
+        <svg class="lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <input type="password" class="login-input" id="input-password" placeholder="请输入密码（至少4位）" maxlength="20" autocomplete="off">
+        <button type="button" class="toggle-pwd" onclick="togglePwd('input-password',this)">
+          <svg class="ico-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg>
+          <svg class="ico-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+      <div class="field" id="confirm-password-group" style="display:none">
+        <svg class="lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         <input type="password" class="login-input" id="input-confirm-password" placeholder="请确认密码" maxlength="20" autocomplete="off">
-        <button type="button" class="toggle-pwd" onclick="togglePwd('input-confirm-password',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.14em"><path d="M2.2 12S5.8 5.8 12 5.8 21.8 12 21.8 12 18.2 18.2 12 18.2 2.2 12 2.2 12Z"/><circle cx="12" cy="12" r="2.7"/></svg></button>
+        <button type="button" class="toggle-pwd" onclick="togglePwd('input-confirm-password',this)">
+          <svg class="ico-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg>
+          <svg class="ico-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
       </div>
       <label class="login-remember">
         <input type="checkbox" id="remember-login" checked>

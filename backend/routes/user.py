@@ -11,7 +11,7 @@ from auth_utils import identify, viewer_identity, esc
 
 user_bp = Blueprint("user", __name__)
 
-DEFAULT_AVATAR_SVG = b'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="38" r="18" fill="#374151"/><ellipse cx="50" cy="80" rx="28" ry="22" fill="#374151"/></svg>'
+DEFAULT_AVATAR_SVG = b'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="#eef8ff"/><circle cx="50" cy="38" r="18" fill="#2d7dd8"/><ellipse cx="50" cy="80" rx="28" ry="22" fill="#2d7dd8"/></svg>'
 
 
 @user_bp.route("/api/users/<name>")

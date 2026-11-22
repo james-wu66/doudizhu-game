@@ -95,12 +95,11 @@ function loadLeaderboard(){
       body.innerHTML='';
       data.forEach(r=>{
         const tr=document.createElement('tr');
-        tr.style.borderBottom='1px solid rgba(255,255,255,0.05)';
-        const rankColor=r.rank<=3?['#fbbf24','#94a3b8','#cd7f32'][r.rank-1]:'#94a3b8';
-        tr.innerHTML='<td style="padding:6px 8px;font-weight:700;color:'+rankColor+'">'+r.rank+'</td>'
-          +'<td style="padding:6px 8px;color:#e2e8f0">'+escapeHtml(r.name)+'</td>'
-          +'<td style="padding:6px 8px;text-align:center;color:#94a3b8">'+r.total+'</td>'
-          +'<td style="padding:6px 8px;text-align:center;color:#4ade80">'+r.win_rate+'%</td>';
+        const rankClass='lb-rank'+(r.rank===2?' r2':r.rank===3?' r3':'');
+        tr.innerHTML='<td class="'+rankClass+'">'+r.rank+'</td>'
+          +'<td>'+escapeHtml(r.name)+'</td>'
+          +'<td class="c">'+r.total+'</td>'
+          +'<td class="c rate">'+r.win_rate+'%</td>';
         body.appendChild(tr);
       });
     })

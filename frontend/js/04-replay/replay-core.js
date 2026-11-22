@@ -124,13 +124,15 @@ function toggleReplayPause(){
   if(!replayTimer&&replayIndex>=replayData.length)return;
   replayPaused=!replayPaused;
   var btn=document.getElementById('replay-pause-btn');
+  var pauseIcon='<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg>';
+  var playIcon='<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="m7 4 12 8-12 8V4Z"/></svg>';
   if(replayPaused){
     // 暂停：清除定时器
     if(replayTimer){clearInterval(replayTimer);replayTimer=null;}
-    if(btn)btn.textContent='继续';
+    if(btn)btn.innerHTML=playIcon+'<span>继续</span>';
   }else{
     // 继续：从当前位置重启定时器
-    if(btn)btn.textContent='暂停';
+    if(btn)btn.innerHTML=pauseIcon+'<span>暂停</span>';
     startReplayPlayback();
   }
 }

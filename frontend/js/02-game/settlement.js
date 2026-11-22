@@ -87,13 +87,18 @@ function endGame(winner){
   const landlordWon=winner===G.landlord;
   const playerWon=landlordWon===(G.landlord===PLAYER);
   if(playerWon){
-    titleEl.textContent='你赢了！';titleEl.style.color='#f0c040';
+    titleEl.textContent='你赢了！';titleEl.style.color='#f79e1b';
     playGameSound('voice_你赢了');
   }else{
-    titleEl.textContent='你输了';titleEl.style.color='#e74c3c';
+    titleEl.textContent='你输了';titleEl.style.color='#d5463a';
     playGameSound('voice_你输了');
   }
-  textEl.textContent=PLAYER_NAMES[winner]+' 出完了所有牌';
+  textEl.textContent=(PLAYER_NAMES[winner]||'对家')+' 出完了所有牌';
+
+  const resultBox=document.querySelector('#result-modal .result-box');
+  if(resultBox){resultBox.classList.toggle('win',playerWon);resultBox.classList.toggle('lose',!playerWon);}
+  const roundEl=document.getElementById('result-round');
+  if(roundEl)roundEl.textContent='第'+(currentRound||1)+'局 / 共'+TOTAL_ROUNDS+'局';
 
   // 记录战绩到后端
   try{
@@ -113,10 +118,10 @@ function endGame(winner){
       }).catch(()=>{});
     }catch(e){console.warn('AI backfill fail',e);}
   }catch(e){console.warn('record fail',e);}
-  multEl.textContent='';
+  multEl.innerHTML='<span>底分 '+BASE_SCORE+' × 倍数 '+(G.bidMult*G.bombMult)+(isSpring?' × 春天 2':'')+'</span><b>基础分 '+roundScore+'</b>';
 
   if(currentRound>=TOTAL_ROUNDS){
-    scoresEl.innerHTML=showRoundScoreBreakdown()+'<h3 style="color:#f0c040;margin:12px 0 8px">10局累计总排名</h3>'+showFinalRanking();
+    scoresEl.innerHTML=showRoundScoreBreakdown()+showFinalRanking();
     restartBtn.textContent='开始新一轮';
     restartBtn.disabled=false;
     document.getElementById('result-modal').classList.add('show');
@@ -132,31 +137,28 @@ function endGame(winner){
 
 // ==================== 局分结算渲染 ====================
 function showRoundScoreBreakdown(){
-  if(!G||!G.roundScores)return '<div style="color:#9eacbd;font-size:13px;padding:8px">本局得分暂无</div>';
-  let html='<div style="margin:8px 0">';
+  if(!G||!G.roundScores)return '<div class="score-title">本局得分暂无</div>';
+  let html='<div class="score-title">本局得分</div>';
   for(let i=0;i<3;i++){
     const s=G.roundScores[i]||0;
-    const color=s>=0?'#4caf50':'#f44336';
     const sign=s>=0?'+':'';
-    html+='<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px">'
-      +'<span style="color:#dce8f7">'+PLAYER_NAMES[i]+'</span>'
-      +'<span style="color:'+color+';font-weight:700">'+sign+s+'</span></div>';
+    html+='<div class="score-row'+(i===PLAYER?' you':'')+'">'
+      +'<span class="score-name">'+PLAYER_NAMES[i]+'</span>'
+      +'<span class="score-value '+(s>=0?'positive':'negative')+'">'+sign+s+'</span></div>';
   }
-  html+='</div>';
   return html;
 }
 
 function showFinalRanking(){
   const order=[0,1,2].map(i=>({name:PLAYER_NAMES[i],score:sessionScores[i]||0}))
     .sort((a,b)=>b.score-a.score);
-  let html='<div style="margin:8px 0">';
+  let html='<div class="score-title final-title">10局累计总排名</div>';
   order.forEach((p,idx)=>{
     const medal=['冠军','亚军','季军'][idx]||('第'+(idx+1)+'名');
-    const color=p.score>=0?'#4caf50':'#f44336';
-    html+='<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px">'
-      +'<span style="color:#dce8f7">'+medal+' '+p.name+'</span>'
-      +'<span style="color:'+color+';font-weight:700">'+(p.score>=0?'+':'')+p.score+'</span></div>';
+    html+='<div class="rank-row'+(p.name===PLAYER_NAMES[PLAYER]?' you':'')+'">'
+      +'<span class="rank-medal">'+medal+'</span>'
+      +'<span class="rank-name">'+p.name+'</span>'
+      +'<span class="score-value '+(p.score>=0?'positive':'negative')+'">'+(p.score>=0?'+':'')+p.score+'</span></div>';
   });
-  html+='</div>';
   return html;
 }
