@@ -96,6 +96,8 @@ function renderPlayedCards(who,cards){
     el.style.margin='0';el.style.flex='0 0 '+cardW+'px';
     container.appendChild(el);
   });
+  // 2026-11-23：出牌区恢复旧版 45% 叠压（UI 重构去掉了 CSS 的 !important，内联 margin 压掉了叠压）
+  [...container.children].forEach((el,i)=>{el.style.marginLeft=i===0?'0':(-cardW*.45)+'px';});
 }
 
 function renderPassText(who){
